@@ -100,7 +100,11 @@ const InputPage = () => {
     return validKarungNumbers.length > 0 ? Math.max(...validKarungNumbers) : 0;
   }, [allResiForExpedition]);
 
-  const karungOptions = Array.from({ length: 100 }, (_, i) => (i + 1).toString());
+  // Dynamically generate karung options: from 1 up to max(100, highestKarung)
+  const karungOptions = React.useMemo(() => {
+    const maxKarung = Math.max(1, highestKarung, 100); // Ensure at least 1, and up to 100 or highestKarung if greater
+    return Array.from({ length: maxKarung }, (_, i) => (i + 1).toString());
+  }, [highestKarung]);
 
   // Auto-focus logic
   React.useEffect(() => {

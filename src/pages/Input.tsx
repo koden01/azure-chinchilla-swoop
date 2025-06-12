@@ -220,12 +220,25 @@ const InputPage = () => {
     }
   };
 
+  // Console log for debugging
+  console.log("InputPage State:", {
+    expedition,
+    selectedKarung,
+    isLoadingAllResiForExpedition,
+    allResiForExpeditionCount: allResiForExpedition?.length,
+    currentCount,
+  });
+
   return (
     <div className="p-6 space-y-6 bg-gray-50 min-h-[calc(100vh-64px)]">
       <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-8 rounded-lg shadow-md text-white text-center space-y-4">
         <h2 className="text-2xl font-semibold">Input Data Resi</h2>
         <div className="text-6xl font-bold">
-          {isLoadingAllResiForExpedition ? "..." : currentCount}
+          {!expedition
+            ? "Pilih Expedisi"
+            : isLoadingAllResiForExpedition
+            ? "..."
+            : currentCount}
         </div>
         <p className="text-xl">
           {expedition ? `${expedition} - Karung ${selectedKarung || '?'}` : "Pilih Expedisi"}

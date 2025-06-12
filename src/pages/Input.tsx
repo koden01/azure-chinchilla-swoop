@@ -29,9 +29,7 @@ interface ResiExpedisiData {
   Resi: string;
   nokarung: string | null;
   created: string;
-  tbl_expedisi: {
-    couriername: string | null;
-  };
+  couriername: string | null; // This will now come directly from the RPC function
 }
 
 const beepSuccess = new Audio('/sounds/beep-success.mp3'); // Pastikan file ini ada di public/sounds/
@@ -47,23 +45,16 @@ const InputPage = () => {
   const formattedDate = format(today, "yyyy-MM-dd");
   const queryClient = useQueryClient();
 
-  // Query to get all resi for the selected expedition for today
+  // Query to get all resi for the selected expedition for today using RPC
   const { data: allResiForExpedition, isLoading: isLoadingAllResiForExpedition } = useQuery<ResiExpedisiData[]>({
     queryKey: ["allResiForExpedition", expedition, formattedDate],
     queryFn: async () => {
       if (!expedition) return [];
 
-      const { data, error } = await supabase
-        .from("tbl_resi")
-        .select(`
-          Resi,
-          nokarung,
-          created,
-          tbl_expedisi!inner(couriername)
-        `)
-        .eq("tbl_expedisi.couriername", expedition)
-        .gte("created", startOfDay(today).toISOString())
-        .lt("created", endOfDay(today).toISOString());
+      const { data, error } = await supabase.rpc("get_resi_for_expedition_and_date", {
+        p_couriername: expedition,
+        p_selected_date: formattedDate,
+      });
 
       if (error) {
         console.error("Error fetching all resi for expedition:", error);
@@ -174,13 +165,12 @@ const InputPage = () => {
       }
 
       // 2. Validate for duplicate resi in tbl_resi for the current day, expedition, and karung
-      const { data: duplicateResi, error: dupError } = await supabase
-        .from("tbl_resi")
-        .select("Resi")
-        .eq("Resi", currentResi)
-        .eq("nokarung", selectedKarung)
-        .gte("created", startOfDay(today).toISOString())
-        .lt("created", endOfDay(today).toISOString());
+      // Use the RPC function to check for duplicates as well, for consistency
+      const { data: duplicateResi, error: dupError } = await supabase.rpc("get_resi_for_expedition_and_date", {
+        p_couriername: expedition,
+        p_selected_date: formattedDate,
+      }).eq("Resi", currentResi).eq("nokarung", selectedKarung);
+
 
       if (dupError) throw dupError;
 

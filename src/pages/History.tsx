@@ -186,7 +186,7 @@ const HistoryPage = () => {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[50px]">No</TableHead>
-                <TableHead>Nomor Resi</TableHead>
+                <TableHead className="w-[30%]">Nomor Resi</TableHead> {/* 3x larger */}
                 <TableHead>Keterangan</TableHead>
                 <TableHead>No Karung</TableHead>
                 <TableHead>Tanggal Input</TableHead>
@@ -209,7 +209,7 @@ const HistoryPage = () => {
                 currentData.map((data, index) => (
                   <TableRow key={data.Resi + index}>
                     <TableCell className="font-medium">{startIndex + index + 1}</TableCell>
-                    <TableCell>{data.Resi}</TableCell>
+                    <TableCell className="w-[30%]">{data.Resi}</TableCell>
                     <TableCell>
                       <span className="px-2 py-1 rounded-full text-xs font-semibold"
                         style={{

@@ -14,8 +14,8 @@ import { showSuccess, showError } from "@/utils/toast";
 import ResiDetailModal from "@/components/ResiDetailModal";
 import { useDashboardData } from "@/hooks/useDashboardData"; // Import the new hook
 
-const DashboardPage: React.FC = () => { // Explicitly typing as React.FC
-  console.log("DashboardPage rendering..."); // Added for debugging
+const DashboardPage: React.FC = () => {
+  console.log("DashboardPage rendering...");
   const [date, setDate] = React.useState<Date | undefined>(new Date());
   const queryClient = useQueryClient();
 
@@ -26,15 +26,15 @@ const DashboardPage: React.FC = () => { // Explicitly typing as React.FC
     isLoadingTotalScan,
     idRekomendasi,
     isLoadingIdRekomendasi,
-    belumKirim, // This now represents flag = 'NO'
+    belumKirim,
     isLoadingBelumKirim,
     batalCount,
     isLoadingBatalCount,
-    followUpData, // This data is still fetched but not directly displayed on a card anymore
+    followUpData,
     isLoadingFollowUp,
     expeditionSummaries,
-    formattedDate, // Get formattedDate from the hook
-  } = useDashboardData(date); // Use the new hook
+    formattedDate,
+  } = useDashboardData(date);
 
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [modalTitle, setModalTitle] = React.useState("");
@@ -63,8 +63,6 @@ const DashboardPage: React.FC = () => { // Explicitly typing as React.FC
   };
 
   const handleOpenFollowUpModal = async () => {
-    // This function is still available but not directly linked to a card anymore
-    // The "Follow Up" card now uses handleOpenBelumKirimModal
     const { data, error } = await supabase.rpc("get_scan_follow_up", {
       selected_date: formattedDate,
     });
@@ -97,7 +95,7 @@ const DashboardPage: React.FC = () => { // Explicitly typing as React.FC
       .from("tbl_expedisi")
       .select("*")
       .eq("couriername", courierName)
-      .eq("flag", "NO") // Only show 'NO' status as per request
+      .eq("flag", "NO")
       .gte("created", startOfDay(date!).toISOString())
       .lt("created", endOfDay(date!).toISOString());
     if (error) {
@@ -139,7 +137,6 @@ const DashboardPage: React.FC = () => { // Explicitly typing as React.FC
   };
 
   const handleConfirmResi = async (resiNumber: string) => {
-    // Update tbl_expedisi flag to 'YES'
     const { error: expError } = await supabase
       .from("tbl_expedisi")
       .update({ flag: "YES" })
@@ -151,7 +148,6 @@ const DashboardPage: React.FC = () => { // Explicitly typing as React.FC
       return;
     }
 
-    // Update tbl_resi schedule to 'ontime'
     const { error: resiError } = await supabase
       .from("tbl_resi")
       .update({ schedule: "ontime" })
@@ -185,7 +181,6 @@ const DashboardPage: React.FC = () => { // Explicitly typing as React.FC
       queryClient.invalidateQueries({ queryKey: ["followUpData", formattedDate] });
       queryClient.invalidateQueries({ queryKey: ["belumKirim", formattedDate] });
       queryClient.invalidateQueries({ queryKey: ["allExpedisi", formattedDate] });
-      // Re-open modal with updated data if needed, or refetch modal data
       if (modalType === "belumKirim") {
         handleOpenBelumKirimModal();
       } else if (modalType === "followUp") {
@@ -195,111 +190,112 @@ const DashboardPage: React.FC = () => { // Explicitly typing as React.FC
   };
 
   return (
-    <div className="p-6 space-y-6 bg-gray-50 min-h-[calc(100vh-64px)]">
-      {/* Filter Tanggal Section */}
-      <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-6 rounded-lg shadow-md">
-        <h2 className="text-white text-xl font-semibold mb-4 flex items-center">
-          <CalendarDays className="mr-2 h-6 w-6" /> Filter Tanggal
-        </h2>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant={"outline"}
-              className={cn(
-                "w-full md:w-[280px] justify-start text-left font-normal bg-white text-gray-800 hover:bg-gray-100",
-                !date && "text-muted-foreground"
-              )}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {date ? format(date, "dd/MM/yyyy") : <span>Pilih tanggal</span>}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0">
-            <Calendar
-              mode="single"
-              selected={date}
-              onSelect={setDate}
-              initialFocus
-            />
-          </PopoverContent>
-        </Popover>
-      </div>
-
-      {/* Summary Cards Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <SummaryCard
-          title="Terisi Hari Ini"
-          value={isLoadingTransaksiHariIni ? "Loading..." : transaksiHariIni || 0}
-          gradientFrom="from-green-400"
-          gradientTo="to-blue-500"
-          icon="package"
-        />
-        <SummaryCard
-          title="Total Scan"
-          value={isLoadingTotalScan ? "Loading..." : totalScan || 0}
-          gradientFrom="from-purple-500"
-          gradientTo="to-pink-500"
-          icon="maximize"
-        />
-        {/* Removed "Belum Dikirim" card as its logic is now part of "Follow Up" */}
-        <SummaryCard
-          title="Follow Up"
-          value={isLoadingBelumKirim ? "Loading..." : belumKirim || 0}
-          gradientFrom="from-orange-500"
-          gradientTo="to-red-500"
-          icon="warning"
-          onClick={handleOpenBelumKirimModal} // Now opens the "Belum Dikirim" modal
-        />
-        <SummaryCard
-          title="Batal"
-          value={isLoadingBatalCount ? "Loading..." : batalCount || 0}
-          gradientFrom="from-red-700"
-          gradientTo="to-red-900"
-          icon="info"
-        />
-        <SummaryCard
-          title="ID Rekomendasi" {/* Renamed from "Scan Follow Up" */}
-          value={isLoadingIdRekomendasi ? "Loading..." : idRekomendasi || 0}
-          gradientFrom="from-blue-500"
-          gradientTo="to-purple-600"
-          icon="clock"
-        />
-      </div>
-
-      {/* Detail per Expedisi Section */}
-      <div className="space-y-4">
-        <h2 className="text-2xl font-bold text-gray-800 flex items-center">
-          <Package className="mr-2 h-6 w-6" /> Detail per Expedisi
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {expeditionSummaries.map((summary) => (
-            <div key={summary.name} onClick={() => handleOpenExpeditionDetailModal(summary.name)}>
-              <ExpeditionDetailCard
-                name={summary.name}
-                totalTransaksi={summary.totalTransaksi}
-                totalScan={summary.totalScan}
-                sisa={summary.sisa}
-                jumlahKarung={summary.jumlahKarung}
-                idRekomendasi={summary.idRekomendasi}
+    <> {/* Added React.Fragment shorthand */}
+      <div className="p-6 space-y-6 bg-gray-50 min-h-[calc(100vh-64px)]">
+        {/* Filter Tanggal Section */}
+        <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-6 rounded-lg shadow-md">
+          <h2 className="text-white text-xl font-semibold mb-4 flex items-center">
+            <CalendarDays className="mr-2 h-6 w-6" /> Filter Tanggal
+          </h2>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant={"outline"}
+                className={cn(
+                  "w-full md:w-[280px] justify-start text-left font-normal bg-white text-gray-800 hover:bg-gray-100",
+                  !date && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {date ? format(date, "dd/MM/yyyy") : <span>Pilih tanggal</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <Calendar
+                mode="single"
+                selected={date}
+                onSelect={setDate}
+                initialFocus
               />
-            </div>
-          ))}
+            </PopoverContent>
+          </Popover>
         </div>
-      </div>
-      <MadeWithDyad />
 
-      <ResiDetailModal
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        title={modalTitle}
-        data={modalData}
-        modalType={modalType}
-        selectedCourier={selectedCourier}
-        onBatalResi={handleBatalResi}
-        onConfirmResi={handleConfirmResi}
-        onCekfuToggle={handleCekfuToggle}
-      />
-    </div>
+        {/* Summary Cards Section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <SummaryCard
+            title="Terisi Hari Ini"
+            value={isLoadingTransaksiHariIni ? "Loading..." : transaksiHariIni || 0}
+            gradientFrom="from-green-400"
+            gradientTo="to-blue-500"
+            icon="package"
+          />
+          <SummaryCard
+            title="Total Scan"
+            value={isLoadingTotalScan ? "Loading..." : totalScan || 0}
+            gradientFrom="from-purple-500"
+            gradientTo="to-pink-500"
+            icon="maximize"
+          />
+          <SummaryCard
+            title="Follow Up"
+            value={isLoadingBelumKirim ? "Loading..." : belumKirim || 0}
+            gradientFrom="from-orange-500"
+            gradientTo="to-red-500"
+            icon="warning"
+            onClick={handleOpenBelumKirimModal}
+          />
+          <SummaryCard
+            title="Batal"
+            value={isLoadingBatalCount ? "Loading..." : batalCount || 0}
+            gradientFrom="from-red-700"
+            gradientTo="to-red-900"
+            icon="info"
+          />
+          <SummaryCard
+            title="ID Rekomendasi"
+            value={isLoadingIdRekomendasi ? "Loading..." : idRekomendasi || 0}
+            gradientFrom="from-blue-500"
+            gradientTo="to-purple-600"
+            icon="clock"
+          />
+        </div>
+
+        {/* Detail per Expedisi Section */}
+        <div className="space-y-4">
+          <h2 className="text-2xl font-bold text-gray-800 flex items-center">
+            <Package className="mr-2 h-6 w-6" /> Detail per Expedisi
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {expeditionSummaries.map((summary) => (
+              <div key={summary.name} onClick={() => handleOpenExpeditionDetailModal(summary.name)}>
+                <ExpeditionDetailCard
+                  name={summary.name}
+                  totalTransaksi={summary.totalTransaksi}
+                  totalScan={summary.totalScan}
+                  sisa={summary.sisa}
+                  jumlahKarung={summary.jumlahKarung}
+                  idRekomendasi={summary.idRekomendasi}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+        <MadeWithDyad />
+
+        <ResiDetailModal
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+          title={modalTitle}
+          data={modalData}
+          modalType={modalType}
+          selectedCourier={selectedCourier}
+          onBatalResi={handleBatalResi}
+          onConfirmResi={handleConfirmResi}
+          onCekfuToggle={handleCekfuToggle}
+        />
+      </div>
+    </> // Added React.Fragment shorthand
   );
 };
 

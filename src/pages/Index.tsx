@@ -14,12 +14,6 @@ import { showSuccess, showError } from "@/utils/toast";
 import ResiDetailModal from "@/components/ResiDetailModal";
 import { useDashboardData } from "@/hooks/useDashboardData"; // Import the new hook
 
-// Define types for Supabase data (moved to useDashboardData.ts)
-// interface TblExpedisi { ... }
-// interface TblResi { ... }
-// interface ScanFollowUpData { ... }
-// interface ExpeditionSummary { ... }
-
 const Index = () => {
   const [date, setDate] = React.useState<Date | undefined>(new Date());
   const queryClient = useQueryClient();
@@ -31,11 +25,11 @@ const Index = () => {
     isLoadingTotalScan,
     idRekomendasi,
     isLoadingIdRekomendasi,
-    belumKirim,
+    belumKirim, // This now represents flag = 'NO'
     isLoadingBelumKirim,
     batalCount,
     isLoadingBatalCount,
-    followUpData,
+    followUpData, // This data is still fetched but not directly displayed on a card anymore
     isLoadingFollowUp,
     expeditionSummaries,
     formattedDate, // Get formattedDate from the hook
@@ -68,6 +62,8 @@ const Index = () => {
   };
 
   const handleOpenFollowUpModal = async () => {
+    // This function is still available but not directly linked to a card anymore
+    // The "Follow Up" card now uses handleOpenBelumKirimModal
     const { data, error } = await supabase.rpc("get_scan_follow_up", {
       selected_date: formattedDate,
     });
@@ -76,8 +72,7 @@ const Index = () => {
       console.error("Error fetching Follow Up:", error);
       return;
     }
-    // For follow-up, we need to get cekfu from tbl_expedisi
-    const resiWithCekfu = await Promise.all((data || []).map(async (item: any) => { // Use any for now, type is in hook
+    const resiWithCekfu = await Promise.all((data || []).map(async (item: any) => {
       const { data: expedisiDetail, error: expError } = await supabase
         .from("tbl_expedisi")
         .select("cekfu")
@@ -89,7 +84,7 @@ const Index = () => {
       };
     }));
 
-    setModalTitle("Detail Resi Follow Up");
+    setModalTitle("Detail Resi Follow Up (Scan Tidak Sesuai Tanggal)");
     setModalData(resiWithCekfu || []);
     setModalType("followUp");
     setIsModalOpen(true);
@@ -245,13 +240,14 @@ const Index = () => {
           gradientTo="to-pink-500"
           icon="maximize"
         />
+        {/* Removed "Belum Dikirim" card as its logic is now part of "Follow Up" */}
         <SummaryCard
-          title="Belum Dikirim"
+          title="Follow Up"
           value={isLoadingBelumKirim ? "Loading..." : belumKirim || 0}
           gradientFrom="from-orange-500"
           gradientTo="to-red-500"
           icon="warning"
-          onClick={handleOpenBelumKirimModal}
+          onClick={handleOpenBelumKirimModal} // Now opens the "Belum Dikirim" modal
         />
         <SummaryCard
           title="Batal"
@@ -261,15 +257,7 @@ const Index = () => {
           icon="info"
         />
         <SummaryCard
-          title="Follow Up"
-          value={isLoadingFollowUp ? "Loading..." : followUpData?.length || 0}
-          gradientFrom="from-yellow-500"
-          gradientTo="to-orange-600"
-          icon="clock"
-          onClick={handleOpenFollowUpModal}
-        />
-        <SummaryCard
-          title="Scan Follow Up"
+          title="ID Rekomendasi" {/* Renamed from "Scan Follow Up" */}
           value={isLoadingIdRekomendasi ? "Loading..." : idRekomendasi || 0}
           gradientFrom="from-blue-500"
           gradientTo="to-purple-600"

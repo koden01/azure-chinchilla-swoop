@@ -14,7 +14,7 @@ import { showSuccess, showError } from "@/utils/toast";
 import ResiDetailModal from "@/components/ResiDetailModal";
 import { useDashboardData } from "@/hooks/useDashboardData"; // Import the new hook
 
-const Index = () => {
+const DashboardPage = () => {
   const [date, setDate] = React.useState<Date | undefined>(new Date());
   const queryClient = useQueryClient();
 
@@ -302,4 +302,4 @@ const Index = () => {
   );
 };
 
-export default Index;
+export default DashboardPage;

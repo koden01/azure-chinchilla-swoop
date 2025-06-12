@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Plus, History, LayoutDashboard } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } => "@/lib/utils";
 
 const Navbar = () => {
   const location = useLocation();
@@ -15,7 +15,7 @@ const Navbar = () => {
   ];
 
   return (
-    <nav className="bg-gradient-to-r from-blue-600 to-purple-700 p-4 flex items-center justify-between shadow-lg">
+    <nav className="bg-gradient-to-r from-blue-600 to-purple-700 p-4 flex items-center justify-center shadow-lg">
       <div className="flex items-center space-x-4">
         {navItems.map((item) => (
           <Link

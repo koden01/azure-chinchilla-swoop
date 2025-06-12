@@ -106,6 +106,20 @@ const InputPage = () => {
     return Array.from({ length: maxKarung }, (_, i) => (i + 1).toString());
   }, [highestKarung]);
 
+  // Auto-select highest karung when expedition changes
+  React.useEffect(() => {
+    if (expedition) {
+      if (highestKarung > 0) {
+        setSelectedKarung(highestKarung.toString());
+      } else {
+        setSelectedKarung("1"); // Default to 1 if no karung found for this expedition today
+      }
+    } else {
+      setSelectedKarung(""); // Clear selected karung if no expedition is selected
+    }
+  }, [expedition, highestKarung]);
+
+
   // Auto-focus logic
   React.useEffect(() => {
     if (expedition && selectedKarung && resiInputRef.current) {

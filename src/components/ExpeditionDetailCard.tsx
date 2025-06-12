@@ -18,6 +18,8 @@ const ExpeditionDetailCard: React.FC<ExpeditionDetailCardProps> = ({
   jumlahKarung,
   idRekomendasi,
 }) => {
+  const showIdRekomendasi = name === "ID" && idRekomendasi !== undefined;
+
   return (
     <Card className="bg-white shadow-md rounded-lg p-4">
       <CardHeader className="pb-2">
@@ -29,14 +31,14 @@ const ExpeditionDetailCard: React.FC<ExpeditionDetailCardProps> = ({
           <p>Total Scan:</p>
           <p>Sisa:</p>
           <p>Jumlah Karung:</p>
-          {idRekomendasi !== undefined && <p>ID Rekomendasi:</p>}
+          {showIdRekomendasi && <p>ID Rekomendasi:</p>}
         </div>
         <div className="text-right font-medium">
           <p>{totalTransaksi}</p>
           <p>{totalScan}</p>
           <p>{sisa}</p>
           <p>{jumlahKarung}</p>
-          {idRekomendasi !== undefined && <p>{idRekomendasi}</p>}
+          {showIdRekomendasi && <p>{idRekomendasi}</p>}
         </div>
       </CardContent>
     </Card>

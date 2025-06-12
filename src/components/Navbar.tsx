@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Plus, History, LayoutDashboard } from "lucide-react";
-import { cn } => "@/lib/utils";
+import { cn } from "@/lib/utils"; // Perbaikan di sini
 
 const Navbar = () => {
   const location = useLocation();

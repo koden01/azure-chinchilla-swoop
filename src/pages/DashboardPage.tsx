@@ -14,7 +14,7 @@ import { showSuccess, showError } from "@/utils/toast";
 import ResiDetailModal from "@/components/ResiDetailModal";
 import { useDashboardData } from "@/hooks/useDashboardData"; // Import the new hook
 
-const DashboardPage = () => {
+const DashboardPage = () => { // React component
   const [date, setDate] = React.useState<Date | undefined>(new Date());
   const queryClient = useQueryClient();
 

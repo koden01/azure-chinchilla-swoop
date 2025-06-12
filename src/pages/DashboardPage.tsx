@@ -14,7 +14,8 @@ import { showSuccess, showError } from "@/utils/toast";
 import ResiDetailModal from "@/components/ResiDetailModal";
 import { useDashboardData } from "@/hooks/useDashboardData"; // Import the new hook
 
-const DashboardPage = () => { // React component
+const DashboardPage: React.FC = () => { // Explicitly typing as React.FC
+  console.log("DashboardPage rendering..."); // Added for debugging
   const [date, setDate] = React.useState<Date | undefined>(new Date());
   const queryClient = useQueryClient();
 

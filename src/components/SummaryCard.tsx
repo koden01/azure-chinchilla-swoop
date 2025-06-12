@@ -9,6 +9,7 @@ interface SummaryCardProps {
   gradientFrom: string;
   gradientTo: string;
   icon?: "warning" | "info" | "clock";
+  onClick?: () => void; // Added onClick prop
 }
 
 const SummaryCard: React.FC<SummaryCardProps> = ({
@@ -17,6 +18,7 @@ const SummaryCard: React.FC<SummaryCardProps> = ({
   gradientFrom,
   gradientTo,
   icon,
+  onClick,
 }) => {
   const IconComponent =
     icon === "warning"
@@ -30,9 +32,10 @@ const SummaryCard: React.FC<SummaryCardProps> = ({
   return (
     <Card
       className={cn(
-        `relative overflow-hidden text-white shadow-lg`,
+        `relative overflow-hidden text-white shadow-lg cursor-pointer`, // Added cursor-pointer
         `bg-gradient-to-br ${gradientFrom} ${gradientTo}`
       )}
+      onClick={onClick} // Apply onClick handler
     >
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>

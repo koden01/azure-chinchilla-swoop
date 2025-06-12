@@ -33,14 +33,7 @@ const Navbar = () => {
           </Link>
         ))}
       </div>
-      <div className="relative flex items-center w-64"> {/* Adjusted width here */}
-        <Input
-          type="text"
-          placeholder="Search..."
-          className="pl-10 pr-4 py-2 rounded-md bg-white bg-opacity-20 text-white placeholder-white placeholder-opacity-70 border-none focus:ring-2 focus:ring-white focus:ring-opacity-50 w-full"
-        />
-        <Search className="absolute left-3 h-4 w-4 text-white text-opacity-70" />
-      </div>
+      {/* Search bar removed as per request */}
     </nav>
   );
 };

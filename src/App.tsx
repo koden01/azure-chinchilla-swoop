@@ -3,7 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index"; // This will be our Dashboard
+import DashboardPage from "./pages/DashboardPage"; // Update import to DashboardPage
 import Input from "./pages/Input";
 import History from "./pages/History";
 import NotFound from "./pages/NotFound";
@@ -21,7 +21,7 @@ const App = () => (
           <Navbar /> {/* Add Navbar here */}
           <main className="flex-grow">
             <Routes>
-              <Route path="/" element={<Index />} /> {/* Dashboard */}
+              <Route path="/" element={<DashboardPage />} /> {/* Use DashboardPage */}
               <Route path="/input" element={<Input />} />
               <Route path="/history" element={<History />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

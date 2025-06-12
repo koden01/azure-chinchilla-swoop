@@ -5,7 +5,7 @@ import ExpeditionDetailCard from "@/components/ExpeditionDetailCard";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, CalendarDays, Package } from "lucide-react";
 import { format, startOfDay, endOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -38,7 +38,7 @@ interface ScanFollowUpData {
   created_resi: string;
   created_expedisi: string | null;
   couriername: string | null;
-  cekfu?: boolean; // Added for follow-up modal
+  cekfu?: boolean;
 }
 
 interface ExpeditionSummary {
@@ -154,7 +154,7 @@ const Index = () => {
           .single();
         return {
           ...item,
-          cekfu: expedisiDetail?.cekfu || false, // Default to false if not found
+          cekfu: expedisiDetail?.cekfu || false,
         };
       }));
       return resiWithCekfu || [];
@@ -289,7 +289,7 @@ const Index = () => {
         .single();
       return {
         ...item,
-        cekfu: expedisiDetail?.cekfu || false, // Default to false if not found
+        cekfu: expedisiDetail?.cekfu || false,
       };
     }));
 
@@ -391,7 +391,7 @@ const Index = () => {
     } else {
       showSuccess(`Status CEKFU untuk resi ${resiNumber} berhasil diperbarui.`);
       queryClient.invalidateQueries({ queryKey: ["followUpData", formattedDate] });
-      queryClient.invalidateQueries({ queryKey: ["belumKirim", formattedDate] }); // cekfu is in tbl_expedisi
+      queryClient.invalidateQueries({ queryKey: ["belumKirim", formattedDate] });
       queryClient.invalidateQueries({ queryKey: ["allExpedisi", formattedDate] });
       // Re-open modal with updated data if needed, or refetch modal data
       if (modalType === "belumKirim") {
@@ -406,13 +406,15 @@ const Index = () => {
     <div className="p-6 space-y-6 bg-gray-50 min-h-[calc(100vh-64px)]">
       {/* Filter Tanggal Section */}
       <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-6 rounded-lg shadow-md">
-        <h2 className="text-white text-xl font-semibold mb-4">Filter Tanggal</h2>
+        <h2 className="text-white text-xl font-semibold mb-4 flex items-center">
+          <CalendarDays className="mr-2 h-6 w-6" /> Filter Tanggal
+        </h2>
         <Popover>
           <PopoverTrigger asChild>
             <Button
               variant={"outline"}
               className={cn(
-                "w-[280px] justify-start text-left font-normal bg-white text-gray-800 hover:bg-gray-100",
+                "w-full md:w-[280px] justify-start text-left font-normal bg-white text-gray-800 hover:bg-gray-100",
                 !date && "text-muted-foreground"
               )}
             >
@@ -438,12 +440,14 @@ const Index = () => {
           value={isLoadingTransaksiHariIni ? "Loading..." : transaksiHariIni || 0}
           gradientFrom="from-green-400"
           gradientTo="to-blue-500"
+          icon="package" // Updated icon
         />
         <SummaryCard
           title="Total Scan"
           value={isLoadingTotalScan ? "Loading..." : totalScan || 0}
           gradientFrom="from-purple-500"
           gradientTo="to-pink-500"
+          icon="maximize" // Updated icon
         />
         <SummaryCard
           title="Belum Dikirim"
@@ -451,21 +455,22 @@ const Index = () => {
           gradientFrom="from-orange-500"
           gradientTo="to-red-500"
           icon="warning"
-          onClick={handleOpenBelumKirimModal} // Add onClick handler
+          onClick={handleOpenBelumKirimModal}
         />
         <SummaryCard
           title="Batal"
           value={isLoadingBatalCount ? "Loading..." : batalCount || 0}
-          gradientFrom="from-blue-500"
-          gradientTo="to-purple-600"
+          gradientFrom="from-red-700" // Darker gradient
+          gradientTo="to-red-900" // Darker gradient
           icon="info"
         />
         <SummaryCard
           title="Follow Up"
           value={isLoadingFollowUp ? "Loading..." : followUpData?.length || 0}
-          gradientFrom="from-orange-500"
-          gradientTo="to-red-500"
-          onClick={handleOpenFollowUpModal} // Add onClick handler
+          gradientFrom="from-yellow-500" // Updated gradient
+          gradientTo="to-orange-600" // Updated gradient
+          icon="clock" // Updated icon
+          onClick={handleOpenFollowUpModal}
         />
         <SummaryCard
           title="Scan Follow Up"
@@ -478,7 +483,9 @@ const Index = () => {
 
       {/* Detail per Expedisi Section */}
       <div className="space-y-4">
-        <h2 className="text-2xl font-bold text-gray-800">Detail per Expedisi</h2>
+        <h2 className="text-2xl font-bold text-gray-800 flex items-center">
+          <Package className="mr-2 h-6 w-6" /> Detail per Expedisi
+        </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {expeditionSummaries.map((summary) => (
             <div key={summary.name} onClick={() => handleOpenExpeditionDetailModal(summary.name)}>

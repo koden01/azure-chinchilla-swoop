@@ -11,8 +11,10 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { showSuccess, showError } from "@/utils/toast";
-import { beepSuccess, beepFailure, beepDouble } from "@/utils/audio"; // Import new audio utility
-import { useResiInputData } from "@/hooks/useResiInputData"; // Import new hook
+import { beepSuccess, beepFailure, beepDouble } from "@/utils/audio";
+import { useResiInputData } from "@/hooks/useResiInputData";
+import { useDebounce } from "@/hooks/useDebounce"; // Import useDebounce
+import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation"; // Import utility
 
 const InputPage = () => {
   const [expedition, setExpedition] = React.useState<string>("");
@@ -24,7 +26,7 @@ const InputPage = () => {
   const {
     allResiForExpedition,
     isLoadingAllResiForExpedition,
-    currentCount: getCountForSelectedKarung, // Renamed to avoid conflict with state
+    currentCount: getCountForSelectedKarung,
     lastKarung,
     highestKarung,
     karungOptions,
@@ -32,6 +34,13 @@ const InputPage = () => {
   } = useResiInputData(expedition);
 
   const currentCount = getCountForSelectedKarung(selectedKarung);
+
+  // Debounced invalidate function
+  const debouncedInvalidate = useDebounce(() => {
+    console.log("Debounced invalidation triggered!");
+    // Invalidate all relevant dashboard and input-related queries for today's date
+    invalidateDashboardQueries(queryClient, new Date());
+  }, 500); // 500ms debounce delay
 
   // Auto-select highest karung when expedition changes
   React.useEffect(() => {
@@ -189,11 +198,8 @@ const InputPage = () => {
 
       const isInserted = await insertResi(currentResi, validationResult.actualCourierName || null);
       if (isInserted) {
-        queryClient.invalidateQueries({ queryKey: ["allResiForExpedition", expedition, formattedDate] });
-        queryClient.invalidateQueries({ queryKey: ["totalScan", formattedDate] });
-        queryClient.invalidateQueries({ queryKey: ["idRekCount", formattedDate] }); // Invalidate ID Rekomendasi count
-        queryClient.invalidateQueries({ queryKey: ["allResiData", formattedDate] }); // Invalidate allResiData for dashboard
-        queryClient.invalidateQueries({ queryKey: ["historyData"] });
+        // Call the debounced invalidation instead of direct invalidation
+        debouncedInvalidate();
       }
     } catch (error: any) {
       showError(`Terjadi kesalahan: ${error.message || "Unknown error"}`);

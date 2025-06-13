@@ -35,6 +35,7 @@ const DashboardPage: React.FC = () => {
     isLoadingBatalCount,
     formattedDate,
     allExpedisiData,
+    expeditionSummaries, // Pastikan ini diambil dari hook
   } = useDashboardData(date);
 
   const {
@@ -52,6 +53,8 @@ const DashboardPage: React.FC = () => {
     handleConfirmResi,
     handleCekfuToggle,
   } = useDashboardModals({ date, formattedDate, allExpedisiData });
+
+  console.log("expeditionSummaries in DashboardPage (before map):", expeditionSummaries); // Debug log
 
   return (
     <>
@@ -137,22 +140,26 @@ const DashboardPage: React.FC = () => {
             <Package className="mr-2 h-6 w-6" /> Detail per Expedisi
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {expeditionSummaries.map((summary) => {
-              return (
-                <div key={summary.name} onClick={() => handleOpenExpeditionDetailModal(summary.name)}>
-                  <ExpeditionDetailCard
-                    name={summary.name}
-                    totalTransaksi={summary.totalTransaksi}
-                    totalScan={summary.totalScan}
-                    sisa={summary.sisa}
-                    jumlahKarung={summary.jumlahKarung}
-                    idRekomendasi={summary.idRekomendasi}
-                    totalBatal={summary.totalBatal}
-                    totalScanFollowUp={summary.totalScanFollowUp}
-                  />
-                </div>
-              );
-            })}
+            {expeditionSummaries && expeditionSummaries.length > 0 ? (
+              expeditionSummaries.map((summary) => {
+                return (
+                  <div key={summary.name} onClick={() => handleOpenExpeditionDetailModal(summary.name)}>
+                    <ExpeditionDetailCard
+                      name={summary.name}
+                      totalTransaksi={summary.totalTransaksi}
+                      totalScan={summary.totalScan}
+                      sisa={summary.sisa}
+                      jumlahKarung={summary.jumlahKarung}
+                      idRekomendasi={summary.idRekomendasi}
+                      totalBatal={summary.totalBatal}
+                      totalScanFollowUp={summary.totalScanFollowUp}
+                    />
+                  </div>
+                );
+              })
+            ) : (
+              <p className="text-white col-span-full text-center">Memuat detail ekspedisi atau tidak ada data.</p>
+            )}
           </div>
         </div>
         <MadeWithDyad />

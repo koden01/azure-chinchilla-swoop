@@ -265,6 +265,8 @@ export const useDashboardData = (date: Date | undefined) => {
   }, [date, allExpedisiData, allResiData, isLoadingAllExpedisi, isLoadingAllResi]);
 
 
+  console.log("useDashboardData returning expeditionSummaries:", expeditionSummaries); // Debug log
+
   return {
     transaksiHariIni,
     isLoadingTransaksiHariIni,

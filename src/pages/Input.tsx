@@ -123,7 +123,7 @@ const InputPage = () => {
       .insert({
         Resi: currentResi,
         nokarung: selectedKarung,
-        Keterangan: "MASUK",
+        Keterangan: expedition, // Mengisi Keterangan dengan nilai expedition
       });
 
     if (insertError) {

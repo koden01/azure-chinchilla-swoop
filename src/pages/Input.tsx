@@ -9,93 +9,29 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { format, startOfDay, endOfDay } from "date-fns";
+import { useQueryClient } from "@tanstack/react-query";
 import { showSuccess, showError } from "@/utils/toast";
-
-// Define types for Supabase data
-interface TblExpedisi {
-  datetrans: string | null;
-  chanelsales: string | null;
-  orderno: string;
-  couriername: string | null;
-  resino: string;
-  created: string | null;
-  flag: string | null;
-  cekfu: boolean | null;
-}
-
-interface ResiExpedisiData {
-  Resi: string;
-  nokarung: string | null;
-  created: string;
-  couriername: string | null; // This will now come directly from the RPC function
-}
-
-const beepSuccess = new Audio('/sounds/beep-success.mp3'); // Pastikan file ini ada di public/sounds/
-const beepFailure = new Audio('/sounds/beep-failure.mp3'); // Pastikan file ini ada di public/sounds/
-const beepDouble = new Audio('/sounds/beep-double.mp3'); // Pastikan file ini ada di public/sounds/
+import { beepSuccess, beepFailure, beepDouble } from "@/utils/audio"; // Import new audio utility
+import { useResiInputData } from "@/hooks/useResiInputData"; // Import new hook
 
 const InputPage = () => {
   const [expedition, setExpedition] = React.useState<string>("");
   const [selectedKarung, setSelectedKarung] = React.useState<string>("");
   const [resiNumber, setResiNumber] = React.useState<string>("");
   const resiInputRef = React.useRef<HTMLInputElement>(null);
-  const today = new Date();
-  const formattedDate = format(today, "yyyy-MM-dd");
   const queryClient = useQueryClient();
 
-  // Query to get all resi for the selected expedition for today using RPC
-  const { data: allResiForExpedition, isLoading: isLoadingAllResiForExpedition } = useQuery<ResiExpedisiData[]>({
-    queryKey: ["allResiForExpedition", expedition, formattedDate],
-    queryFn: async () => {
-      if (!expedition) return [];
+  const {
+    allResiForExpedition,
+    isLoadingAllResiForExpedition,
+    currentCount: getCountForSelectedKarung, // Renamed to avoid conflict with state
+    lastKarung,
+    highestKarung,
+    karungOptions,
+    formattedDate,
+  } = useResiInputData(expedition);
 
-      const { data, error } = await supabase.rpc("get_resi_for_expedition_and_date", {
-        p_couriername: expedition,
-        p_selected_date: formattedDate,
-      });
-
-      if (error) {
-        console.error("Error fetching all resi for expedition:", error);
-        throw error;
-      }
-      return data || [];
-    },
-    enabled: !!expedition,
-  });
-
-  // Calculate current count, last karung, highest karung based on fetched data
-  const currentCount = React.useMemo(() => {
-    if (!allResiForExpedition || !selectedKarung) return 0;
-    return allResiForExpedition.filter(
-      (item) => item.nokarung === selectedKarung
-    ).length;
-  }, [allResiForExpedition, selectedKarung]);
-
-  const lastKarung = React.useMemo(() => {
-    if (!allResiForExpedition || allResiForExpedition.length === 0) return 0;
-    const sortedByCreated = [...allResiForExpedition].sort((a, b) => {
-      const dateA = new Date(a.created).getTime();
-      const dateB = new Date(b.created).getTime();
-      return dateB - dateA; // Descending
-    });
-    return parseInt(sortedByCreated[0].nokarung || "0") || 0;
-  }, [allResiForExpedition]);
-
-  const highestKarung = React.useMemo(() => {
-    if (!allResiForExpedition || allResiForExpedition.length === 0) return 0;
-    const validKarungNumbers = allResiForExpedition
-      .map(item => parseInt(item.nokarung || "0"))
-      .filter(num => !isNaN(num) && num > 0);
-    return validKarungNumbers.length > 0 ? Math.max(...validKarungNumbers) : 0;
-  }, [allResiForExpedition]);
-
-  // Dynamically generate karung options: from 1 up to max(100, highestKarung)
-  const karungOptions = React.useMemo(() => {
-    const maxKarung = Math.max(1, highestKarung, 100); // Ensure at least 1, and up to 100 or highestKarung if greater
-    return Array.from({ length: maxKarung }, (_, i) => (i + 1).toString());
-  }, [highestKarung]);
+  const currentCount = getCountForSelectedKarung(selectedKarung);
 
   // Auto-select highest karung when expedition changes
   React.useEffect(() => {
@@ -110,113 +46,126 @@ const InputPage = () => {
     }
   }, [expedition, highestKarung]);
 
-
   // Auto-focus logic: Ensure focus after expedition and karung are selected
   React.useEffect(() => {
     if (expedition && selectedKarung && resiInputRef.current) {
-      // Add a small delay to ensure the input is fully enabled and rendered
       const timer = setTimeout(() => {
         if (resiInputRef.current) {
           resiInputRef.current.focus();
         }
-      }, 100); // 100ms delay
-      return () => clearTimeout(timer); // Cleanup on unmount or dependency change
+      }, 100);
+      return () => clearTimeout(timer);
     }
   }, [expedition, selectedKarung]);
 
   // Keep focus on resi input after an action
   const keepFocus = () => {
-    setTimeout(() => { // Use setTimeout to ensure focus after state updates
+    setTimeout(() => {
       if (resiInputRef.current) {
         resiInputRef.current.focus();
       }
     }, 0);
   };
 
-  const handleScanResi = async () => {
-    if (!resiNumber) {
+  const validateInput = (resi: string) => {
+    if (!resi) {
       showError("Nomor resi tidak boleh kosong.");
       beepFailure.play();
-      keepFocus();
-      return;
+      return false;
     }
     if (!expedition || !selectedKarung) {
       showError("Pilih Expedisi dan No Karung terlebih dahulu.");
       beepFailure.play();
-      keepFocus();
-      return;
+      return false;
+    }
+    return true;
+  };
+
+  const checkExpeditionAndDuplicates = async (currentResi: string) => {
+    // 1. Validate if resi exists in tbl_expedisi and belongs to selected expedition
+    const { data: expedisiData, error: expError } = await supabase
+      .from("tbl_expedisi")
+      .select("resino, couriername")
+      .eq("resino", currentResi)
+      .single();
+
+    if (expError || !expedisiData) {
+      showError("Resi tidak ditemukan di database ekspedisi.");
+      beepFailure.play();
+      return false;
     }
 
+    if (expedisiData.couriername !== expedition) {
+      showError(`Resi ini bukan milik ekspedisi ${expedition}. Ini milik ${expedisiData.couriername}.`);
+      beepFailure.play();
+      return false;
+    }
+
+    // 2. Validate for duplicate resi in tbl_resi for the current day, expedition, and karung
+    const { data: duplicateResi, error: dupError } = await supabase.rpc("get_resi_for_expedition_and_date", {
+      p_couriername: expedition,
+      p_selected_date: formattedDate,
+    }).eq("Resi", currentResi).eq("nokarung", selectedKarung);
+
+    if (dupError) throw dupError;
+
+    if (duplicateResi && duplicateResi.length > 0) {
+      showError("Resi duplikat! Data sudah ada.");
+      beepDouble.play();
+      return false;
+    }
+    return true;
+  };
+
+  const insertResi = async (currentResi: string) => {
+    const { error: insertError } = await supabase
+      .from("tbl_resi")
+      .insert({
+        Resi: currentResi,
+        nokarung: selectedKarung,
+        Keterangan: "MASUK",
+      });
+
+    if (insertError) {
+      showError(`Gagal menginput resi: ${insertError.message}`);
+      beepFailure.play();
+      return false;
+    }
+    showSuccess(`Resi ${currentResi} berhasil diinput.`);
+    beepSuccess.play();
+    return true;
+  };
+
+  const handleScanResi = async () => {
     const currentResi = resiNumber.trim();
     setResiNumber(""); // Clear input immediately
 
+    if (!validateInput(currentResi)) {
+      return;
+    }
+
     try {
-      // 1. Validate if resi exists in tbl_expedisi and belongs to selected expedition
-      const { data: expedisiData, error: expError } = await supabase
-        .from("tbl_expedisi")
-        .select("resino, couriername")
-        .eq("resino", currentResi)
-        .single();
-
-      if (expError || !expedisiData) {
-        showError("Resi tidak ditemukan di database ekspedisi.");
-        beepFailure.play();
+      const isValid = await checkExpeditionAndDuplicates(currentResi);
+      if (!isValid) {
         return;
       }
 
-      if (expedisiData.couriername !== expedition) {
-        showError(`Resi ini bukan milik ekspedisi ${expedition}. Ini milik ${expedisiData.couriername}.`);
-        beepFailure.play();
-        return;
-      }
-
-      // 2. Validate for duplicate resi in tbl_resi for the current day, expedition, and karung
-      // Use the RPC function to check for duplicates as well, for consistency
-      const { data: duplicateResi, error: dupError } = await supabase.rpc("get_resi_for_expedition_and_date", {
-        p_couriername: expedition,
-        p_selected_date: formattedDate,
-      }).eq("Resi", currentResi).eq("nokarung", selectedKarung);
-
-
-      if (dupError) throw dupError;
-
-      if (duplicateResi && duplicateResi.length > 0) {
-        showError("Resi duplikat! Data sudah ada.");
-        beepDouble.play();
-        return;
-      }
-
-      // 3. Insert into tbl_resi
-      const { error: insertError } = await supabase
-        .from("tbl_resi")
-        .insert({
-          Resi: currentResi,
-          nokarung: selectedKarung,
-          Keterangan: "MASUK", // Assuming 'MASUK' is the status for successful scan
-        });
-
-      if (insertError) {
-        showError(`Gagal menginput resi: ${insertError.message}`);
-        beepFailure.play();
-      } else {
-        showSuccess(`Resi ${currentResi} berhasil diinput.`);
-        beepSuccess.play();
-        // Invalidate queries to refresh counts and history
+      const isInserted = await insertResi(currentResi);
+      if (isInserted) {
         queryClient.invalidateQueries({ queryKey: ["allResiForExpedition", expedition, formattedDate] });
         queryClient.invalidateQueries({ queryKey: ["totalScan", formattedDate] });
         queryClient.invalidateQueries({ queryKey: ["allResi", formattedDate] });
-        queryClient.invalidateQueries({ queryKey: ["historyData"] }); // Invalidate history data as well
+        queryClient.invalidateQueries({ queryKey: ["historyData"] });
       }
     } catch (error: any) {
       showError(`Terjadi kesalahan: ${error.message || "Unknown error"}`);
       beepFailure.play();
       console.error("Error during resi input:", error);
     } finally {
-      keepFocus(); // Ensure focus remains after operation
+      keepFocus();
     }
   };
 
-  // Console log for debugging
   console.log("InputPage State:", {
     expedition,
     selectedKarung,

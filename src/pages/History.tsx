@@ -170,12 +170,13 @@ const HistoryPage = () => {
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Filter & Search</h3>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
             <div>
-              <label htmlFor="start-date" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="start-date-picker" className="block text-sm font-medium text-gray-700 mb-1">
                 Tanggal Mulai
               </label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
+                    id="start-date-picker"
                     variant={"outline"}
                     className={cn(
                       "w-full justify-start text-left font-normal",
@@ -197,12 +198,13 @@ const HistoryPage = () => {
               </Popover>
             </div>
             <div>
-              <label htmlFor="end-date" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="end-date-picker" className="block text-sm font-medium text-gray-700 mb-1">
                 Tanggal Selesai
               </label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
+                    id="end-date-picker"
                     variant={"outline"}
                     className={cn(
                       "w-full justify-start text-left font-normal",

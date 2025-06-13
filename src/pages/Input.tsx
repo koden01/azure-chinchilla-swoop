@@ -239,11 +239,11 @@ const InputPage = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
             <div>
-              <label htmlFor="expedition" className="block text-left text-sm font-medium mb-2">
+              <label htmlFor="expedition-select" className="block text-left text-sm font-medium mb-2">
                 Expedisi
               </label>
               <Select onValueChange={setExpedition} value={expedition}>
-                <SelectTrigger className="w-full bg-white text-gray-800 h-20 text-center justify-center">
+                <SelectTrigger id="expedition-select" className="w-full bg-white text-gray-800 h-20 text-center justify-center">
                   <SelectValue placeholder="Pilih Expedisi" />
                 </SelectTrigger>
                 <SelectContent>
@@ -256,11 +256,11 @@ const InputPage = () => {
               </Select>
             </div>
             <div>
-              <label htmlFor="no-karung" className="block text-left text-sm font-medium mb-2">
+              <label htmlFor="no-karung-select" className="block text-left text-sm font-medium mb-2">
                 No Karung
               </label>
               <Select onValueChange={setSelectedKarung} value={selectedKarung} disabled={!expedition}>
-                <SelectTrigger className="w-full bg-white text-gray-800 h-20 text-center justify-center">
+                <SelectTrigger id="no-karung-select" className="w-full bg-white text-gray-800 h-20 text-center justify-center">
                   <SelectValue placeholder="Pilih No Karung" />
                 </SelectTrigger>
                 <SelectContent>

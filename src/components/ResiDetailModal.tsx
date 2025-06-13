@@ -182,6 +182,25 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
     return null;
   };
 
+  // Logic to determine which page numbers to display
+  const getPaginationPages = () => {
+    const pages = [];
+    if (totalPages <= 3) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (currentPage <= 2) {
+        pages.push(1, 2, 3);
+      } else if (currentPage >= totalPages - 1) {
+        pages.push(totalPages - 2, totalPages - 1, totalPages);
+      } else {
+        pages.push(currentPage - 1, currentPage, currentPage + 1);
+      }
+    }
+    return pages;
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[800px] lg:max-w-[1000px] max-h-[90vh] flex flex-col">
@@ -231,14 +250,14 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
                   className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
                 />
               </PaginationItem>
-              {Array.from({ length: totalPages }, (_, i) => (
-                <PaginationItem key={i}>
+              {getPaginationPages().map((pageNumber) => (
+                <PaginationItem key={pageNumber}>
                   <PaginationLink
                     href="#"
-                    isActive={i + 1 === currentPage}
-                    onClick={() => handlePageChange(i + 1)}
+                    isActive={pageNumber === currentPage}
+                    onClick={() => handlePageChange(pageNumber)}
                   >
-                    {i + 1}
+                    {pageNumber}
                   </PaginationLink>
                 </PaginationItem>
               ))}

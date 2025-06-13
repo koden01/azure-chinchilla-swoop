@@ -23,8 +23,20 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { showSuccess, showError } from "@/utils/toast";
 
 interface HistoryData {
   Resi: string;
@@ -37,6 +49,10 @@ const HistoryPage = () => {
   const [startDate, setStartDate] = React.useState<Date | undefined>(new Date());
   const [endDate, setEndDate] = React.useState<Date | undefined>(new Date());
   const [searchQuery, setSearchQuery] = React.useState<string>("");
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
+  const [resiToDelete, setResiToDelete] = React.useState<string | null>(null);
+
+  const queryClient = useQueryClient();
 
   const formattedStartDate = startDate ? format(startDate, "yyyy-MM-dd") : "";
   const formattedEndDate = endDate ? format(endDate, "yyyy-MM-dd") : "";
@@ -110,6 +126,39 @@ const HistoryPage = () => {
       }
     }
     return pages;
+  };
+
+  const handleDeleteClick = (resi: string) => {
+    setResiToDelete(resi);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteResi = async () => {
+    if (!resiToDelete) return;
+
+    const { error } = await supabase
+      .from("tbl_resi")
+      .delete()
+      .eq("Resi", resiToDelete);
+
+    if (error) {
+      showError(`Gagal menghapus resi ${resiToDelete}: ${error.message}`);
+      console.error("Error deleting resi:", error);
+    } else {
+      showSuccess(`Resi ${resiToDelete} berhasil dihapus.`);
+      queryClient.invalidateQueries({ queryKey: ["historyData", formattedStartDate, formattedEndDate] });
+      // Also invalidate dashboard queries if deletion affects counts there
+      queryClient.invalidateQueries({ queryKey: ["transaksiHariIni"] });
+      queryClient.invalidateQueries({ queryKey: ["totalScan"] });
+      queryClient.invalidateQueries({ queryKey: ["belumKirim"] });
+      queryClient.invalidateQueries({ queryKey: ["followUpFlagNoCount"] });
+      queryClient.invalidateQueries({ queryKey: ["scanFollowupLateCount"] });
+      queryClient.invalidateQueries({ queryKey: ["batalCount"] });
+      queryClient.invalidateQueries({ queryKey: ["allExpedisiData"] });
+      queryClient.invalidateQueries({ queryKey: ["allResiData"] });
+    }
+    setIsDeleteDialogOpen(false);
+    setResiToDelete(null);
   };
 
   return (
@@ -225,7 +274,7 @@ const HistoryPage = () => {
                 </TableRow>
               ) : (
                 currentData.map((data, index) => (
-                  <TableRow key={data.Resi + index}>
+                  <TableRow key={data.Resi + index} className="cursor-pointer hover:bg-gray-100" onClick={() => handleDeleteClick(data.Resi)}>
                     <TableCell className="font-medium">{startIndex + index + 1}</TableCell>
                     <TableCell className="w-[30%]">{data.Resi}</TableCell>
                     <TableCell>
@@ -279,6 +328,23 @@ const HistoryPage = () => {
         )}
       </div>
       <MadeWithDyad />
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Konfirmasi Penghapusan</AlertDialogTitle>
+            <AlertDialogDescription>
+              Apakah Anda yakin ingin menghapus resi <span className="font-bold">{resiToDelete}</span>? Tindakan ini tidak dapat dibatalkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setIsDeleteDialogOpen(false)}>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteResi} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Hapus
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

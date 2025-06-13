@@ -12,7 +12,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { showSuccess, showError } from "@/utils/toast";
 import ResiDetailModal from "@/components/ResiDetailModal";
-import { useDashboardData } from "@/hooks/useDashboardData"; // Import the new hook
+import { useDashboardData } from "@/hooks/useDashboardData";
+import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation"; // Import new utility
 
 const DashboardPage: React.FC = () => {
   console.log("DashboardPage rendering...");
@@ -24,17 +25,17 @@ const DashboardPage: React.FC = () => {
     isLoadingTransaksiHariIni,
     totalScan,
     isLoadingTotalScan,
-    idRekCount, // Renamed for clarity
+    idRekCount,
     isLoadingIdRekCount,
     belumKirim,
     isLoadingBelumKirim,
-    followUpFlagNoCount, // New
-    isLoadingFollowUpFlagNoCount, // New
-    scanFollowupLateCount, // New
-    isLoadingScanFollowupLateCount, // New
+    followUpFlagNoCount,
+    isLoadingFollowUpFlagNoCount,
+    scanFollowupLateCount,
+    isLoadingScanFollowupLateCount,
     batalCount,
     isLoadingBatalCount,
-    followUpData, // This is from get_scan_follow_up RPC
+    followUpData,
     isLoadingFollowUp,
     expeditionSummaries,
     formattedDate,
@@ -48,6 +49,19 @@ const DashboardPage: React.FC = () => {
   >(null);
   const [selectedCourier, setSelectedCourier] = React.useState<string | null>(null);
 
+  const openResiModal = (
+    title: string,
+    data: any[],
+    type: "belumKirim" | "followUp" | "expeditionDetail",
+    courier: string | null = null
+  ) => {
+    setModalTitle(title);
+    setModalData(data);
+    setModalType(type);
+    setSelectedCourier(courier);
+    setIsModalOpen(true);
+  };
+
   const handleOpenBelumKirimModal = async () => {
     const { data, error } = await supabase
       .from("tbl_expedisi")
@@ -60,36 +74,25 @@ const DashboardPage: React.FC = () => {
       console.error("Error fetching Belum Kirim:", error);
       return;
     }
-    setModalTitle("Detail Resi Belum Dikirim");
-    setModalData(data || []);
-    setModalType("belumKirim");
-    setIsModalOpen(true);
+    openResiModal("Detail Resi Belum Dikirim", data || [], "belumKirim");
   };
 
-  // New modal handler for "Follow Up" card (flag NO except today)
   const handleOpenFollowUpFlagNoModal = async () => {
     const { data, error } = await supabase
       .from("tbl_expedisi")
       .select("*")
       .eq("flag", "NO")
-      .not("created", "gte", startOfDay(date!).toISOString())
-      .or(`created.lt.${startOfDay(date!).toISOString()},created.gte.${endOfDay(date!).toISOString()}`);
-      // Note: The .or() condition here is a simplified attempt to exclude today.
-      // For precise "not today" filtering, the `get_flag_no_except_today_count` RPC is used for the count.
-      // For the modal detail, fetching all and filtering in JS or a dedicated RPC for detail might be needed for very large datasets.
-      // For now, this query attempts to get records not created today.
+      .not("created", "gte", startOfDay(new Date()).toISOString()) // Use actual current date for this specific query
+      .lt("created", startOfDay(new Date()).toISOString()); // Ensure it's before today
+      
     if (error) {
       showError("Gagal memuat data Follow Up (Flag NO kecuali hari ini).");
       console.error("Error fetching Follow Up (Flag NO except today):", error);
       return;
     }
-    setModalTitle("Detail Resi Follow Up (Flag NO kecuali hari ini)");
-    setModalData(data || []);
-    setModalType("belumKirim"); // Reusing 'belumKirim' type as it has similar columns and actions
-    setIsModalOpen(true);
+    openResiModal("Detail Resi Follow Up (Flag NO kecuali hari ini)", data || [], "belumKirim");
   };
 
-  // Renamed from handleOpenFollowUpModal to be specific for 'late' schedule / scan follow up
   const handleOpenScanFollowupModal = async () => {
     const { data, error } = await supabase.rpc("get_scan_follow_up", {
       selected_date: formattedDate,
@@ -111,14 +114,10 @@ const DashboardPage: React.FC = () => {
       };
     }));
 
-    setModalTitle("Detail Resi Scan Follow Up (Scan Tidak Sesuai Tanggal)");
-    setModalData(resiWithCekfu || []);
-    setModalType("followUp");
-    setIsModalOpen(true);
+    openResiModal("Detail Resi Scan Follow Up (Scan Tidak Sesuai Tanggal)", resiWithCekfu || [], "followUp");
   };
 
   const handleOpenExpeditionDetailModal = async (courierName: string) => {
-    setSelectedCourier(courierName);
     const { data, error } = await supabase
       .from("tbl_expedisi")
       .select("*")
@@ -131,10 +130,7 @@ const DashboardPage: React.FC = () => {
       console.error(`Error fetching expedition detail for ${courierName}:`, error);
       return;
     }
-    setModalTitle(`Detail Resi ${courierName} (Belum Kirim)`);
-    setModalData(data || []);
-    setModalType("expeditionDetail");
-    setIsModalOpen(true);
+    openResiModal(`Detail Resi ${courierName} (Belum Kirim)`, data || [], "expeditionDetail", courierName);
   };
 
   const handleCloseModal = () => {
@@ -155,15 +151,7 @@ const DashboardPage: React.FC = () => {
       console.error("Error batal resi:", error);
     } else {
       showSuccess(`Resi ${resiNumber} berhasil dibatalkan.`);
-      queryClient.invalidateQueries({ queryKey: ["belumKirim", formattedDate] });
-      queryClient.invalidateQueries({ queryKey: ["batalCount", formattedDate] });
-      queryClient.invalidateQueries({ queryKey: ["followUpData", formattedDate] });
-      queryClient.invalidateQueries({ queryKey: ["allResi", formattedDate] });
-      queryClient.invalidateQueries({ queryKey: ["allExpedisi", formattedDate] });
-      queryClient.invalidateQueries({ queryKey: ["followUpFlagNoCount", format(new Date(), 'yyyy-MM-dd')] }); // Invalidate new query
-      queryClient.invalidateQueries({ queryKey: ["scanFollowupLateCount", formattedDate] }); // Invalidate new query
-      queryClient.invalidateQueries({ queryKey: ["allResiData", formattedDate] }); // Invalidate allResiData for expedition summaries
-      queryClient.invalidateQueries({ queryKey: ["allExpedisiData", formattedDate] }); // Invalidate allExpedisiData for expedition summaries
+      invalidateDashboardQueries(queryClient, date); // Use the new utility
       handleCloseModal();
     }
   };
@@ -192,14 +180,7 @@ const DashboardPage: React.FC = () => {
     }
 
     showSuccess(`Resi ${resiNumber} berhasil dikonfirmasi.`);
-    queryClient.invalidateQueries({ queryKey: ["belumKirim", formattedDate] });
-    queryClient.invalidateQueries({ queryKey: ["totalScan", formattedDate] });
-    queryClient.invalidateQueries({ queryKey: ["allResi", formattedDate] });
-    queryClient.invalidateQueries({ queryKey: ["allExpedisi", formattedDate] });
-    queryClient.invalidateQueries({ queryKey: ["followUpFlagNoCount", format(new Date(), 'yyyy-MM-dd')] }); // Invalidate new query
-    queryClient.invalidateQueries({ queryKey: ["scanFollowupLateCount", formattedDate] }); // Invalidate new query
-    queryClient.invalidateQueries({ queryKey: ["allResiData", formattedDate] }); // Invalidate allResiData for expedition summaries
-    queryClient.invalidateQueries({ queryKey: ["allExpedisiData", formattedDate] }); // Invalidate allExpedisiData for expedition summaries
+    invalidateDashboardQueries(queryClient, date); // Use the new utility
     handleCloseModal();
   };
 
@@ -214,35 +195,15 @@ const DashboardPage: React.FC = () => {
       console.error("Error updating CEKFU status:", error);
     } else {
       showSuccess(`Status CEKFU untuk resi ${resiNumber} berhasil diperbarui.`);
-      queryClient.invalidateQueries({ queryKey: ["followUpData", formattedDate] });
-      queryClient.invalidateQueries({ queryKey: ["belumKirim", formattedDate] });
-      queryClient.invalidateQueries({ queryKey: ["allExpedisi", formattedDate] });
-      queryClient.invalidateQueries({ queryKey: ["followUpFlagNoCount", format(new Date(), 'yyyy-MM-dd')] }); // Invalidate new query
-      queryClient.invalidateQueries({ queryKey: ["scanFollowupLateCount", formattedDate] }); // Invalidate new query
-      queryClient.invalidateQueries({ queryKey: ["allResiData", formattedDate] }); // Invalidate allResiData for expedition summaries
-      queryClient.invalidateQueries({ queryKey: ["allExpedisiData", formattedDate] }); // Invalidate allExpedisiData for expedition summaries
+      invalidateDashboardQueries(queryClient, date); // Use the new utility
+      // Re-open the modal to reflect changes
       if (modalType === "belumKirim") {
         handleOpenBelumKirimModal();
       } else if (modalType === "followUp") {
-        handleOpenScanFollowupModal(); // Use the renamed function
-      } else if (modalType === "expeditionDetail") {
-        // Re-open expedition detail modal if it was open
-        if (selectedCourier) {
-          handleOpenExpeditionDetailModal(selectedCourier);
-        }
+        handleOpenScanFollowupModal();
+      } else if (modalType === "expeditionDetail" && selectedCourier) {
+        handleOpenExpeditionDetailModal(selectedCourier);
       }
-    }
-  };
-
-  // Define gradients for expedition cards
-  const getExpeditionGradient = (name: string) => {
-    switch (name) {
-      case "JNE": return { from: "from-red-600", to: "to-red-800" };
-      case "SPX": return { from: "from-yellow-500", to: "to-yellow-700" };
-      case "INSTAN": return { from: "from-green-500", to: "to-green-700" };
-      case "ID": return { from: "from-blue-500", to: "to-blue-700" };
-      case "SICEPAT": return { from: "from-purple-500", to: "to-purple-700" };
-      default: return { from: "from-gray-500", to: "to-gray-700" };
     }
   };
 
@@ -283,9 +244,9 @@ const DashboardPage: React.FC = () => {
           <SummaryCard
             title="Transaksi Hari Ini"
             value={isLoadingTransaksiHariIni ? "Loading..." : transaksiHariIni || 0}
-            sisaTitle="Sisa" // New prop
-            sisaValue={isLoadingBelumKirim ? "Loading..." : belumKirim || 0} // New prop
-            onSisaClick={handleOpenBelumKirimModal} // New handler
+            sisaTitle="Sisa"
+            sisaValue={isLoadingBelumKirim ? "Loading..." : belumKirim || 0}
+            onSisaClick={handleOpenBelumKirimModal}
             gradientFrom="from-green-400"
             gradientTo="to-blue-500"
             icon="package"
@@ -305,7 +266,7 @@ const DashboardPage: React.FC = () => {
             gradientFrom="from-orange-500"
             gradientTo="to-red-500"
             icon="warning"
-            onClick={handleOpenFollowUpFlagNoModal} // New handler for this card
+            onClick={handleOpenFollowUpFlagNoModal}
           />
           <SummaryCard
             title="Batal"
@@ -320,7 +281,7 @@ const DashboardPage: React.FC = () => {
             gradientFrom="from-blue-500"
             gradientTo="to-purple-600"
             icon="clock"
-            onClick={handleOpenScanFollowupModal} // Renamed handler
+            onClick={handleOpenScanFollowupModal}
           />
         </div>
 
@@ -331,7 +292,6 @@ const DashboardPage: React.FC = () => {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {expeditionSummaries.map((summary) => {
-              // const { from, to } = getExpeditionGradient(summary.name); // No longer needed for card background
               return (
                 <div key={summary.name} onClick={() => handleOpenExpeditionDetailModal(summary.name)}>
                   <ExpeditionDetailCard
@@ -343,8 +303,6 @@ const DashboardPage: React.FC = () => {
                     idRekomendasi={summary.idRekomendasi}
                     totalBatal={summary.totalBatal}
                     totalScanFollowUp={summary.totalScanFollowUp}
-                    // gradientFrom={from} // Tidak lagi diteruskan untuk background card
-                    // gradientTo={to} // Tidak lagi diteruskan untuk background card
                   />
                 </div>
               );

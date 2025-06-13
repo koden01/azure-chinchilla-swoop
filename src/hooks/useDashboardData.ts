@@ -20,6 +20,7 @@ export const useDashboardData = (date: Date | undefined) => {
         .gte("created", startOfDay(date).toISOString())
         .lt("created", endOfDay(date).toISOString());
       if (error) throw error;
+      console.log("Transaksi Hari Ini:", count);
       return count || 0;
     },
     enabled: !!date,
@@ -37,6 +38,7 @@ export const useDashboardData = (date: Date | undefined) => {
         .gte("created", startOfDay(date).toISOString())
         .lt("created", endOfDay(date).toISOString());
       if (error) throw error;
+      console.log("Total Scan:", count);
       return count || 0;
     },
     enabled: !!date,
@@ -54,6 +56,7 @@ export const useDashboardData = (date: Date | undefined) => {
         .gte("created", startOfDay(date).toISOString())
         .lt("created", endOfDay(date).toISOString());
       if (error) throw error;
+      console.log("ID Rekomendasi:", count);
       return count || 0;
     },
     enabled: !!date,
@@ -71,54 +74,28 @@ export const useDashboardData = (date: Date | undefined) => {
         .gte("created", startOfDay(date).toISOString())
         .lt("created", endOfDay(date).toISOString());
       if (error) throw error;
+      console.log("Belum Kirim:", count);
       return count || 0;
     },
     enabled: !!date,
   });
 
-  // NEW: Query for Follow Up (tbl_expedisi count where flag = 'NO' and created date is NOT selected date)
+  // Query for Follow Up (tbl_expedisi count where flag = 'NO' and created date is NOT selected date)
   const { data: followUpFlagNoCount, isLoading: isLoadingFollowUpFlagNoCount } = useQuery<number>({
     queryKey: ["followUpFlagNoCount", formattedDate],
     queryFn: async () => {
       if (!date) return 0;
-      const { count, error } = await supabase
-        .from("tbl_expedisi")
-        .select("*", { count: "exact" })
-        .eq("flag", "NO")
-        .not("created", "gte", startOfDay(date).toISOString())
-        .or(`created.lt.${startOfDay(date).toISOString()},created.gte.${endOfDay(date).toISOString()}`);
-        // The above .or() condition is tricky for "not today". A simpler way is to fetch all and filter in JS,
-        // or use a custom RPC if performance is an issue with large datasets.
-        // For now, let's assume the `not` condition is sufficient for `gte` and `lt` for the selected day.
-        // A more robust SQL would be `created::date <> selected_date`.
-        // Let's use a direct RPC for this to be precise, as the `not` operator on ranges can be complex.
-        // For now, I'll use the existing `get_scan_follow_up` which is close to the user's intent for "Scan Followup"
-        // and create a new RPC for the "flag NO except today" if needed.
-        // Re-reading: "menghitung semua noresi yang status "NO" pada kolom flag kecuali hari ini"
-        // This means `tbl_expedisi.flag = 'NO'` AND `DATE(created) != selected_date`.
-        // Supabase client doesn't directly support `DATE(column) != date_value`.
-        // We need to fetch all 'NO' flags and filter, or use an RPC.
-        // Let's create a new RPC for this for accuracy.
-        // For now, I'll use a placeholder and note that an RPC is ideal.
-        // For the purpose of this task, I will assume the user means `tbl_expedisi.flag = 'NO'` and the `created` date is *not* within the selected day.
-        // This is hard to do with simple `gte`/`lt` and `not`.
-        // Let's use the `get_scan_follow_up` RPC for the "Scan Followup" card, as it's already defined and fits "scan tidak sesuai tanggal".
-        // For "Follow Up" card (flag NO except today), I will use a simpler query for now, assuming it means `flag='NO'` and `created` is *before* the selected date.
-        // This is a simplification. The most accurate would be an RPC.
-        // Let's stick to the existing `belumKirim` for the "Follow Up" card, and use `followUpData` for the new "Scan Followup" card.
-        // The user's request for "Follow Up" card: "menghitung semua noresi yang status "NO" pada kolom flag kecuali hari ini".
-        // This is `tbl_expedisi.flag = 'NO'` AND `created::date != selected_date`.
-        // Let's add a new RPC for this.
-        const { data: countData, error: rpcError } = await supabase.rpc("get_flag_no_except_today_count", {
-          p_selected_date: formattedDate,
-        });
-        if (rpcError) throw rpcError;
-        return countData || 0;
+      const { data: countData, error: rpcError } = await supabase.rpc("get_flag_no_except_today_count", {
+        p_selected_date: formattedDate,
+      });
+      if (rpcError) throw rpcError;
+      console.log("Follow Up (Flag NO except today):", countData);
+      return countData || 0;
     },
     enabled: !!date,
   });
 
-  // NEW: Query for Scan Followup (tbl_resi count where schedule = 'late' for selected date)
+  // Query for Scan Followup (tbl_resi count where schedule = 'late' for selected date)
   const { data: scanFollowupLateCount, isLoading: isLoadingScanFollowupLateCount } = useQuery<number>({
     queryKey: ["scanFollowupLateCount", formattedDate],
     queryFn: async () => {
@@ -130,6 +107,7 @@ export const useDashboardData = (date: Date | undefined) => {
         .gte("created", startOfDay(date).toISOString())
         .lt("created", endOfDay(date).toISOString());
       if (error) throw error;
+      console.log("Scan Followup (Late):", count);
       return count || 0;
     },
     enabled: !!date,
@@ -147,6 +125,7 @@ export const useDashboardData = (date: Date | undefined) => {
         .gte("created", startOfDay(date).toISOString())
         .lt("created", endOfDay(date).toISOString());
       if (error) throw error;
+      console.log("Batal Count:", count);
       return count || 0;
     },
     enabled: !!date,
@@ -161,99 +140,120 @@ export const useDashboardData = (date: Date | undefined) => {
         selected_date: formattedDate,
       });
       if (error) throw error;
+      console.log("Follow Up Data (RPC):", data);
       return data || [];
     },
     enabled: !!date,
   });
 
-  // Query for all expedition names
-  const { data: expeditionNames, isLoading: isLoadingExpeditionNames } = useQuery<string[]>({
-    queryKey: ["expeditionNames"],
+  // NEW: Fetch all tbl_expedisi data for the selected date range
+  const { data: allExpedisiData, isLoading: isLoadingAllExpedisi } = useQuery<any[]>({
+    queryKey: ["allExpedisiData", formattedDate],
     queryFn: async () => {
+      if (!date) return [];
       const { data, error } = await supabase
         .from("tbl_expedisi")
-        .select("couriername")
-        .distinct("couriername");
+        .select("resino, couriername, flag, created")
+        .gte("created", startOfDay(date).toISOString())
+        .lt("created", endOfDay(date).toISOString());
       if (error) throw error;
-      return data?.map((item) => item.couriername) || [];
+      console.log("All Expedisi Data:", data);
+      return data || [];
     },
+    enabled: !!date,
   });
 
-  // Fetch data for each expedition
+  // NEW: Fetch all tbl_resi data for the selected date range
+  const { data: allResiData, isLoading: isLoadingAllResi } = useQuery<any[]>({
+    queryKey: ["allResiData", formattedDate],
+    queryFn: async () => {
+      if (!date) return [];
+      const { data, error } = await supabase
+        .from("tbl_resi")
+        .select("Resi, nokarung, schedule, created")
+        .gte("created", startOfDay(date).toISOString())
+        .lt("created", endOfDay(date).toISOString());
+      if (error) throw error;
+      console.log("All Resi Data:", data);
+      return data || [];
+    },
+    enabled: !!date,
+  });
+
+  // Process data to create expedition summaries
   useEffect(() => {
-    const fetchExpeditionData = async () => {
-      if (!date || !expeditionNames || isLoadingExpeditionNames) {
-        setExpeditionSummaries([]);
-        return;
-      }
+    if (isLoadingAllExpedisi || isLoadingAllResi || !allExpedisiData || !allResiData || !date) {
+      setExpeditionSummaries([]);
+      return;
+    }
 
-      const summaries = await Promise.all(
-        expeditionNames.map(async (name) => {
-          const { count: totalTransaksi, error: err1 } = await supabase
-            .from("tbl_expedisi")
-            .select("*", { count: "exact" })
-            .eq("couriername", name)
-            .gte("created", startOfDay(date).toISOString())
-            .lt("created", endOfDay(date).toISOString());
+    const startOfSelectedDay = startOfDay(date).getTime();
+    const endOfSelectedDay = endOfDay(date).getTime();
 
-          const { count: totalScan, error: err2 } = await supabase
-            .from("tbl_resi")
-            .select("*", { count: "exact" })
-            .eq("couriername", name) // Assuming couriername is in tbl_resi or can be joined
-            .eq("schedule", "ontime")
-            .gte("created", startOfDay(date).toISOString())
-            .lt("created", endOfDay(date).toISOString());
+    const resiToExpeditionMap = new Map<string, string>(); // Map Resi to Couriername
+    allExpedisiData.forEach(exp => {
+      resiToExpeditionMap.set(exp.resino, exp.couriername);
+    });
 
-          const { count: sisa, error: err3 } = await supabase
-            .from("tbl_expedisi")
-            .select("*", { count: "exact" })
-            .eq("couriername", name)
-            .eq("flag", "NO")
-            .gte("created", startOfDay(date).toISOString())
-            .lt("created", endOfDay(date).toISOString());
+    const summaries: { [key: string]: any } = {};
 
-          const { count: jumlahKarung, error: err4 } = await supabase
-            .from("tbl_resi")
-            .select("nokarung", { count: "exact" })
-            .eq("couriername", name) // Assuming couriername is in tbl_resi or can be joined
-            .not("nokarung", "is", null)
-            .gte("created", startOfDay(date).toISOString())
-            .lt("created", endOfDay(date).toISOString());
+    // Initialize summaries for all unique courier names from tbl_expedisi
+    const uniqueCourierNames = new Set(allExpedisiData.map(e => e.couriername).filter(Boolean));
+    uniqueCourierNames.forEach(name => {
+      summaries[name] = {
+        name,
+        totalTransaksi: 0,
+        totalScan: 0,
+        sisa: 0,
+        jumlahKarung: new Set<string>(), // Use a Set to count unique karung numbers
+        idRekomendasi: 0,
+      };
+    });
 
-          const { count: idRekomendasiExp, error: err5 } = await supabase
-            .from("tbl_resi")
-            .select("*", { count: "exact" })
-            .eq("couriername", name) // Assuming couriername is in tbl_resi or can be joined
-            .eq("schedule", "idrek")
-            .gte("created", startOfDay(date).toISOString())
-            .lt("created", endOfDay(date).toISOString());
-
-          if (err1 || err2 || err3 || err4 || err5) {
-            console.error(
-              `Error fetching data for ${name}:`,
-              err1,
-              err2,
-              err3,
-              err4,
-              err5
-            );
+    // Process tbl_expedisi data
+    allExpedisiData.forEach(exp => {
+      const createdDate = new Date(exp.created).getTime();
+      if (createdDate >= startOfSelectedDay && createdDate <= endOfSelectedDay) {
+        const courierName = exp.couriername;
+        if (courierName && summaries[courierName]) {
+          summaries[courierName].totalTransaksi++;
+          if (exp.flag === "NO") {
+            summaries[courierName].sisa++;
           }
+        }
+      }
+    });
 
-          return {
-            name,
-            totalTransaksi: totalTransaksi || 0,
-            totalScan: totalScan || 0,
-            sisa: sisa || 0,
-            jumlahKarung: jumlahKarung || 0,
-            idRekomendasi: idRekomendasiExp || 0,
-          };
-        })
-      );
-      setExpeditionSummaries(summaries);
-    };
+    // Process tbl_resi data
+    allResiData.forEach(resi => {
+      const createdDate = new Date(resi.created).getTime();
+      if (createdDate >= startOfSelectedDay && createdDate <= endOfSelectedDay) {
+        const courierName = resiToExpeditionMap.get(resi.Resi);
+        if (courierName && summaries[courierName]) {
+          if (resi.schedule === "ontime") {
+            summaries[courierName].totalScan++;
+          }
+          if (resi.schedule === "idrek") {
+            summaries[courierName].idRekomendasi++;
+          }
+          if (resi.nokarung) {
+            // Add nokarung to the Set for unique counting
+            summaries[courierName].jumlahKarung.add(resi.nokarung);
+          }
+        }
+      }
+    });
 
-    fetchExpeditionData();
-  }, [date, expeditionNames, isLoadingExpeditionNames]);
+    // Convert Set size to number for final jumlahKarung
+    const finalSummaries = Object.values(summaries).map(summary => ({
+      ...summary,
+      jumlahKarung: summary.jumlahKarung.size,
+    }));
+
+    setExpeditionSummaries(finalSummaries);
+    console.log("Final Expedition Summaries:", finalSummaries);
+  }, [date, allExpedisiData, allResiData, isLoadingAllExpedisi, isLoadingAllResi]);
+
 
   return {
     transaksiHariIni,

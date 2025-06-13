@@ -199,7 +199,7 @@ const InputPage = () => {
                 Expedisi
               </label>
               <Select onValueChange={setExpedition} value={expedition}>
-                <SelectTrigger className="w-full bg-white text-gray-800 h-20 text-center">
+                <SelectTrigger className="w-full bg-white text-gray-800 h-20 text-center justify-center">
                   <SelectValue placeholder="Pilih Expedisi" />
                 </SelectTrigger>
                 <SelectContent>
@@ -216,7 +216,7 @@ const InputPage = () => {
                 No Karung
               </label>
               <Select onValueChange={setSelectedKarung} value={selectedKarung} disabled={!expedition}>
-                <SelectTrigger className="w-full bg-white text-gray-800 h-20 text-center">
+                <SelectTrigger className="w-full bg-white text-gray-800 h-20 text-center justify-center">
                   <SelectValue placeholder="Pilih No Karung" />
                 </SelectTrigger>
                 <SelectContent>

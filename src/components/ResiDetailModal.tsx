@@ -93,7 +93,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
   const currentData = filteredData.slice(startIndex, endIndex);
 
   const handlePageChange = (page: number) => {
-    if (page >= 1 && page <= totalPages) {
+    if (page >= 1 && page >= 1 && page <= totalPages) {
       setCurrentPage(page);
     }
   };
@@ -126,7 +126,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
             <Button variant="destructive" size="sm" onClick={() => onBatalResi(item.resino)}>
               Batal
             </Button>
-            {modalType === "expeditionDetail" && ( // Only show Confirm for expeditionDetail
+            {(modalType === "expeditionDetail" || modalType === "belumKirim") && ( // Tampilkan Konfirmasi untuk kedua tipe
               <Button variant="default" size="sm" onClick={() => onConfirmResi(item.resino)}>
                 Konfirmasi
               </Button>

@@ -76,6 +76,7 @@ const DashboardPage: React.FC = () => {
       new Date(item.created).getTime() >= startOfSelectedDay &&
       new Date(item.created).getTime() <= endOfSelectedDay
     );
+    console.log("Filtered Belum Kirim Data:", filteredBelumKirim); // Log data
     openResiModal("Detail Resi Belum Dikirim", filteredBelumKirim, "belumKirim");
   };
 
@@ -95,7 +96,7 @@ const DashboardPage: React.FC = () => {
       console.error("Error fetching Follow Up (Flag NO except today):", error);
       return;
     }
-    openResiModal("Detail Resi Follow Up (Flag NO kecuali hari ini)", data || [], "belumKirim"); // Use 'belumKirim' type for consistent column display
+    openResiModal("Detail Resi Follow Up", data || [], "belumKirim"); // Judul disederhanakan
   };
 
   const handleOpenScanFollowupModal = async () => {

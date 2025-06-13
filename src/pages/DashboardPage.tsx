@@ -224,7 +224,7 @@ const DashboardPage: React.FC = () => {
         {/* Summary Cards Section */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <SummaryCard
-            title="Transaksi Hari Ini" {/* Changed from "Terisi Hari Ini" */}
+            title="Transaksi Hari Ini"
             value={isLoadingTransaksiHariIni ? "Loading..." : transaksiHariIni || 0}
             gradientFrom="from-green-400"
             gradientTo="to-blue-500"

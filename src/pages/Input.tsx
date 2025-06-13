@@ -81,7 +81,12 @@ const InputPage = () => {
     return true;
   };
 
-  const checkExpeditionAndDuplicates = async (currentResi: string) => {
+  interface ValidationResult {
+    success: boolean;
+    actualCourierName?: string | null; // Will be null if not found in tbl_expedisi but allowed (for ID)
+  }
+
+  const checkExpeditionAndDuplicates = async (currentResi: string): Promise<ValidationResult> => {
     // 1. Validate if resi exists in tbl_expedisi and belongs to selected expedition
     const { data: expedisiData, error: expError } = await supabase
       .from("tbl_expedisi")
@@ -89,38 +94,38 @@ const InputPage = () => {
       .eq("resino", currentResi)
       .single();
 
-    // If it's an actual error other than "no rows found" (PGRST116), throw it
-    if (expError && expError.code !== 'PGRST116') {
-        throw expError;
+    if (expError && expError.code !== 'PGRST116') { // PGRST116 means "no rows found"
+        throw expError; // Actual database error
     }
+
+    let actualCourierNameFromExpedisi: string | null = expedisiData?.couriername || null;
 
     if (expedition === "ID") {
         if (!expedisiData) {
             // Resi not found in tbl_expedisi, but it's "ID" expedition, so allow it to proceed.
-            // We still need to check for duplicates in tbl_resi for ID.
+            // actualCourierNameFromExpedisi remains null, indicating it wasn't found.
         } else if (expedisiData.couriername !== "ID") {
             // Resi found, but belongs to a different courier, even if it's ID.
             showError(`Resi ini bukan milik ekspedisi ID. Ini milik ${expedisiData.couriername}.`);
             beepFailure.play();
-            return false;
+            return { success: false };
         }
     } else { // For non-ID expeditions
         if (expError || !expedisiData) { // If resi not found or error
             showError("Resi tidak ditemukan di database ekspedisi.");
             beepFailure.play();
-            return false;
+            return { success: false };
         }
         if (expedisiData.couriername !== expedition) {
             showError(`Resi ini bukan milik ekspedisi ${expedition}. Ini milik ${expedisiData.couriername}.`);
             beepFailure.play();
-            return false;
+            return { success: false };
         }
     }
 
     // 2. Validate for duplicate resi in tbl_resi for the current day, expedition, and karung
-    // This check applies to ALL expeditions, including "ID"
     const { data: duplicateResi, error: dupError } = await supabase.rpc("get_resi_for_expedition_and_date", {
-      p_couriername: expedition,
+      p_couriername: expedition, // Use the selected expedition for duplicate check
       p_selected_date: formattedDate,
     }).eq("Resi", currentResi).eq("nokarung", selectedKarung);
 
@@ -129,23 +134,29 @@ const InputPage = () => {
     if (duplicateResi && duplicateResi.length > 0) {
       showError("Resi duplikat! Data sudah ada.");
       beepDouble.play();
-      return false;
+      return { success: false };
     }
-    return true;
+
+    return { success: true, actualCourierName: actualCourierNameFromExpedisi };
   };
 
-  const insertResi = async (currentResi: string) => {
+  const insertResi = async (currentResi: string, actualCourierNameFromExpedisi: string | null) => {
     let insertPayload: any = {
         Resi: currentResi,
         nokarung: selectedKarung,
     };
 
     if (expedition === "ID") {
-        insertPayload.Keterangan = "ID_REKOMENDASI";
-        insertPayload.schedule = "idrek";
-    } else {
-        insertPayload.Keterangan = expedition;
-        // schedule will be handled by the trigger update_schedule_if_null for non-ID expeditions
+        if (actualCourierNameFromExpedisi === null) { // Resi not found in tbl_expedisi
+            insertPayload.Keterangan = "ID_REKOMENDASI";
+            insertPayload.schedule = "idrek";
+        } else { // Resi found in tbl_expedisi (and it must be 'ID' based on checkExpeditionAndDuplicates)
+            insertPayload.Keterangan = actualCourierNameFromExpedisi; // Use actual courier name from tbl_expedisi
+            // schedule will be handled by the trigger update_schedule_if_null
+        }
+    } else { // For non-ID expeditions
+        insertPayload.Keterangan = expedition; // Use selected expedition name
+        // schedule will be handled by the trigger update_schedule_if_null
     }
 
     const { error: insertError } = await supabase
@@ -171,12 +182,12 @@ const InputPage = () => {
     }
 
     try {
-      const isValid = await checkExpeditionAndDuplicates(currentResi);
-      if (!isValid) {
+      const validationResult = await checkExpeditionAndDuplicates(currentResi);
+      if (!validationResult.success) {
         return;
       }
 
-      const isInserted = await insertResi(currentResi);
+      const isInserted = await insertResi(currentResi, validationResult.actualCourierName || null);
       if (isInserted) {
         queryClient.invalidateQueries({ queryKey: ["allResiForExpedition", expedition, formattedDate] });
         queryClient.invalidateQueries({ queryKey: ["totalScan", formattedDate] });

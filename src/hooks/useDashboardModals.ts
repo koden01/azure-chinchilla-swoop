@@ -173,31 +173,80 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
   };
 
   const handleConfirmResi = async (resiNumber: string) => {
-    const { error: expError } = await supabase
-      .from("tbl_expedisi")
-      .update({ flag: "YES" })
-      .eq("resino", resiNumber);
+    try {
+      // 1. Update tbl_expedisi.flag to 'YES'
+      const { error: expUpdateError } = await supabase
+        .from("tbl_expedisi")
+        .update({ flag: "YES" })
+        .eq("resino", resiNumber);
 
-    if (expError) {
-      showError(`Gagal mengkonfirmasi resi ${resiNumber} di tbl_expedisi.`);
-      console.error("Error confirming resi in tbl_expedisi:", expError);
-      return;
+      if (expUpdateError) {
+        throw new Error(`Gagal mengkonfirmasi resi ${resiNumber} di tbl_expedisi: ${expUpdateError.message}`);
+      }
+
+      // Fetch couriername from tbl_expedisi for Keterangan
+      const { data: expedisiData, error: expFetchError } = await supabase
+        .from("tbl_expedisi")
+        .select("couriername")
+        .eq("resino", resiNumber)
+        .single();
+
+      if (expFetchError || !expedisiData) {
+        throw new Error(`Gagal mendapatkan data ekspedisi untuk resi ${resiNumber}: ${expFetchError?.message || "Data tidak ditemukan"}`);
+      }
+
+      const courierName = expedisiData.couriername;
+
+      // 2. Check if the resi already exists in tbl_resi
+      const { data: existingResi, error: checkResiError } = await supabase
+        .from("tbl_resi")
+        .select("Resi")
+        .eq("Resi", resiNumber)
+        .single();
+
+      if (checkResiError && checkResiError.code !== 'PGRST116') { // PGRST116 means "no rows found"
+        throw checkResiError;
+      }
+
+      const currentTimestamp = new Date().toISOString(); // Use current date for tbl_resi.created
+
+      if (existingResi) {
+        // If it exists, update its properties
+        const { error: updateResiError } = await supabase
+          .from("tbl_resi")
+          .update({
+            created: currentTimestamp, // Update to today's date
+            Keterangan: courierName, // Set Keterangan based on couriername
+            nokarung: "0", // Set nokarung to 0
+            // schedule will be updated by the trigger based on the new 'created' date
+          })
+          .eq("Resi", resiNumber);
+
+        if (updateResiError) throw updateResiError;
+        showSuccess(`Resi ${resiNumber} berhasil dikonfirmasi (diperbarui).`);
+      } else {
+        // If it doesn't exist, insert a new entry
+        const { error: insertResiError } = await supabase
+          .from("tbl_resi")
+          .insert({
+            Resi: resiNumber,
+            created: currentTimestamp, // Use today's date
+            Keterangan: courierName, // Set Keterangan based on couriername
+            nokarung: "0", // Set nokarung to 0
+            // schedule will be set by the trigger
+          });
+
+        if (insertResiError) throw insertResiError;
+        showSuccess(`Resi ${resiNumber} berhasil dikonfirmasi (baru diinput).`);
+      }
+
+      invalidateDashboardQueries(queryClient, date);
+      setModalData(prevData => prevData.filter(item => (item.resino || item.Resi) !== resiNumber));
+
+    } catch (error: any) {
+      showError(`Gagal mengkonfirmasi resi ${resiNumber}: ${error.message || "Unknown error"}`);
+      console.error("Error confirming resi:", error);
     }
-
-    const { error: resiError } = await supabase
-      .from("tbl_resi")
-      .update({ schedule: "ontime" })
-      .eq("Resi", resiNumber);
-
-    if (resiError) {
-      showError(`Gagal mengkonfirmasi resi ${resiNumber} di tbl_resi.`);
-      console.error("Error confirming resi in tbl_resi:", resiError);
-      return;
-    }
-
-    showSuccess(`Resi ${resiNumber} berhasil dikonfirmasi.`);
-    invalidateDashboardQueries(queryClient, date);
-    setModalData(prevData => prevData.filter(item => (item.resino || item.Resi) !== resiNumber));
   };
 
   const handleCekfuToggle = async (resiNumber: string, currentCekfuStatus: boolean) => {

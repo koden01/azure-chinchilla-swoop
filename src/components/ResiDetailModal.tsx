@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox"; // Import Checkbox
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Pagination,
   PaginationContent,
@@ -70,10 +70,10 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
       if (modalType === "belumKirim" || modalType === "expeditionDetail") {
         return (
           item.resino?.toLowerCase().includes(lowerCaseSearchTerm) ||
-          item.nokarung?.toLowerCase().includes(lowerCaseSearchTerm) ||
+          item.orderno?.toLowerCase().includes(lowerCaseSearchTerm) || // New search field
+          item.chanelsales?.toLowerCase().includes(lowerCaseSearchTerm) || // New search field
           item.couriername?.toLowerCase().includes(lowerCaseSearchTerm) ||
-          item.flag?.toLowerCase().includes(lowerCaseSearchTerm) ||
-          (item.created ? format(new Date(item.created), "dd/MM/yyyy HH:mm").toLowerCase().includes(lowerCaseSearchTerm) : false)
+          (item.datetrans ? format(new Date(item.datetrans), "dd/MM/yyyy HH:mm").toLowerCase().includes(lowerCaseSearchTerm) : false) // New search field
         );
       } else if (modalType === "followUp") {
         return (
@@ -100,7 +100,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
 
   const getTableHeaders = () => {
     if (modalType === "belumKirim" || modalType === "expeditionDetail") {
-      return ["No. Resi", "No Karung", "Tanggal Input", "Kurir", "Flag", "CEKFU", "Aksi"];
+      return ["No. Resi", "No Order", "Marketplace", "Tanggal Pembelian", "Kurir", "CEKFU", "Aksi"];
     } else if (modalType === "followUp") {
       return ["No. Resi", "Tanggal Resi", "Tanggal Expedisi", "Kurir", "CEKFU", "Aksi"];
     }
@@ -108,14 +108,14 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
   };
 
   const renderTableRows = () => {
-    if (modalType === "belumKirim") {
+    if (modalType === "belumKirim" || modalType === "expeditionDetail") {
       return currentData.map((item, index) => (
         <TableRow key={item.resino || index}>
           <TableCell>{item.resino}</TableCell>
-          <TableCell>{item.nokarung || "-"}</TableCell>
-          <TableCell>{item.created ? format(new Date(item.created), "dd/MM/yyyy HH:mm") : "-"}</TableCell>
+          <TableCell>{item.orderno || "-"}</TableCell> {/* New column */}
+          <TableCell>{item.chanelsales || "-"}</TableCell> {/* New column */}
+          <TableCell>{item.datetrans ? format(new Date(item.datetrans), "dd/MM/yyyy HH:mm") : "-"}</TableCell> {/* Changed column */}
           <TableCell>{item.couriername || "-"}</TableCell>
-          <TableCell>{item.flag || "-"}</TableCell>
           <TableCell>
             <Checkbox
               checked={item.cekfu || false}
@@ -126,7 +126,11 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
             <Button variant="destructive" size="sm" onClick={() => onBatalResi(item.resino)}>
               Batal
             </Button>
-            {/* No Confirm button for 'belumKirim' as per original logic, it's for expeditionDetail */}
+            {modalType === "expeditionDetail" && ( // Only show Confirm for expeditionDetail
+              <Button variant="default" size="sm" onClick={() => onConfirmResi(item.resino)}>
+                Konfirmasi
+              </Button>
+            )}
           </TableCell>
         </TableRow>
       ));
@@ -147,32 +151,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
             <Button variant="destructive" size="sm" onClick={() => onBatalResi(item.Resi)}>
               Batal
             </Button>
-            {/* Confirm button might be relevant here too if 'late' items can be confirmed */}
             <Button variant="default" size="sm" onClick={() => onConfirmResi(item.Resi)}>
-              Konfirmasi
-            </Button>
-          </TableCell>
-        </TableRow>
-      ));
-    } else if (modalType === "expeditionDetail") {
-      return currentData.map((item, index) => (
-        <TableRow key={item.resino || index}>
-          <TableCell>{item.resino}</TableCell>
-          <TableCell>{item.nokarung || "-"}</TableCell>
-          <TableCell>{item.created ? format(new Date(item.created), "dd/MM/yyyy HH:mm") : "-"}</TableCell>
-          <TableCell>{item.couriername || "-"}</TableCell>
-          <TableCell>{item.flag || "-"}</TableCell>
-          <TableCell>
-            <Checkbox
-              checked={item.cekfu || false}
-              onCheckedChange={() => onCekfuToggle(item.resino, item.cekfu || false)}
-            />
-          </TableCell>
-          <TableCell className="flex space-x-2">
-            <Button variant="destructive" size="sm" onClick={() => onBatalResi(item.resino)}>
-              Batal
-            </Button>
-            <Button variant="default" size="sm" onClick={() => onConfirmResi(item.resino)}>
               Konfirmasi
             </Button>
           </TableCell>
@@ -213,7 +192,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
         </DialogHeader>
         <div className="my-4">
           <Input
-            placeholder="Cari Resi, No Karung, Kurir, atau Keterangan..."
+            placeholder="Cari Resi, No Order, Marketplace, Kurir, atau Tanggal Pembelian..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full"

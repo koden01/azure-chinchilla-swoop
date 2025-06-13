@@ -249,7 +249,7 @@ const InputPage = () => {
               Expedisi
             </label>
             <Select onValueChange={setExpedition} value={expedition}>
-              <SelectTrigger className="w-full bg-white text-gray-800">
+              <SelectTrigger className="w-full bg-white text-gray-800 h-20"> {/* 2x larger */}
                 <SelectValue placeholder="Pilih Expedisi" />
               </SelectTrigger>
               <SelectContent>
@@ -266,7 +266,7 @@ const InputPage = () => {
               No Karung
             </label>
             <Select onValueChange={setSelectedKarung} value={selectedKarung} disabled={!expedition}>
-              <SelectTrigger className="w-full bg-white text-gray-800">
+              <SelectTrigger className="w-full bg-white text-gray-800 h-20"> {/* 2x larger */}
                 <SelectValue placeholder="Pilih No Karung" />
               </SelectTrigger>
               <SelectContent>
@@ -292,7 +292,7 @@ const InputPage = () => {
                 }
               }}
               ref={resiInputRef}
-              className="w-full bg-white text-gray-800"
+              className="w-full bg-white text-gray-800 h-40 text-2xl" // 4x larger, added text-2xl for better visibility
               disabled={!expedition || !selectedKarung}
             />
           </div>

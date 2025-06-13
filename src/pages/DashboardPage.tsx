@@ -283,6 +283,9 @@ const DashboardPage: React.FC = () => {
           <SummaryCard
             title="Transaksi Hari Ini"
             value={isLoadingTransaksiHariIni ? "Loading..." : transaksiHariIni || 0}
+            sisaTitle="Sisa" // New prop
+            sisaValue={isLoadingBelumKirim ? "Loading..." : belumKirim || 0} // New prop
+            onSisaClick={handleOpenBelumKirimModal} // New handler
             gradientFrom="from-green-400"
             gradientTo="to-blue-500"
             icon="package"

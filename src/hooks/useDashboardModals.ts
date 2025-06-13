@@ -114,18 +114,61 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
   };
 
   const handleBatalResi = async (resiNumber: string) => {
-    const { error } = await supabase
-      .from("tbl_resi")
-      .update({ schedule: "batal" })
-      .eq("Resi", resiNumber);
+    try {
+      // 1. Check if the resi already exists in tbl_resi
+      const { data: existingResi, error: checkError } = await supabase
+        .from("tbl_resi")
+        .select("Resi")
+        .eq("Resi", resiNumber)
+        .single();
 
-    if (error) {
-      showError(`Gagal membatalkan resi ${resiNumber}.`);
-      console.error("Error batal resi:", error);
-    } else {
-      showSuccess(`Resi ${resiNumber} berhasil dibatalkan.`);
+      if (checkError && checkError.code !== 'PGRST116') { // PGRST116 means "no rows found"
+        throw checkError;
+      }
+
+      if (existingResi) {
+        // If it exists, update its schedule to 'batal'
+        const { error: updateError } = await supabase
+          .from("tbl_resi")
+          .update({ schedule: "batal" })
+          .eq("Resi", resiNumber);
+
+        if (updateError) throw updateError;
+        showSuccess(`Resi ${resiNumber} berhasil dibatalkan (diperbarui).`);
+      } else {
+        // If it doesn't exist, fetch data from tbl_expedisi and insert
+        const { data: expedisiData, error: expFetchError } = await supabase
+          .from("tbl_expedisi")
+          .select("resino, created")
+          .eq("resino", resiNumber)
+          .single();
+
+        if (expFetchError) {
+          showError(`Gagal menemukan data ekspedisi untuk resi ${resiNumber}.`);
+          console.error("Error fetching expedisi data for batal:", expFetchError);
+          return;
+        }
+
+        const { error: insertError } = await supabase
+          .from("tbl_resi")
+          .insert({
+            Resi: resiNumber,
+            created: expedisiData.created, // Use created from tbl_expedisi
+            Keterangan: "BATAL",
+            nokarung: "0",
+            schedule: "batal",
+          });
+
+        if (insertError) throw insertError;
+        showSuccess(`Resi ${resiNumber} berhasil dibatalkan (baru diinput).`);
+      }
+
       invalidateDashboardQueries(queryClient, date);
       setModalData(prevData => prevData.filter(item => (item.resino || item.Resi) !== resiNumber));
+
+    } catch (error: any) {
+      showError(`Gagal membatalkan resi ${resiNumber}: ${error.message || "Unknown error"}`);
+      console.error("Error batal resi:", error);
     }
   };
 

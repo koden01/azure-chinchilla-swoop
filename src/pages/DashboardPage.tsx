@@ -294,7 +294,7 @@ const DashboardPage: React.FC = () => {
             icon="info"
           />
           <SummaryCard
-            title="Scan Followup" {/* Changed title */}
+            title="Scan Followup" 
             value={isLoadingScanFollowupLateCount ? "Loading..." : scanFollowupLateCount || 0}
             gradientFrom="from-blue-500"
             gradientTo="to-purple-600"

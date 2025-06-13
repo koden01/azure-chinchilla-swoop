@@ -80,19 +80,21 @@ export const useDashboardData = (date: Date | undefined) => {
     enabled: !!date,
   });
 
-  // Query for Follow Up (tbl_expedisi count where flag = 'NO' and created date is NOT selected date)
+  // Query for Follow Up (tbl_expedisi count where flag = 'NO' and created date is NOT actual current date)
   const { data: followUpFlagNoCount, isLoading: isLoadingFollowUpFlagNoCount } = useQuery<number>({
-    queryKey: ["followUpFlagNoCount", formattedDate],
+    queryKey: ["followUpFlagNoCount", format(new Date(), 'yyyy-MM-dd')], // Query key based on actual current date
     queryFn: async () => {
-      if (!date) return 0;
+      // Always use the actual current date for this specific query
+      const actualCurrentFormattedDate = format(new Date(), 'yyyy-MM-dd');
       const { data: countData, error: rpcError } = await supabase.rpc("get_flag_no_except_today_count", {
-        p_selected_date: formattedDate,
+        p_selected_date: actualCurrentFormattedDate,
       });
       if (rpcError) throw rpcError;
-      console.log("Follow Up (Flag NO except today):", countData);
+      console.log("Follow Up (Flag NO except actual today):", countData);
       return countData || 0;
     },
-    enabled: !!date,
+    // This query should always be enabled as it's independent of the dashboard's selected date filter
+    enabled: true,
   });
 
   // Query for Scan Followup (tbl_resi count where schedule = 'late' for selected date)

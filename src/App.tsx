@@ -35,8 +35,8 @@ const App = () => (
           <Navbar />
           <main className="flex-grow">
             <Routes>
-              <Route path="/" element={<Input />} /> {/* Mengatur Input sebagai halaman default */}
-              <Route path="/dashboard" element={<DashboardPage />} /> {/* Dashboard sekarang di /dashboard */}
+              <Route path="/" element={<DashboardPage />} />
+              <Route path="/input" element={<Input />} />
               <Route path="/history" element={<History />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

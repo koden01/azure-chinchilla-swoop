@@ -4,7 +4,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { CalendarIcon } from "lucide-react";
-import { format, subDays } from "date-fns"; // Import subDays
+import { format, subDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import {
@@ -42,11 +42,10 @@ interface HistoryData {
   Resi: string;
   Keterangan: string | null;
   nokarung: string | null;
-  created: string; // Use string for date from Supabase
+  created: string;
 }
 
 const HistoryPage = () => {
-  // Mengatur tanggal mulai default menjadi 30 hari yang lalu dari hari ini
   const [startDate, setStartDate] = React.useState<Date | undefined>(subDays(new Date(), 30));
   const [endDate, setEndDate] = React.useState<Date | undefined>(new Date());
   const [searchQuery, setSearchQuery] = React.useState<string>("");
@@ -67,8 +66,8 @@ const HistoryPage = () => {
         .from("tbl_resi")
         .select("Resi, Keterangan, nokarung, created")
         .gte("created", startDate.toISOString())
-        .lt("created", new Date(endDate.getTime() + 24 * 60 * 60 * 1000).toISOString()) // End of day for endDate
-        .order("created", { ascending: false }); // Sort from newest to oldest
+        .lt("created", new Date(endDate.getTime() + 24 * 60 * 60 * 1000).toISOString())
+        .order("created", { ascending: false });
 
       const { data, error } = await query;
 
@@ -92,7 +91,7 @@ const HistoryPage = () => {
     );
   }, [historyData, searchQuery]);
 
-  const ITEMS_PER_PAGE = 10; // You can adjust this
+  const ITEMS_PER_PAGE = 10;
   const [currentPage, setCurrentPage] = React.useState(1);
 
   const totalPages = Math.ceil(filteredHistoryData.length / ITEMS_PER_PAGE);
@@ -107,10 +106,9 @@ const HistoryPage = () => {
   };
 
   React.useEffect(() => {
-    setCurrentPage(1); // Reset page when filters change
+    setCurrentPage(1);
   }, [searchQuery, startDate, endDate]);
 
-  // Logic to determine which page numbers to display
   const getPaginationPages = () => {
     const pages = [];
     if (totalPages <= 3) {
@@ -148,7 +146,6 @@ const HistoryPage = () => {
     } else {
       showSuccess(`Resi ${resiToDelete} berhasil dihapus.`);
       queryClient.invalidateQueries({ queryKey: ["historyData", formattedStartDate, formattedEndDate] });
-      // Also invalidate dashboard queries if deletion affects counts there
       queryClient.invalidateQueries({ queryKey: ["transaksiHariIni"] });
       queryClient.invalidateQueries({ queryKey: ["totalScan"] });
       queryClient.invalidateQueries({ queryKey: ["belumKirim"] });
@@ -163,86 +160,88 @@ const HistoryPage = () => {
   };
 
   return (
-    <div className="p-6 space-y-6 bg-gray-50 min-h-[calc(100vh-64px)]">
-      {/* History Data Input Section */}
-      <div className="bg-gradient-to-r from-green-500 to-blue-600 p-6 rounded-lg shadow-md">
-        <h2 className="text-white text-xl font-semibold mb-4">History Data Input</h2>
-        <div className="bg-white p-4 rounded-md shadow-sm">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Filter & Search</h3>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-            <div>
-              <label htmlFor="start-date-picker" className="block text-sm font-medium text-gray-700 mb-1">
-                Tanggal Mulai
-              </label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    id="start-date-picker"
-                    variant={"outline"}
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !startDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? format(startDate, "dd/MM/yyyy") : <span>Pilih tanggal</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={startDate}
-                    onSelect={setStartDate}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div>
-              <label htmlFor="end-date-picker" className="block text-sm font-medium text-gray-700 mb-1">
-                Tanggal Selesai
-              </label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    id="end-date-picker"
-                    variant={"outline"}
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !endDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {endDate ? format(endDate, "dd/MM/yyyy") : <span>Pilih tanggal</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={endDate}
-                    onSelect={setEndDate}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div className="md:col-span-2 flex items-end space-x-2">
-              <div className="flex-grow">
-                <label htmlFor="search-input" className="block text-sm font-medium text-gray-700 mb-1">
-                  Cari
+    <React.Fragment>
+      <div className="p-6 space-y-6 bg-gray-50 min-h-[calc(100vh-64px)]">
+        {/* History Data Input Section */}
+        <div className="bg-gradient-to-r from-green-500 to-blue-600 p-6 rounded-lg shadow-md">
+          <h2 className="text-white text-xl font-semibold mb-4">History Data Input</h2>
+          <div className="bg-white p-4 rounded-md shadow-sm">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Filter & Search</h3>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+              <div>
+                <label htmlFor="start-date-picker" className="block text-sm font-medium text-gray-700 mb-1">
+                  Tanggal Mulai
                 </label>
-                <Input
-                  id="search-input"
-                  type="text"
-                  placeholder="Cari no. resi, keterangan, atau lainnya..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full"
-                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      id="start-date-picker"
+                      variant={"outline"}
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !startDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {startDate ? format(startDate, "dd/MM/yyyy") : <span>Pilih tanggal</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={startDate}
+                      onSelect={setStartDate}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
-              <Button className="bg-green-600 hover:bg-green-700 text-white whitespace-nowrap">
-                Export Data ({filteredHistoryData.length} records)
-              </Button>
+              <div>
+                <label htmlFor="end-date-picker" className="block text-sm font-medium text-gray-700 mb-1">
+                  Tanggal Selesai
+                </label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      id="end-date-picker"
+                      variant={"outline"}
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !endDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {endDate ? format(endDate, "dd/MM/yyyy") : <span>Pilih tanggal</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={endDate}
+                      onSelect={setEndDate}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="md:col-span-2 flex items-end space-x-2">
+                <div className="flex-grow">
+                  <label htmlFor="search-input" className="block text-sm font-medium text-gray-700 mb-1">
+                    Cari
+                  </label>
+                  <Input
+                    id="search-input"
+                    type="text"
+                    placeholder="Cari no. resi, keterangan, atau lainnya..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+                <Button className="bg-green-600 hover:bg-green-700 text-white whitespace-nowrap">
+                  Export Data ({filteredHistoryData.length} records)
+                </Button>
+              </div>
             </div>
           </div>
         </div>

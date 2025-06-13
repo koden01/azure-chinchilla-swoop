@@ -63,43 +63,49 @@ const DashboardPage: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleOpenBelumKirimModal = () => {
-    if (!date || !allExpedisiData) {
-      showError("Data belum siap.");
+  const handleOpenBelumKirimModal = async () => {
+    if (!date) {
+      showError("Tanggal belum dipilih.");
       return;
     }
-    const startOfSelectedDay = startOfDay(date).getTime();
-    const endOfSelectedDay = endOfDay(date).getTime();
+    const { data, error } = await supabase
+      .from("tbl_expedisi")
+      .select("resino, orderno, chanelsales, couriername, created, flag, datetrans, cekfu")
+      .eq("flag", "NO")
+      .gte("created", startOfDay(date).toISOString())
+      .lt("created", endOfDay(date).toISOString());
 
-    const filteredBelumKirim = allExpedisiData.filter(item =>
-      item.flag === "NO" &&
-      new Date(item.created).getTime() >= startOfSelectedDay &&
-      new Date(item.created).getTime() <= endOfSelectedDay
-    );
-    console.log("Filtered Belum Kirim Data:", filteredBelumKirim); // Log data
-    openResiModal("Detail Resi Belum Dikirim", filteredBelumKirim, "belumKirim");
+    if (error) {
+      showError("Gagal memuat data Resi Belum Dikirim.");
+      console.error("Error fetching Belum Kirim data:", error);
+      return;
+    }
+    openResiModal("Detail Resi Belum Dikirim", data || [], "belumKirim");
   };
 
   const handleOpenFollowUpFlagNoModal = async () => {
-    // This query still needs to fetch data outside the selected date range
     const actualCurrentDate = new Date();
     const startOfActualCurrentDay = startOfDay(actualCurrentDate).toISOString();
 
     const { data, error } = await supabase
       .from("tbl_expedisi")
-      .select("resino, orderno, chanelsales, couriername, created, flag, datetrans, cekfu") // Select all necessary columns
+      .select("resino, orderno, chanelsales, couriername, created, flag, datetrans, cekfu")
       .eq("flag", "NO")
-      .lt("created", startOfActualCurrentDay); // Records created BEFORE today
+      .lt("created", startOfActualCurrentDay);
 
     if (error) {
       showError("Gagal memuat data Follow Up (Flag NO kecuali hari ini).");
       console.error("Error fetching Follow Up (Flag NO except today):", error);
       return;
     }
-    openResiModal("Detail Resi Follow Up", data || [], "belumKirim"); // Judul disederhanakan
+    openResiModal("Detail Resi Follow Up", data || [], "belumKirim");
   };
 
   const handleOpenScanFollowupModal = async () => {
+    if (!date) {
+      showError("Tanggal belum dipilih.");
+      return;
+    }
     const { data, error } = await supabase.rpc("get_scan_follow_up", {
       selected_date: formattedDate,
     });
@@ -108,19 +114,8 @@ const DashboardPage: React.FC = () => {
       console.error("Error fetching Scan Follow Up:", error);
       return;
     }
-    const resiWithCekfu = await Promise.all((data || []).map(async (item: any) => {
-      const { data: expedisiDetail, error: expError } = await supabase
-        .from("tbl_expedisi")
-        .select("cekfu")
-        .eq("resino", item.Resi)
-        .single();
-      return {
-        ...item,
-        cekfu: expedisiDetail?.cekfu || false,
-      };
-    }));
-
-    openResiModal("Detail Resi Scan Follow Up (Scan Tidak Sesuai Tanggal)", resiWithCekfu || [], "followUp");
+    // Data now directly includes cekfu from the RPC function
+    openResiModal("Detail Resi Scan Follow Up (Scan Tidak Sesuai Tanggal)", data || [], "followUp");
   };
 
   const handleOpenExpeditionDetailModal = (courierName: string) => {
@@ -158,8 +153,9 @@ const DashboardPage: React.FC = () => {
       console.error("Error batal resi:", error);
     } else {
       showSuccess(`Resi ${resiNumber} berhasil dibatalkan.`);
-      invalidateDashboardQueries(queryClient, date); // Use the new utility
-      handleCloseModal();
+      invalidateDashboardQueries(queryClient, date);
+      // Update modalData directly
+      setModalData(prevData => prevData.filter(item => (item.resino || item.Resi) !== resiNumber));
     }
   };
 
@@ -187,8 +183,9 @@ const DashboardPage: React.FC = () => {
     }
 
     showSuccess(`Resi ${resiNumber} berhasil dikonfirmasi.`);
-    invalidateDashboardQueries(queryClient, date); // Use the new utility
-    handleCloseModal();
+    invalidateDashboardQueries(queryClient, date);
+    // Update modalData directly
+    setModalData(prevData => prevData.filter(item => (item.resino || item.Resi) !== resiNumber));
   };
 
   const handleCekfuToggle = async (resiNumber: string, currentCekfuStatus: boolean) => {
@@ -202,15 +199,15 @@ const DashboardPage: React.FC = () => {
       console.error("Error updating CEKFU status:", error);
     } else {
       showSuccess(`Status CEKFU untuk resi ${resiNumber} berhasil diperbarui.`);
-      invalidateDashboardQueries(queryClient, date); // Use the new utility
-      // Re-open the modal to reflect changes
-      if (modalType === "belumKirim") {
-        handleOpenBelumKirimModal();
-      } else if (modalType === "followUp") {
-        handleOpenScanFollowupModal();
-      } else if (modalType === "expeditionDetail" && selectedCourier) {
-        handleOpenExpeditionDetailModal(selectedCourier);
-      }
+      invalidateDashboardQueries(queryClient, date);
+      // Update modalData directly without re-fetching all data
+      setModalData(prevData =>
+        prevData.map(item =>
+          (item.resino || item.Resi) === resiNumber
+            ? { ...item, cekfu: !currentCekfuStatus }
+            : item
+        )
+      );
     }
   };
 

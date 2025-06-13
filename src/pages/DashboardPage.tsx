@@ -322,13 +322,13 @@ const DashboardPage: React.FC = () => {
         </div>
 
         {/* Detail per Expedisi Section */}
-        <div className="space-y-4">
-          <h2 className="text-2xl font-bold text-gray-800 flex items-center">
+        <div className="space-y-4 p-6 rounded-lg shadow-md bg-gradient-to-r from-emerald-400 to-blue-400">
+          <h2 className="text-2xl font-bold text-white flex items-center">
             <Package className="mr-2 h-6 w-6" /> Detail per Expedisi
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {expeditionSummaries.map((summary) => {
-              const { from, to } = getExpeditionGradient(summary.name);
+              // const { from, to } = getExpeditionGradient(summary.name); // No longer needed for card background
               return (
                 <div key={summary.name} onClick={() => handleOpenExpeditionDetailModal(summary.name)}>
                   <ExpeditionDetailCard
@@ -340,8 +340,8 @@ const DashboardPage: React.FC = () => {
                     idRekomendasi={summary.idRekomendasi}
                     totalBatal={summary.totalBatal}
                     totalScanFollowUp={summary.totalScanFollowUp}
-                    gradientFrom={from}
-                    gradientTo={to}
+                    // gradientFrom={from} // Tidak lagi diteruskan untuk background card
+                    // gradientTo={to} // Tidak lagi diteruskan untuk background card
                   />
                 </div>
               );

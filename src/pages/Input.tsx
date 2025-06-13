@@ -13,12 +13,23 @@ import { useQueryClient } from "@tanstack/react-query";
 import { showSuccess, showError } from "@/utils/toast";
 import { beepSuccess, beepFailure, beepDouble } from "@/utils/audio";
 import { useResiInputData } from "@/hooks/useResiInputData";
-import { useDebounce } from "@/hooks/useDebounce"; // Import useDebounce
-import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation"; // Import utility
+import { useDebounce } from "@/hooks/useDebounce";
+import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
 
 const InputPage = () => {
-  const [expedition, setExpedition] = React.useState<string>("");
-  const [selectedKarung, setSelectedKarung] = React.useState<string>("");
+  // Inisialisasi state dari localStorage
+  const [expedition, setExpedition] = React.useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('lastExpedition') || "";
+    }
+    return "";
+  });
+  const [selectedKarung, setSelectedKarung] = React.useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('lastSelectedKarung') || "";
+    }
+    return "";
+  });
   const [resiNumber, setResiNumber] = React.useState<string>("");
   const resiInputRef = React.useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
@@ -38,11 +49,24 @@ const InputPage = () => {
   // Debounced invalidate function
   const debouncedInvalidate = useDebounce(() => {
     console.log("Debounced invalidation triggered!");
-    // Invalidate all relevant dashboard and input-related queries for today's date
     invalidateDashboardQueries(queryClient, new Date());
-  }, 500); // 500ms debounce delay
+  }, 500);
 
-  // Auto-select highest karung when expedition changes
+  // Simpan expedition ke localStorage setiap kali berubah
+  React.useEffect(() => {
+    if (typeof window !== 'undefined' && expedition) {
+      localStorage.setItem('lastExpedition', expedition);
+    }
+  }, [expedition]);
+
+  // Simpan selectedKarung ke localStorage setiap kali berubah
+  React.useEffect(() => {
+    if (typeof window !== 'undefined' && selectedKarung) {
+      localStorage.setItem('lastSelectedKarung', selectedKarung);
+    }
+  }, [selectedKarung]);
+
+  // Auto-select highest karung when expedition changes, or default to 1 if none
   React.useEffect(() => {
     if (expedition) {
       if (highestKarung > 0) {
@@ -92,19 +116,18 @@ const InputPage = () => {
 
   interface ValidationResult {
     success: boolean;
-    actualCourierName?: string | null; // Will be null if not found in tbl_expedisi but allowed (for ID)
+    actualCourierName?: string | null;
   }
 
   const checkExpeditionAndDuplicates = async (currentResi: string): Promise<ValidationResult> => {
-    // 1. Validate if resi exists in tbl_expedisi and belongs to selected expedition
     const { data: expedisiData, error: expError } = await supabase
       .from("tbl_expedisi")
       .select("resino, couriername")
       .eq("resino", currentResi)
       .single();
 
-    if (expError && expError.code !== 'PGRST116') { // PGRST116 means "no rows found"
-        throw expError; // Actual database error
+    if (expError && expError.code !== 'PGRST116') {
+        throw expError;
     }
 
     let actualCourierNameFromExpedisi: string | null = expedisiData?.couriername || null;
@@ -112,15 +135,13 @@ const InputPage = () => {
     if (expedition === "ID") {
         if (!expedisiData) {
             // Resi not found in tbl_expedisi, but it's "ID" expedition, so allow it to proceed.
-            // actualCourierNameFromExpedisi remains null, indicating it wasn't found.
         } else if (expedisiData.couriername !== "ID") {
-            // Resi found, but belongs to a different courier, even if it's ID.
             showError(`Resi ini bukan milik ekspedisi ID. Ini milik ${expedisiData.couriername}.`);
             beepFailure.play();
             return { success: false };
         }
-    } else { // For non-ID expeditions
-        if (expError || !expedisiData) { // If resi not found or error
+    } else {
+        if (expError || !expedisiData) {
             showError("Resi tidak ditemukan di database ekspedisi.");
             beepFailure.play();
             return { success: false };
@@ -132,9 +153,8 @@ const InputPage = () => {
         }
     }
 
-    // 2. Validate for duplicate resi in tbl_resi for the current day, expedition, and karung
     const { data: duplicateResi, error: dupError } = await supabase.rpc("get_resi_for_expedition_and_date", {
-      p_couriername: expedition, // Use the selected expedition for duplicate check
+      p_couriername: expedition,
       p_selected_date: formattedDate,
     }).eq("Resi", currentResi).eq("nokarung", selectedKarung);
 
@@ -156,16 +176,14 @@ const InputPage = () => {
     };
 
     if (expedition === "ID") {
-        if (actualCourierNameFromExpedisi === null) { // Resi not found in tbl_expedisi
+        if (actualCourierNameFromExpedisi === null) {
             insertPayload.Keterangan = "ID_REKOMENDASI";
             insertPayload.schedule = "idrek";
-        } else { // Resi found in tbl_expedisi (and it must be 'ID' based on checkExpeditionAndDuplicates)
-            insertPayload.Keterangan = actualCourierNameFromExpedisi; // Use actual courier name from tbl_expedisi
-            // schedule will be handled by the trigger update_schedule_if_null
+        } else {
+            insertPayload.Keterangan = actualCourierNameFromExpedisi;
         }
-    } else { // For non-ID expeditions
-        insertPayload.Keterangan = expedition; // Use selected expedition name
-        // schedule will be handled by the trigger update_schedule_if_null
+    } else {
+        insertPayload.Keterangan = expedition;
     }
 
     const { error: insertError } = await supabase
@@ -184,7 +202,7 @@ const InputPage = () => {
 
   const handleScanResi = async () => {
     const currentResi = resiNumber.trim();
-    setResiNumber(""); // Clear input immediately
+    setResiNumber("");
 
     if (!validateInput(currentResi)) {
       return;
@@ -198,7 +216,6 @@ const InputPage = () => {
 
       const isInserted = await insertResi(currentResi, validationResult.actualCourierName || null);
       if (isInserted) {
-        // Call the debounced invalidation instead of direct invalidation
         debouncedInvalidate();
       }
     } catch (error: any) {

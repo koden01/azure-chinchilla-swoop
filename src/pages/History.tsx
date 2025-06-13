@@ -254,11 +254,13 @@ const HistoryPage = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[50px]">No</TableHead>
-                <TableHead className="w-[30%]">Nomor Resi</TableHead> {/* 3x larger */}
-                <TableHead>Keterangan</TableHead>
-                <TableHead>No Karung</TableHead>
-                <TableHead>Tanggal Input</TableHead>
+                <React.Fragment>
+                  <TableHead className="w-[50px]">No</TableHead>
+                  <TableHead className="w-[30%]">Nomor Resi</TableHead> {/* 3x larger */}
+                  <TableHead>Keterangan</TableHead>
+                  <TableHead>No Karung</TableHead>
+                  <TableHead>Tanggal Input</TableHead>
+                </React.Fragment>
               </TableRow>
             </TableHeader>
             <TableBody>

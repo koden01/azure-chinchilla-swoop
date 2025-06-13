@@ -40,6 +40,31 @@ const DashboardPage: React.FC = () => {
     formattedDate,
   } = useDashboardData(date);
 
+  // Log data after fetching
+  React.useEffect(() => {
+    console.log("Dashboard Data Status:");
+    console.log("  Transaksi Hari Ini:", transaksiHariIni, "Loading:", isLoadingTransaksiHariIni);
+    console.log("  Total Scan:", totalScan, "Loading:", isLoadingTotalScan);
+    console.log("  ID Rek Count:", idRekCount, "Loading:", isLoadingIdRekCount);
+    console.log("  Belum Kirim:", belumKirim, "Loading:", isLoadingBelumKirim);
+    console.log("  Follow Up (Flag NO):", followUpFlagNoCount, "Loading:", isLoadingFollowUpFlagNoCount);
+    console.log("  Scan Followup (Late):", scanFollowupLateCount, "Loading:", isLoadingScanFollowupLateCount);
+    console.log("  Batal Count:", batalCount, "Loading:", isLoadingBatalCount);
+    console.log("  Follow Up Data (RPC):", followUpData, "Loading:", isLoadingFollowUp);
+    console.log("  Expedition Summaries:", expeditionSummaries);
+  }, [
+    transaksiHariIni, isLoadingTransaksiHariIni,
+    totalScan, isLoadingTotalScan,
+    idRekCount, isLoadingIdRekCount,
+    belumKirim, isLoadingBelumKirim,
+    followUpFlagNoCount, isLoadingFollowUpFlagNoCount,
+    scanFollowupLateCount, isLoadingScanFollowupLateCount,
+    batalCount, isLoadingBatalCount,
+    followUpData, isLoadingFollowUp,
+    expeditionSummaries
+  ]);
+
+
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [modalTitle, setModalTitle] = React.useState("");
   const [modalData, setModalData] = React.useState<any[]>([]);

@@ -89,19 +89,36 @@ const InputPage = () => {
       .eq("resino", currentResi)
       .single();
 
-    if (expError || !expedisiData) {
-      showError("Resi tidak ditemukan di database ekspedisi.");
-      beepFailure.play();
-      return false;
+    // If it's an actual error other than "no rows found" (PGRST116), throw it
+    if (expError && expError.code !== 'PGRST116') {
+        throw expError;
     }
 
-    if (expedisiData.couriername !== expedition) {
-      showError(`Resi ini bukan milik ekspedisi ${expedition}. Ini milik ${expedisiData.couriername}.`);
-      beepFailure.play();
-      return false;
+    if (expedition === "ID") {
+        if (!expedisiData) {
+            // Resi not found in tbl_expedisi, but it's "ID" expedition, so allow it to proceed.
+            // We still need to check for duplicates in tbl_resi for ID.
+        } else if (expedisiData.couriername !== "ID") {
+            // Resi found, but belongs to a different courier, even if it's ID.
+            showError(`Resi ini bukan milik ekspedisi ID. Ini milik ${expedisiData.couriername}.`);
+            beepFailure.play();
+            return false;
+        }
+    } else { // For non-ID expeditions
+        if (expError || !expedisiData) { // If resi not found or error
+            showError("Resi tidak ditemukan di database ekspedisi.");
+            beepFailure.play();
+            return false;
+        }
+        if (expedisiData.couriername !== expedition) {
+            showError(`Resi ini bukan milik ekspedisi ${expedition}. Ini milik ${expedisiData.couriername}.`);
+            beepFailure.play();
+            return false;
+        }
     }
 
     // 2. Validate for duplicate resi in tbl_resi for the current day, expedition, and karung
+    // This check applies to ALL expeditions, including "ID"
     const { data: duplicateResi, error: dupError } = await supabase.rpc("get_resi_for_expedition_and_date", {
       p_couriername: expedition,
       p_selected_date: formattedDate,
@@ -118,13 +135,22 @@ const InputPage = () => {
   };
 
   const insertResi = async (currentResi: string) => {
-    const { error: insertError } = await supabase
-      .from("tbl_resi")
-      .insert({
+    let insertPayload: any = {
         Resi: currentResi,
         nokarung: selectedKarung,
-        Keterangan: expedition, // Mengisi Keterangan dengan nilai expedition
-      });
+    };
+
+    if (expedition === "ID") {
+        insertPayload.Keterangan = "ID_REKOMENDASI";
+        insertPayload.schedule = "idrek";
+    } else {
+        insertPayload.Keterangan = expedition;
+        // schedule will be handled by the trigger update_schedule_if_null for non-ID expeditions
+    }
+
+    const { error: insertError } = await supabase
+      .from("tbl_resi")
+      .insert(insertPayload);
 
     if (insertError) {
       showError(`Gagal menginput resi: ${insertError.message}`);
@@ -154,7 +180,8 @@ const InputPage = () => {
       if (isInserted) {
         queryClient.invalidateQueries({ queryKey: ["allResiForExpedition", expedition, formattedDate] });
         queryClient.invalidateQueries({ queryKey: ["totalScan", formattedDate] });
-        queryClient.invalidateQueries({ queryKey: ["allResi", formattedDate] });
+        queryClient.invalidateQueries({ queryKey: ["idRekCount", formattedDate] }); // Invalidate ID Rekomendasi count
+        queryClient.invalidateQueries({ queryKey: ["allResiData", formattedDate] }); // Invalidate allResiData for dashboard
         queryClient.invalidateQueries({ queryKey: ["historyData"] });
       }
     } catch (error: any) {

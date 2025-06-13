@@ -111,50 +111,54 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
     if (modalType === "belumKirim" || modalType === "expeditionDetail") {
       return currentData.map((item, index) => (
         <TableRow key={item.resino || index}>
-          <TableCell>{item.resino}</TableCell>
-          <TableCell>{item.orderno || "-"}</TableCell> {/* New column */}
-          <TableCell>{item.chanelsales || "-"}</TableCell> {/* New column */}
-          <TableCell>{item.datetrans ? format(new Date(item.datetrans), "dd/MM/yyyy HH:mm") : "-"}</TableCell> {/* Changed column */}
-          <TableCell>{item.couriername || "-"}</TableCell>
-          <TableCell>
-            <Checkbox
-              checked={item.cekfu || false}
-              onCheckedChange={() => onCekfuToggle(item.resino, item.cekfu || false)}
-            />
-          </TableCell>
-          <TableCell className="flex space-x-2">
-            <Button variant="destructive" size="sm" onClick={() => onBatalResi(item.resino)}>
-              Batal
-            </Button>
-            {(modalType === "expeditionDetail" || modalType === "belumKirim") && ( // Tampilkan Konfirmasi untuk kedua tipe
-              <Button variant="default" size="sm" onClick={() => onConfirmResi(item.resino)}>
-                Konfirmasi
+          <React.Fragment>
+            <TableCell>{item.resino}</TableCell>
+            <TableCell>{item.orderno || "-"}</TableCell>
+            <TableCell>{item.chanelsales || "-"}</TableCell>
+            <TableCell>{item.datetrans ? format(new Date(item.datetrans), "dd/MM/yyyy HH:mm") : "-"}</TableCell>
+            <TableCell>{item.couriername || "-"}</TableCell>
+            <TableCell>
+              <Checkbox
+                checked={item.cekfu || false}
+                onCheckedChange={() => onCekfuToggle(item.resino, item.cekfu || false)}
+              />
+            </TableCell>
+            <TableCell className="flex space-x-2">
+              <Button variant="destructive" size="sm" onClick={() => onBatalResi(item.resino)}>
+                Batal
               </Button>
-            )}
-          </TableCell>
+              {(modalType === "expeditionDetail" || modalType === "belumKirim") && (
+                <Button variant="default" size="sm" onClick={() => onConfirmResi(item.resino)}>
+                  Konfirmasi
+                </Button>
+              )}
+            </TableCell>
+          </React.Fragment>
         </TableRow>
       ));
     } else if (modalType === "followUp") {
       return currentData.map((item, index) => (
         <TableRow key={item.Resi || index}>
-          <TableCell>{item.Resi}</TableCell>
-          <TableCell>{item.created_resi ? format(new Date(item.created_resi), "dd/MM/yyyy HH:mm") : "-"}</TableCell>
-          <TableCell>{item.created_expedisi ? format(new Date(item.created_expedisi), "dd/MM/yyyy HH:mm") : "-"}</TableCell>
-          <TableCell>{item.couriername || "-"}</TableCell>
-          <TableCell>
-            <Checkbox
-              checked={item.cekfu || false}
-              onCheckedChange={() => onCekfuToggle(item.Resi, item.cekfu || false)}
-            />
-          </TableCell>
-          <TableCell className="flex space-x-2">
-            <Button variant="destructive" size="sm" onClick={() => onBatalResi(item.Resi)}>
-              Batal
-            </Button>
-            <Button variant="default" size="sm" onClick={() => onConfirmResi(item.Resi)}>
-              Konfirmasi
-            </Button>
-          </TableCell>
+          <React.Fragment>
+            <TableCell>{item.Resi}</TableCell>
+            <TableCell>{item.created_resi ? format(new Date(item.created_resi), "dd/MM/yyyy HH:mm") : "-"}</TableCell>
+            <TableCell>{item.created_expedisi ? format(new Date(item.created_expedisi), "dd/MM/yyyy HH:mm") : "-"}</TableCell>
+            <TableCell>{item.couriername || "-"}</TableCell>
+            <TableCell>
+              <Checkbox
+                checked={item.cekfu || false}
+                onCheckedChange={() => onCekfuToggle(item.Resi, item.cekfu || false)}
+              />
+            </TableCell>
+            <TableCell className="flex space-x-2">
+              <Button variant="destructive" size="sm" onClick={() => onBatalResi(item.Resi)}>
+                Batal
+              </Button>
+              <Button variant="default" size="sm" onClick={() => onConfirmResi(item.Resi)}>
+                Konfirmasi
+              </Button>
+            </TableCell>
+          </React.Fragment>
         </TableRow>
       ));
     }

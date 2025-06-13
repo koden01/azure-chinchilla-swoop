@@ -39,6 +39,7 @@ const DashboardPage: React.FC = () => {
     isLoadingFollowUp,
     expeditionSummaries,
     formattedDate,
+    allExpedisiData, // Get allExpedisiData from the hook
   } = useDashboardData(date);
 
   const [isModalOpen, setIsModalOpen] = React.useState(false);
@@ -62,35 +63,39 @@ const DashboardPage: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleOpenBelumKirimModal = async () => {
-    const { data, error } = await supabase
-      .from("tbl_expedisi")
-      .select("*")
-      .eq("flag", "NO")
-      .gte("created", startOfDay(date!).toISOString())
-      .lt("created", endOfDay(date!).toISOString());
-    if (error) {
-      showError("Gagal memuat data Belum Kirim.");
-      console.error("Error fetching Belum Kirim:", error);
+  const handleOpenBelumKirimModal = () => {
+    if (!date || !allExpedisiData) {
+      showError("Data belum siap.");
       return;
     }
-    openResiModal("Detail Resi Belum Dikirim", data || [], "belumKirim");
+    const startOfSelectedDay = startOfDay(date).getTime();
+    const endOfSelectedDay = endOfDay(date).getTime();
+
+    const filteredBelumKirim = allExpedisiData.filter(item =>
+      item.flag === "NO" &&
+      new Date(item.created).getTime() >= startOfSelectedDay &&
+      new Date(item.created).getTime() <= endOfSelectedDay
+    );
+    openResiModal("Detail Resi Belum Dikirim", filteredBelumKirim, "belumKirim");
   };
 
   const handleOpenFollowUpFlagNoModal = async () => {
+    // This query still needs to fetch data outside the selected date range
+    const actualCurrentDate = new Date();
+    const startOfActualCurrentDay = startOfDay(actualCurrentDate).toISOString();
+
     const { data, error } = await supabase
       .from("tbl_expedisi")
-      .select("*")
+      .select("resino, orderno, chanelsales, couriername, created, flag, datetrans, cekfu") // Select all necessary columns
       .eq("flag", "NO")
-      .not("created", "gte", startOfDay(new Date()).toISOString()) // Use actual current date for this specific query
-      .lt("created", startOfDay(new Date()).toISOString()); // Ensure it's before today
-      
+      .lt("created", startOfActualCurrentDay); // Records created BEFORE today
+
     if (error) {
       showError("Gagal memuat data Follow Up (Flag NO kecuali hari ini).");
       console.error("Error fetching Follow Up (Flag NO except today):", error);
       return;
     }
-    openResiModal("Detail Resi Follow Up (Flag NO kecuali hari ini)", data || [], "belumKirim");
+    openResiModal("Detail Resi Follow Up (Flag NO kecuali hari ini)", data || [], "belumKirim"); // Use 'belumKirim' type for consistent column display
   };
 
   const handleOpenScanFollowupModal = async () => {
@@ -117,20 +122,21 @@ const DashboardPage: React.FC = () => {
     openResiModal("Detail Resi Scan Follow Up (Scan Tidak Sesuai Tanggal)", resiWithCekfu || [], "followUp");
   };
 
-  const handleOpenExpeditionDetailModal = async (courierName: string) => {
-    const { data, error } = await supabase
-      .from("tbl_expedisi")
-      .select("*")
-      .eq("couriername", courierName)
-      .eq("flag", "NO")
-      .gte("created", startOfDay(date!).toISOString())
-      .lt("created", endOfDay(date!).toISOString());
-    if (error) {
-      showError(`Gagal memuat detail ekspedisi ${courierName}.`);
-      console.error(`Error fetching expedition detail for ${courierName}:`, error);
+  const handleOpenExpeditionDetailModal = (courierName: string) => {
+    if (!date || !allExpedisiData) {
+      showError("Data belum siap.");
       return;
     }
-    openResiModal(`Detail Resi ${courierName} (Belum Kirim)`, data || [], "expeditionDetail", courierName);
+    const startOfSelectedDay = startOfDay(date).getTime();
+    const endOfSelectedDay = endOfDay(date).getTime();
+
+    const filteredExpeditionData = allExpedisiData.filter(item =>
+      item.couriername === courierName &&
+      item.flag === "NO" &&
+      new Date(item.created).getTime() >= startOfSelectedDay &&
+      new Date(item.created).getTime() <= endOfSelectedDay
+    );
+    openResiModal(`Detail Resi ${courierName} (Belum Kirim)`, filteredExpeditionData, "expeditionDetail", courierName);
   };
 
   const handleCloseModal = () => {

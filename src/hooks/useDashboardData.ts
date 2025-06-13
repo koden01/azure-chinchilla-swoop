@@ -148,14 +148,14 @@ export const useDashboardData = (date: Date | undefined) => {
     enabled: !!date,
   });
 
-  // NEW: Fetch all tbl_expedisi data for the selected date range
+  // NEW: Fetch all tbl_expedisi data for the selected date range with all necessary columns
   const { data: allExpedisiData, isLoading: isLoadingAllExpedisi } = useQuery<any[]>({
     queryKey: ["allExpedisiData", formattedDate],
     queryFn: async () => {
       if (!date) return [];
       const { data, error } = await supabase
         .from("tbl_expedisi")
-        .select("resino, couriername, flag, created")
+        .select("resino, couriername, flag, created, orderno, chanelsales, datetrans, cekfu") // Added orderno, chanelsales, datetrans, cekfu
         .gte("created", startOfDay(date).toISOString())
         .lt("created", endOfDay(date).toISOString());
       if (error) throw error;
@@ -284,5 +284,6 @@ export const useDashboardData = (date: Date | undefined) => {
     isLoadingFollowUp,
     expeditionSummaries,
     formattedDate,
+    allExpedisiData, // Return allExpedisiData
   };
 };

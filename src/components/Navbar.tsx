@@ -9,8 +9,8 @@ const Navbar = () => {
   const location = useLocation();
 
   const navItems = [
-    { name: "Dashboard", path: "/", icon: LayoutDashboard },
-    { name: "Input", path: "/input", icon: Plus },
+    { name: "Input", path: "/", icon: Plus }, // Input is now home
+    { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard }, // Dashboard is now /dashboard
     { name: "History", path: "/history", icon: History },
   ];
 

@@ -37,8 +37,8 @@ const App = () => (
           <main className="flex-grow">
             <ExpeditionProvider> {/* Bungkus rute dengan ExpeditionProvider */}
               <Routes>
-                <Route path="/" element={<DashboardPage />} />
-                <Route path="/input" element={<Input />} />
+                <Route path="/" element={<Input />} /> {/* Home is now Input */}
+                <Route path="/dashboard" element={<DashboardPage />} /> {/* Dashboard is now /dashboard */}
                 <Route path="/history" element={<History />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />

@@ -24,13 +24,17 @@ const DashboardPage: React.FC = () => {
     isLoadingTransaksiHariIni,
     totalScan,
     isLoadingTotalScan,
-    idRekomendasi,
-    isLoadingIdRekomendasi,
+    idRekCount, // Renamed for clarity
+    isLoadingIdRekCount,
     belumKirim,
     isLoadingBelumKirim,
+    followUpFlagNoCount, // New
+    isLoadingFollowUpFlagNoCount, // New
+    scanFollowupLateCount, // New
+    isLoadingScanFollowupLateCount, // New
     batalCount,
     isLoadingBatalCount,
-    followUpData,
+    followUpData, // This is from get_scan_follow_up RPC
     isLoadingFollowUp,
     expeditionSummaries,
     formattedDate,
@@ -62,13 +66,37 @@ const DashboardPage: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleOpenFollowUpModal = async () => {
+  // New modal handler for "Follow Up" card (flag NO except today)
+  const handleOpenFollowUpFlagNoModal = async () => {
+    const { data, error } = await supabase
+      .from("tbl_expedisi")
+      .select("*")
+      .eq("flag", "NO")
+      .not("created", "gte", startOfDay(date!).toISOString())
+      .or(`created.lt.${startOfDay(date!).toISOString()},created.gte.${endOfDay(date!).toISOString()}`);
+      // Note: The .or() condition here is a simplified attempt to exclude today.
+      // For precise "not today" filtering, the `get_flag_no_except_today_count` RPC is used for the count.
+      // For the modal detail, fetching all and filtering in JS or a dedicated RPC for detail might be needed for very large datasets.
+      // For now, this query attempts to get records not created today.
+    if (error) {
+      showError("Gagal memuat data Follow Up (Flag NO kecuali hari ini).");
+      console.error("Error fetching Follow Up (Flag NO except today):", error);
+      return;
+    }
+    setModalTitle("Detail Resi Follow Up (Flag NO kecuali hari ini)");
+    setModalData(data || []);
+    setModalType("belumKirim"); // Reusing 'belumKirim' type as it has similar columns and actions
+    setIsModalOpen(true);
+  };
+
+  // Renamed from handleOpenFollowUpModal to be specific for 'late' schedule / scan follow up
+  const handleOpenScanFollowupModal = async () => {
     const { data, error } = await supabase.rpc("get_scan_follow_up", {
       selected_date: formattedDate,
     });
     if (error) {
-      showError("Gagal memuat data Follow Up.");
-      console.error("Error fetching Follow Up:", error);
+      showError("Gagal memuat data Scan Follow Up.");
+      console.error("Error fetching Scan Follow Up:", error);
       return;
     }
     const resiWithCekfu = await Promise.all((data || []).map(async (item: any) => {
@@ -83,7 +111,7 @@ const DashboardPage: React.FC = () => {
       };
     }));
 
-    setModalTitle("Detail Resi Follow Up (Scan Tidak Sesuai Tanggal)");
+    setModalTitle("Detail Resi Scan Follow Up (Scan Tidak Sesuai Tanggal)");
     setModalData(resiWithCekfu || []);
     setModalType("followUp");
     setIsModalOpen(true);
@@ -132,6 +160,8 @@ const DashboardPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ["followUpData", formattedDate] });
       queryClient.invalidateQueries({ queryKey: ["allResi", formattedDate] });
       queryClient.invalidateQueries({ queryKey: ["allExpedisi", formattedDate] });
+      queryClient.invalidateQueries({ queryKey: ["followUpFlagNoCount", formattedDate] }); // Invalidate new query
+      queryClient.invalidateQueries({ queryKey: ["scanFollowupLateCount", formattedDate] }); // Invalidate new query
       handleCloseModal();
     }
   };
@@ -164,6 +194,8 @@ const DashboardPage: React.FC = () => {
     queryClient.invalidateQueries({ queryKey: ["totalScan", formattedDate] });
     queryClient.invalidateQueries({ queryKey: ["allResi", formattedDate] });
     queryClient.invalidateQueries({ queryKey: ["allExpedisi", formattedDate] });
+    queryClient.invalidateQueries({ queryKey: ["followUpFlagNoCount", formattedDate] }); // Invalidate new query
+    queryClient.invalidateQueries({ queryKey: ["scanFollowupLateCount", formattedDate] }); // Invalidate new query
     handleCloseModal();
   };
 
@@ -181,10 +213,17 @@ const DashboardPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ["followUpData", formattedDate] });
       queryClient.invalidateQueries({ queryKey: ["belumKirim", formattedDate] });
       queryClient.invalidateQueries({ queryKey: ["allExpedisi", formattedDate] });
+      queryClient.invalidateQueries({ queryKey: ["followUpFlagNoCount", formattedDate] }); // Invalidate new query
+      queryClient.invalidateQueries({ queryKey: ["scanFollowupLateCount", formattedDate] }); // Invalidate new query
       if (modalType === "belumKirim") {
         handleOpenBelumKirimModal();
       } else if (modalType === "followUp") {
-        handleOpenFollowUpModal();
+        handleOpenScanFollowupModal(); // Use the renamed function
+      } else if (modalType === "expeditionDetail") {
+        // Re-open expedition detail modal if it was open
+        if (selectedCourier) {
+          handleOpenExpeditionDetailModal(selectedCourier);
+        }
       }
     }
   };
@@ -233,17 +272,19 @@ const DashboardPage: React.FC = () => {
           <SummaryCard
             title="Total Scan"
             value={isLoadingTotalScan ? "Loading..." : totalScan || 0}
+            secondaryTitle="ID Rekomendasi"
+            secondaryValue={isLoadingIdRekCount ? "Loading..." : idRekCount || 0}
             gradientFrom="from-purple-500"
             gradientTo="to-pink-500"
             icon="maximize"
           />
           <SummaryCard
             title="Follow Up"
-            value={isLoadingBelumKirim ? "Loading..." : belumKirim || 0}
+            value={isLoadingFollowUpFlagNoCount ? "Loading..." : followUpFlagNoCount || 0}
             gradientFrom="from-orange-500"
             gradientTo="to-red-500"
             icon="warning"
-            onClick={handleOpenBelumKirimModal}
+            onClick={handleOpenFollowUpFlagNoModal} // New handler for this card
           />
           <SummaryCard
             title="Batal"
@@ -253,11 +294,12 @@ const DashboardPage: React.FC = () => {
             icon="info"
           />
           <SummaryCard
-            title="ID Rekomendasi"
-            value={isLoadingIdRekomendasi ? "Loading..." : idRekomendasi || 0}
+            title="Scan Followup" {/* Changed title */}
+            value={isLoadingScanFollowupLateCount ? "Loading..." : scanFollowupLateCount || 0}
             gradientFrom="from-blue-500"
             gradientTo="to-purple-600"
             icon="clock"
+            onClick={handleOpenScanFollowupModal} // Renamed handler
           />
         </div>
 

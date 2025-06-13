@@ -4,7 +4,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
+import { format, subDays } from "date-fns"; // Import subDays
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import {
@@ -46,7 +46,8 @@ interface HistoryData {
 }
 
 const HistoryPage = () => {
-  const [startDate, setStartDate] = React.useState<Date | undefined>(new Date());
+  // Mengatur tanggal mulai default menjadi 30 hari yang lalu dari hari ini
+  const [startDate, setStartDate] = React.useState<Date | undefined>(subDays(new Date(), 30));
   const [endDate, setEndDate] = React.useState<Date | undefined>(new Date());
   const [searchQuery, setSearchQuery] = React.useState<string>("");
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
@@ -245,105 +246,105 @@ const HistoryPage = () => {
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Data History Table Section */}
-      <div className="bg-white p-6 rounded-lg shadow-md">
-        <h2 className="text-2xl font-bold text-gray-800 mb-4">Data History ({filteredHistoryData.length} records)</h2>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[50px]">No</TableHead><TableHead className="w-[30%]">Nomor Resi</TableHead><TableHead>Keterangan</TableHead><TableHead>No Karung</TableHead><TableHead>Tanggal Input</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoadingHistory ? (
+        {/* Data History Table Section */}
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Data History ({filteredHistoryData.length} records)</h2>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center">
-                    Memuat data...
-                  </TableCell>
+                  <TableHead className="w-[50px]">No</TableHead><TableHead className="w-[30%]">Nomor Resi</TableHead><TableHead>Keterangan</TableHead><TableHead>No Karung</TableHead><TableHead>Tanggal Input</TableHead>
                 </TableRow>
-              ) : currentData.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center">
-                    Tidak ada data.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                currentData.map((data, index) => (
-                  <TableRow key={data.Resi + index} className="cursor-pointer hover:bg-gray-100" onClick={() => handleDeleteClick(data.Resi)}>
-                    <TableCell className="font-medium">{startIndex + index + 1}</TableCell>
-                    <TableCell className="w-[30%]">{data.Resi}</TableCell>
-                    <TableCell>
-                      <span className="px-2 py-1 rounded-full text-xs font-semibold"
-                        style={{
-                          backgroundColor: data.Keterangan === "DATA" ? "#e0f7fa" : data.Keterangan === "MASUK" ? "#e8f5e9" : "#fff3e0",
-                          color: data.Keterangan === "DATA" ? "#00796b" : data.Keterangan === "MASUK" ? "#2e7d32" : "#e65100",
-                        }}
-                      >
-                        {data.Keterangan}
-                      </span>
+              </TableHeader>
+              <TableBody>
+                {isLoadingHistory ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center">
+                      Memuat data...
                     </TableCell>
-                    <TableCell>{data.nokarung}</TableCell>
-                    <TableCell>{format(new Date(data.created), "dd/MM/yyyy HH:mm")}</TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-        {totalPages > 1 && (
-          <Pagination className="mt-4">
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  href="#"
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
-                />
-              </PaginationItem>
-              {getPaginationPages().map((pageNumber) => (
-                <PaginationItem key={pageNumber}>
-                  <PaginationLink
+                ) : currentData.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center">
+                      Tidak ada data.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  currentData.map((data, index) => (
+                    <TableRow key={data.Resi + index} className="cursor-pointer hover:bg-gray-100" onClick={() => handleDeleteClick(data.Resi)}>
+                      <TableCell className="font-medium">{startIndex + index + 1}</TableCell>
+                      <TableCell className="w-[30%]">{data.Resi}</TableCell>
+                      <TableCell>
+                        <span className="px-2 py-1 rounded-full text-xs font-semibold"
+                          style={{
+                            backgroundColor: data.Keterangan === "DATA" ? "#e0f7fa" : data.Keterangan === "MASUK" ? "#e8f5e9" : "#fff3e0",
+                            color: data.Keterangan === "DATA" ? "#00796b" : data.Keterangan === "MASUK" ? "#2e7d32" : "#e65100",
+                          }}
+                        >
+                          {data.Keterangan}
+                        </span>
+                      </TableCell>
+                      <TableCell>{data.nokarung}</TableCell>
+                      <TableCell>{format(new Date(data.created), "dd/MM/yyyy HH:mm")}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          {totalPages > 1 && (
+            <Pagination className="mt-4">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
                     href="#"
-                    isActive={pageNumber === currentPage}
-                    onClick={() => handlePageChange(pageNumber)}
-                  >
-                    {pageNumber}
-                  </PaginationLink>
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+                  />
                 </PaginationItem>
-              ))}
-              <PaginationItem>
-                <PaginationNext
-                  href="#"
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        )}
-      </div>
-      <MadeWithDyad />
+                {getPaginationPages().map((pageNumber) => (
+                  <PaginationItem key={pageNumber}>
+                    <PaginationLink
+                      href="#"
+                      isActive={pageNumber === currentPage}
+                      onClick={() => handlePageChange(pageNumber)}
+                    >
+                      {pageNumber}
+                    </PaginationLink>
+                  </PaginationItem>
+                ))}
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          )}
+        </div>
+        <MadeWithDyad />
 
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Konfirmasi Penghapusan</AlertDialogTitle>
-            <AlertDialogDescription>
-              Apakah Anda yakin ingin menghapus resi <span className="font-bold">{resiToDelete}</span>? Tindakan ini tidak dapat dibatalkan.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setIsDeleteDialogOpen(false)}>Batal</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteResi} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Hapus
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Konfirmasi Penghapusan</AlertDialogTitle>
+              <AlertDialogDescription>
+                Apakah Anda yakin ingin menghapus resi <span className="font-bold">{resiToDelete}</span>? Tindakan ini tidak dapat dibatalkan.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setIsDeleteDialogOpen(false)}>Batal</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDeleteResi} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Hapus
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    </React.Fragment>
   );
 };
 

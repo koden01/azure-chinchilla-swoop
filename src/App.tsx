@@ -15,7 +15,21 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
-      <Sonner />
+      <Sonner
+        position="top-center" // Posisi toast di tengah atas
+        toastOptions={{
+          success: {
+            classNames: {
+              toast: "bg-green-500 text-white", // Latar belakang hijau untuk sukses
+            },
+          },
+          error: {
+            classNames: {
+              toast: "bg-red-500 text-white", // Latar belakang merah untuk error
+            },
+          },
+        }}
+      />
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <div className="flex flex-col min-h-screen">
           <Navbar />

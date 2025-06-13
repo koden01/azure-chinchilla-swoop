@@ -209,6 +209,8 @@ export const useDashboardData = (date: Date | undefined) => {
         sisa: 0,
         jumlahKarung: new Set<string>(), // Use a Set to count unique karung numbers
         idRekomendasi: 0,
+        totalBatal: 0, // Initialize new field
+        totalScanFollowUp: 0, // Initialize new field
       };
     });
 
@@ -237,6 +239,12 @@ export const useDashboardData = (date: Date | undefined) => {
           }
           if (resi.schedule === "idrek") {
             summaries[courierName].idRekomendasi++;
+          }
+          if (resi.schedule === "batal") { // Count 'batal'
+            summaries[courierName].totalBatal++;
+          }
+          if (resi.schedule === "late") { // Count 'late' for scan follow up
+            summaries[courierName].totalScanFollowUp++;
           }
           if (resi.nokarung) {
             // Add nokarung to the Set for unique counting

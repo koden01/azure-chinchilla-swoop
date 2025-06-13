@@ -160,8 +160,10 @@ const DashboardPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ["followUpData", formattedDate] });
       queryClient.invalidateQueries({ queryKey: ["allResi", formattedDate] });
       queryClient.invalidateQueries({ queryKey: ["allExpedisi", formattedDate] });
-      queryClient.invalidateQueries({ queryKey: ["followUpFlagNoCount", formattedDate] }); // Invalidate new query
+      queryClient.invalidateQueries({ queryKey: ["followUpFlagNoCount", format(new Date(), 'yyyy-MM-dd')] }); // Invalidate new query
       queryClient.invalidateQueries({ queryKey: ["scanFollowupLateCount", formattedDate] }); // Invalidate new query
+      queryClient.invalidateQueries({ queryKey: ["allResiData", formattedDate] }); // Invalidate allResiData for expedition summaries
+      queryClient.invalidateQueries({ queryKey: ["allExpedisiData", formattedDate] }); // Invalidate allExpedisiData for expedition summaries
       handleCloseModal();
     }
   };
@@ -194,8 +196,10 @@ const DashboardPage: React.FC = () => {
     queryClient.invalidateQueries({ queryKey: ["totalScan", formattedDate] });
     queryClient.invalidateQueries({ queryKey: ["allResi", formattedDate] });
     queryClient.invalidateQueries({ queryKey: ["allExpedisi", formattedDate] });
-    queryClient.invalidateQueries({ queryKey: ["followUpFlagNoCount", formattedDate] }); // Invalidate new query
+    queryClient.invalidateQueries({ queryKey: ["followUpFlagNoCount", format(new Date(), 'yyyy-MM-dd')] }); // Invalidate new query
     queryClient.invalidateQueries({ queryKey: ["scanFollowupLateCount", formattedDate] }); // Invalidate new query
+    queryClient.invalidateQueries({ queryKey: ["allResiData", formattedDate] }); // Invalidate allResiData for expedition summaries
+    queryClient.invalidateQueries({ queryKey: ["allExpedisiData", formattedDate] }); // Invalidate allExpedisiData for expedition summaries
     handleCloseModal();
   };
 
@@ -213,8 +217,10 @@ const DashboardPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ["followUpData", formattedDate] });
       queryClient.invalidateQueries({ queryKey: ["belumKirim", formattedDate] });
       queryClient.invalidateQueries({ queryKey: ["allExpedisi", formattedDate] });
-      queryClient.invalidateQueries({ queryKey: ["followUpFlagNoCount", formattedDate] }); // Invalidate new query
+      queryClient.invalidateQueries({ queryKey: ["followUpFlagNoCount", format(new Date(), 'yyyy-MM-dd')] }); // Invalidate new query
       queryClient.invalidateQueries({ queryKey: ["scanFollowupLateCount", formattedDate] }); // Invalidate new query
+      queryClient.invalidateQueries({ queryKey: ["allResiData", formattedDate] }); // Invalidate allResiData for expedition summaries
+      queryClient.invalidateQueries({ queryKey: ["allExpedisiData", formattedDate] }); // Invalidate allExpedisiData for expedition summaries
       if (modalType === "belumKirim") {
         handleOpenBelumKirimModal();
       } else if (modalType === "followUp") {
@@ -225,6 +231,18 @@ const DashboardPage: React.FC = () => {
           handleOpenExpeditionDetailModal(selectedCourier);
         }
       }
+    }
+  };
+
+  // Define gradients for expedition cards
+  const getExpeditionGradient = (name: string) => {
+    switch (name) {
+      case "JNE": return { from: "from-red-600", to: "to-red-800" };
+      case "SPX": return { from: "from-yellow-500", to: "to-yellow-700" };
+      case "INSTAN": return { from: "from-green-500", to: "to-green-700" };
+      case "ID": return { from: "from-blue-500", to: "to-blue-700" };
+      case "SICEPAT": return { from: "from-purple-500", to: "to-purple-700" };
+      default: return { from: "from-gray-500", to: "to-gray-700" };
     }
   };
 
@@ -309,18 +327,25 @@ const DashboardPage: React.FC = () => {
             <Package className="mr-2 h-6 w-6" /> Detail per Expedisi
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {expeditionSummaries.map((summary) => (
-              <div key={summary.name} onClick={() => handleOpenExpeditionDetailModal(summary.name)}>
-                <ExpeditionDetailCard
-                  name={summary.name}
-                  totalTransaksi={summary.totalTransaksi}
-                  totalScan={summary.totalScan}
-                  sisa={summary.sisa}
-                  jumlahKarung={summary.jumlahKarung}
-                  idRekomendasi={summary.idRekomendasi}
-                />
-              </div>
-            ))}
+            {expeditionSummaries.map((summary) => {
+              const { from, to } = getExpeditionGradient(summary.name);
+              return (
+                <div key={summary.name} onClick={() => handleOpenExpeditionDetailModal(summary.name)}>
+                  <ExpeditionDetailCard
+                    name={summary.name}
+                    totalTransaksi={summary.totalTransaksi}
+                    totalScan={summary.totalScan}
+                    sisa={summary.sisa}
+                    jumlahKarung={summary.jumlahKarung}
+                    idRekomendasi={summary.idRekomendasi}
+                    totalBatal={summary.totalBatal}
+                    totalScanFollowUp={summary.totalScanFollowUp}
+                    gradientFrom={from}
+                    gradientTo={to}
+                  />
+                </div>
+              );
+            })}
           </div>
         </div>
         <MadeWithDyad />

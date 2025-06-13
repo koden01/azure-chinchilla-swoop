@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -15,7 +15,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox"; // Import Checkbox
 import {
   Pagination,
   PaginationContent,
@@ -46,21 +47,50 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
   title,
   data,
   modalType,
+  selectedCourier,
   onBatalResi,
   onConfirmResi,
   onCekfuToggle,
 }) => {
-  const [currentPage, setCurrentPage] = React.useState(1);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
 
-  React.useEffect(() => {
-    // Reset to first page when modal opens or data/type changes
+  // Reset to first page and clear search term when modal opens or data/type changes
+  useEffect(() => {
     setCurrentPage(1);
+    setSearchTerm("");
   }, [isOpen, data, modalType]);
 
-  const totalPages = Math.ceil(data.length / ITEMS_PER_PAGE);
+  const filteredData = React.useMemo(() => {
+    const lowerCaseSearchTerm = searchTerm.toLowerCase();
+    if (!lowerCaseSearchTerm) return data;
+
+    return data.filter((item) => {
+      // Adjust properties based on modalType for searching
+      if (modalType === "belumKirim" || modalType === "expeditionDetail") {
+        return (
+          item.resino?.toLowerCase().includes(lowerCaseSearchTerm) ||
+          item.nokarung?.toLowerCase().includes(lowerCaseSearchTerm) ||
+          item.couriername?.toLowerCase().includes(lowerCaseSearchTerm) ||
+          item.flag?.toLowerCase().includes(lowerCaseSearchTerm) ||
+          (item.created ? format(new Date(item.created), "dd/MM/yyyy HH:mm").toLowerCase().includes(lowerCaseSearchTerm) : false)
+        );
+      } else if (modalType === "followUp") {
+        return (
+          item.Resi?.toLowerCase().includes(lowerCaseSearchTerm) ||
+          item.couriername?.toLowerCase().includes(lowerCaseSearchTerm) ||
+          (item.created_resi ? format(new Date(item.created_resi), "dd/MM/yyyy HH:mm").toLowerCase().includes(lowerCaseSearchTerm) : false) ||
+          (item.created_expedisi ? format(new Date(item.created_expedisi), "dd/MM/yyyy HH:mm").toLowerCase().includes(lowerCaseSearchTerm) : false)
+        );
+      }
+      return false;
+    });
+  }, [searchTerm, data, modalType]);
+
+  const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
-  const currentData = data.slice(startIndex, endIndex);
+  const currentData = filteredData.slice(startIndex, endIndex);
 
   const handlePageChange = (page: number) => {
     if (page >= 1 && page <= totalPages) {
@@ -70,7 +100,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
 
   const getTableHeaders = () => {
     if (modalType === "belumKirim" || modalType === "expeditionDetail") {
-      return ["No. Resi", "Tanggal Input", "Flag", "Aksi"];
+      return ["No. Resi", "No Karung", "Tanggal Input", "Kurir", "Flag", "CEKFU", "Aksi"];
     } else if (modalType === "followUp") {
       return ["No. Resi", "Tanggal Resi", "Tanggal Expedisi", "Kurir", "CEKFU", "Aksi"];
     }
@@ -82,17 +112,21 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
       return currentData.map((item, index) => (
         <TableRow key={item.resino || index}>
           <TableCell>{item.resino}</TableCell>
+          <TableCell>{item.nokarung || "-"}</TableCell>
           <TableCell>{item.created ? format(new Date(item.created), "dd/MM/yyyy HH:mm") : "-"}</TableCell>
-          <TableCell>{item.flag}</TableCell>
+          <TableCell>{item.couriername || "-"}</TableCell>
+          <TableCell>{item.flag || "-"}</TableCell>
           <TableCell>
-            <Button variant="destructive" size="sm" onClick={() => onBatalResi(item.resino)}>
-              Batal
-            </Button>
             <Checkbox
               checked={item.cekfu || false}
               onCheckedChange={() => onCekfuToggle(item.resino, item.cekfu || false)}
-              className="ml-2"
             />
+          </TableCell>
+          <TableCell className="flex space-x-2">
+            <Button variant="destructive" size="sm" onClick={() => onBatalResi(item.resino)}>
+              Batal
+            </Button>
+            {/* No Confirm button for 'belumKirim' as per original logic, it's for expeditionDetail */}
           </TableCell>
         </TableRow>
       ));
@@ -102,16 +136,20 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
           <TableCell>{item.Resi}</TableCell>
           <TableCell>{item.created_resi ? format(new Date(item.created_resi), "dd/MM/yyyy HH:mm") : "-"}</TableCell>
           <TableCell>{item.created_expedisi ? format(new Date(item.created_expedisi), "dd/MM/yyyy HH:mm") : "-"}</TableCell>
-          <TableCell>{item.couriername}</TableCell>
+          <TableCell>{item.couriername || "-"}</TableCell>
           <TableCell>
             <Checkbox
               checked={item.cekfu || false}
               onCheckedChange={() => onCekfuToggle(item.Resi, item.cekfu || false)}
             />
           </TableCell>
-          <TableCell>
+          <TableCell className="flex space-x-2">
             <Button variant="destructive" size="sm" onClick={() => onBatalResi(item.Resi)}>
               Batal
+            </Button>
+            {/* Confirm button might be relevant here too if 'late' items can be confirmed */}
+            <Button variant="default" size="sm" onClick={() => onConfirmResi(item.Resi)}>
+              Konfirmasi
             </Button>
           </TableCell>
         </TableRow>
@@ -120,9 +158,20 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
       return currentData.map((item, index) => (
         <TableRow key={item.resino || index}>
           <TableCell>{item.resino}</TableCell>
+          <TableCell>{item.nokarung || "-"}</TableCell>
           <TableCell>{item.created ? format(new Date(item.created), "dd/MM/yyyy HH:mm") : "-"}</TableCell>
-          <TableCell>{item.flag}</TableCell>
+          <TableCell>{item.couriername || "-"}</TableCell>
+          <TableCell>{item.flag || "-"}</TableCell>
           <TableCell>
+            <Checkbox
+              checked={item.cekfu || false}
+              onCheckedChange={() => onCekfuToggle(item.resino, item.cekfu || false)}
+            />
+          </TableCell>
+          <TableCell className="flex space-x-2">
+            <Button variant="destructive" size="sm" onClick={() => onBatalResi(item.resino)}>
+              Batal
+            </Button>
             <Button variant="default" size="sm" onClick={() => onConfirmResi(item.resino)}>
               Konfirmasi
             </Button>
@@ -135,14 +184,23 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[800px] lg:max-w-[1000px] max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
-            Menampilkan {currentData.length} dari {data.length} resi.
+            Menampilkan {currentData.length} dari {filteredData.length} resi.
+            {selectedCourier && ` (Kurir: ${selectedCourier})`}
           </DialogDescription>
         </DialogHeader>
-        <div className="overflow-x-auto">
+        <div className="my-4">
+          <Input
+            placeholder="Cari Resi, No Karung, Kurir, atau Keterangan..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full"
+          />
+        </div>
+        <div className="overflow-y-auto flex-grow">
           <Table>
             <TableHeader>
               <TableRow>

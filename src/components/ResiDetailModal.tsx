@@ -128,7 +128,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
                 Batal
               </Button>
               {(modalType === "expeditionDetail" || modalType === "belumKirim") && (
-                <Button variant="default" size="sm" onClick={() => onConfirmResi(item.resino)}>
+                <Button className="bg-green-600 hover:bg-green-700 text-white" size="sm" onClick={() => onConfirmResi(item.resino)}>
                   Konfirmasi
                 </Button>
               )}
@@ -154,7 +154,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
               <Button variant="destructive" size="sm" onClick={() => onBatalResi(item.Resi)}>
                 Batal
               </Button>
-              <Button variant="default" size="sm" onClick={() => onConfirmResi(item.Resi)}>
+              <Button className="bg-green-600 hover:bg-green-700 text-white" size="sm" onClick={() => onConfirmResi(item.Resi)}>
                 Konfirmasi
               </Button>
             </TableCell>

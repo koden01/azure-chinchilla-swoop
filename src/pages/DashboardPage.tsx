@@ -190,7 +190,7 @@ const DashboardPage: React.FC = () => {
   };
 
   return (
-    <> {/* Added React.Fragment shorthand */}
+    <>
       <div className="p-6 space-y-6 bg-gray-50 min-h-[calc(100vh-64px)]">
         {/* Filter Tanggal Section */}
         <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-6 rounded-lg shadow-md">
@@ -224,7 +224,7 @@ const DashboardPage: React.FC = () => {
         {/* Summary Cards Section */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <SummaryCard
-            title="Terisi Hari Ini"
+            title="Transaksi Hari Ini" {/* Changed from "Terisi Hari Ini" */}
             value={isLoadingTransaksiHariIni ? "Loading..." : transaksiHariIni || 0}
             gradientFrom="from-green-400"
             gradientTo="to-blue-500"
@@ -295,7 +295,7 @@ const DashboardPage: React.FC = () => {
           onCekfuToggle={handleCekfuToggle}
         />
       </div>
-    </> // Added React.Fragment shorthand
+    </>
   );
 };
 

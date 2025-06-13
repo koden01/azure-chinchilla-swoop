@@ -111,14 +111,20 @@ const InputPage = () => {
   }, [expedition, highestKarung]);
 
 
-  // Auto-focus logic
+  // Auto-focus logic: Ensure focus after expedition and karung are selected
   React.useEffect(() => {
     if (expedition && selectedKarung && resiInputRef.current) {
-      resiInputRef.current.focus();
+      // Add a small delay to ensure the input is fully enabled and rendered
+      const timer = setTimeout(() => {
+        if (resiInputRef.current) {
+          resiInputRef.current.focus();
+        }
+      }, 100); // 100ms delay
+      return () => clearTimeout(timer); // Cleanup on unmount or dependency change
     }
   }, [expedition, selectedKarung]);
 
-  // Keep focus on resi input
+  // Keep focus on resi input after an action
   const keepFocus = () => {
     setTimeout(() => { // Use setTimeout to ensure focus after state updates
       if (resiInputRef.current) {

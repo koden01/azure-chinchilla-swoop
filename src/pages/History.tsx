@@ -4,7 +4,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { CalendarIcon } from "lucide-react";
-import { format } from "date-fns"; // Removed subDays
+import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import {
@@ -37,6 +37,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { showSuccess, showError } from "@/utils/toast";
+import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation"; // Import invalidate function
 
 interface HistoryData {
   Resi: string;
@@ -46,7 +47,7 @@ interface HistoryData {
 }
 
 const HistoryPage = () => {
-  const [startDate, setStartDate] = React.useState<Date | undefined>(new Date()); // Changed default to current date
+  const [startDate, setStartDate] = React.useState<Date | undefined>(new Date());
   const [endDate, setEndDate] = React.useState<Date | undefined>(new Date());
   const [searchQuery, setSearchQuery] = React.useState<string>("");
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
@@ -57,16 +58,33 @@ const HistoryPage = () => {
   const formattedStartDate = startDate ? format(startDate, "yyyy-MM-dd") : "";
   const formattedEndDate = endDate ? format(endDate, "yyyy-MM-dd") : "";
 
-  const { data: historyData, isLoading: isLoadingHistory } = useQuery<HistoryData[]>({
+  console.log("HistoryPage: startDate (state)", startDate);
+  console.log("HistoryPage: endDate (state)", endDate);
+  console.log("HistoryPage: formattedStartDate", formattedStartDate);
+  console.log("HistoryPage: formattedEndDate", formattedEndDate);
+
+  const { data: historyData, isLoading: isLoadingHistory, error: historyError } = useQuery<HistoryData[]>({
     queryKey: ["historyData", formattedStartDate, formattedEndDate],
     queryFn: async () => {
-      if (!startDate || !endDate) return [];
+      if (!startDate || !endDate) {
+        console.log("HistoryPage: Skipping query, startDate or endDate is undefined.");
+        return [];
+      }
+
+      // Calculate start of startDate and end of endDate for precise range
+      const startOfSelectedStartDate = new Date(startDate);
+      startOfSelectedStartDate.setHours(0, 0, 0, 0); // Set to start of the day
+
+      const endOfSelectedEndDate = new Date(endDate);
+      endOfSelectedEndDate.setHours(23, 59, 59, 999); // Set to end of the day
+
+      console.log("HistoryPage: Querying Supabase with range (ISO):", startOfSelectedStartDate.toISOString(), "to", endOfSelectedEndDate.toISOString());
 
       let query = supabase
         .from("tbl_resi")
         .select("Resi, Keterangan, nokarung, created")
-        .gte("created", startDate.toISOString())
-        .lt("created", new Date(endDate.getTime() + 24 * 60 * 60 * 1000).toISOString())
+        .gte("created", startOfSelectedStartDate.toISOString())
+        .lte("created", endOfSelectedEndDate.toISOString()) // Changed to lte for end of day
         .order("created", { ascending: false });
 
       const { data, error } = await query;
@@ -75,20 +93,27 @@ const HistoryPage = () => {
         console.error("Error fetching history data:", error);
         throw error;
       }
+      console.log("HistoryPage: Fetched history data:", data);
       return data || [];
     },
     enabled: !!startDate && !!endDate,
   });
 
+  console.log("HistoryPage: isLoadingHistory", isLoadingHistory);
+  console.log("HistoryPage: historyData (from query)", historyData);
+  console.log("HistoryPage: historyError", historyError);
+
   const filteredHistoryData = React.useMemo(() => {
     if (!historyData) return [];
     const lowerCaseSearchQuery = searchQuery.toLowerCase();
-    return historyData.filter(data =>
+    const filtered = historyData.filter(data =>
       data.Resi.toLowerCase().includes(lowerCaseSearchQuery) ||
       (data.Keterangan?.toLowerCase() || "").includes(lowerCaseSearchQuery) ||
       (data.nokarung?.toLowerCase() || "").includes(lowerCaseSearchQuery) ||
       format(new Date(data.created), "dd/MM/yyyy").includes(lowerCaseSearchQuery)
     );
+    console.log("HistoryPage: filteredHistoryData", filtered);
+    return filtered;
   }, [historyData, searchQuery]);
 
   const ITEMS_PER_PAGE = 10;
@@ -98,6 +123,8 @@ const HistoryPage = () => {
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
   const currentData = filteredHistoryData.slice(startIndex, endIndex);
+
+  console.log("HistoryPage: currentData (for table)", currentData);
 
   const handlePageChange = (page: number) => {
     if (page >= 1 && page <= totalPages) {
@@ -145,15 +172,11 @@ const HistoryPage = () => {
       console.error("Error deleting resi:", error);
     } else {
       showSuccess(`Resi ${resiToDelete} berhasil dihapus.`);
-      queryClient.invalidateQueries({ queryKey: ["historyData", formattedStartDate, formattedEndDate] });
-      queryClient.invalidateQueries({ queryKey: ["transaksiHariIni"] });
-      queryClient.invalidateQueries({ queryKey: ["totalScan"] });
-      queryClient.invalidateQueries({ queryKey: ["belumKirim"] });
-      queryClient.invalidateQueries({ queryKey: ["followUpFlagNoCount"] });
-      queryClient.invalidateQueries({ queryKey: ["scanFollowupLateCount"] });
-      queryClient.invalidateQueries({ queryKey: ["batalCount"] });
-      queryClient.invalidateQueries({ queryKey: ["allExpedisiData"] });
-      queryClient.invalidateQueries({ queryKey: ["allResiData"] });
+      // Invalidate all relevant dashboard queries to refresh counts
+      invalidateDashboardQueries(queryClient, new Date()); // Invalidate for current date
+      // Also invalidate for the selected date range in history if it's different
+      if (startDate) invalidateDashboardQueries(queryClient, startDate);
+      if (endDate) invalidateDashboardQueries(queryClient, endDate);
     }
     setIsDeleteDialogOpen(false);
     setResiToDelete(null);
@@ -253,25 +276,30 @@ const HistoryPage = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[50px]">No</TableHead><TableHead className="w-[30%]">Nomor Resi</TableHead><TableHead>Keterangan</TableHead><TableHead>No Karung</TableHead><TableHead>Tanggal Input</TableHead>
+                  <TableHead className="w-[50px]">No</TableHead>
+                  <TableHead className="w-[30%]">Nomor Resi</TableHead>
+                  <TableHead>Keterangan</TableHead>
+                  <TableHead>No Karung</TableHead>
+                  <TableHead>Tanggal Input</TableHead>
+                  <TableHead>Aksi</TableHead> {/* Added Aksi column */}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoadingHistory ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center">
+                    <TableCell colSpan={6} className="text-center"> {/* Updated colspan */}
                       Memuat data...
                     </TableCell>
                   </TableRow>
                 ) : currentData.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center">
+                    <TableCell colSpan={6} className="text-center"> {/* Updated colspan */}
                       Tidak ada data.
                     </TableCell>
                   </TableRow>
                 ) : (
                   currentData.map((data, index) => (
-                    <TableRow key={data.Resi + index} className="cursor-pointer hover:bg-gray-100" onClick={() => handleDeleteClick(data.Resi)}>
+                    <TableRow key={data.Resi + index} className="hover:bg-gray-100">
                       <TableCell className="font-medium">{startIndex + index + 1}</TableCell>
                       <TableCell className="w-[30%]">{data.Resi}</TableCell>
                       <TableCell>
@@ -286,6 +314,15 @@ const HistoryPage = () => {
                       </TableCell>
                       <TableCell>{data.nokarung}</TableCell>
                       <TableCell>{format(new Date(data.created), "dd/MM/yyyy HH:mm")}</TableCell>
+                      <TableCell>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDeleteClick(data.Resi)}
+                        >
+                          Hapus
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))
                 )}

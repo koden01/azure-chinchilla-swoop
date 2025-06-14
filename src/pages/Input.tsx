@@ -39,7 +39,7 @@ const InputPage = () => {
   const debouncedInvalidate = useDebounce(() => {
     console.log("Debounced invalidation triggered!");
     invalidateDashboardQueries(queryClient, new Date());
-  }, 500);
+  }, 150); // Dipercepat menjadi 150ms
 
   React.useEffect(() => {
     if (expedition) {

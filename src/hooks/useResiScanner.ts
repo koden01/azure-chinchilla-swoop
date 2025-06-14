@@ -21,7 +21,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
   const debouncedInvalidate = useDebounce(() => {
     console.log("Debounced invalidation triggered!");
     invalidateDashboardQueries(queryClient, new Date());
-  }, 500); // 500ms debounce delay
+  }, 150); // Dipercepat menjadi 150ms
 
   const keepFocus = () => {
     setTimeout(() => {

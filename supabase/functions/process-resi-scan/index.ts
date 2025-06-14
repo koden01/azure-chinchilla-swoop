@@ -31,6 +31,11 @@ serve(async (req) => {
       }
     );
 
+    // Calculate start and end of the day for the formattedDate
+    const selectedDate = new Date(formattedDate);
+    const startOfDay = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 0, 0, 0, 0);
+    const endOfDay = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 23, 59, 59, 999);
+
     // 1. Check tbl_expedisi
     const { data: expedisiData, error: expError } = await supabaseClient
       .from("tbl_expedisi")
@@ -73,7 +78,8 @@ serve(async (req) => {
     // 2. Check tbl_resi for duplicates using RPC
     const { data: duplicateResi, error: dupError } = await supabaseClient.rpc("get_filtered_resi_for_expedition_and_date", {
       p_couriername: expedition,
-      p_selected_date: formattedDate,
+      p_start_date: startOfDay.toISOString(), // Pass start of day
+      p_end_date: endOfDay.toISOString(),     // Pass end of day
       p_resi: resiNumber,
       p_nokarung: selectedKarung,
     });

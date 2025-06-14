@@ -71,6 +71,7 @@ serve(async (req) => {
     }
 
     // 2. Check tbl_resi for duplicates using RPC
+    // Select 'created' column as well to include in the duplicate message
     const { data: duplicateResi, error: dupError } = await supabaseClient.rpc("get_filtered_resi_for_expedition_and_date", {
       p_couriername: expedition,
       p_selected_date: formattedDate,
@@ -88,7 +89,21 @@ serve(async (req) => {
 
     if (duplicateResi && duplicateResi.length > 0) {
       const existingKarung = duplicateResi[0].nokarung;
-      return new Response(JSON.stringify({ success: false, message: `Resi duplikat! Sudah ada di karung No. ${existingKarung}.` }), {
+      const existingCreated = duplicateResi[0].created;
+      
+      // Format the date for the message
+      const dateObj = new Date(existingCreated);
+      const formattedDateString = dateObj.toLocaleDateString('id-ID', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      });
+      const formattedTimeString = dateObj.toLocaleTimeString('id-ID', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+
+      return new Response(JSON.stringify({ success: false, message: `Resi duplikat! Sudah ada di karung No. ${existingKarung} pada tanggal ${formattedDateString} pukul ${formattedTimeString}.` }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
       });

@@ -213,11 +213,14 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
     const dataRows = rows.map(row => row.join('\t')).join('\n');
     const textToCopy = `${headerRow}\n${dataRows}`;
 
+    console.log("Attempting to copy data:", textToCopy); // Log data to be copied
+
     try {
       await navigator.clipboard.writeText(textToCopy);
       showSuccess("Data tabel berhasil disalin!");
-    } catch (err) {
-      showError("Gagal menyalin data tabel.");
+      console.log("Data copied successfully!");
+    } catch (err: any) {
+      showError(`Gagal menyalin data tabel: ${err.message || "Unknown error"}`);
       console.error("Failed to copy table data:", err);
     }
   };

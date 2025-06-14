@@ -68,8 +68,8 @@ const InputPage = () => {
 
   return (
     <React.Fragment>
-      <div className="p-6 space-y-6 bg-gray-50 min-h-[calc(100vh-64px)]">
-        <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-8 rounded-lg shadow-md text-white text-center space-y-4">
+      <div className="p-4 md:p-6 space-y-6 bg-gray-50 min-h-[calc(100vh-64px)]"> {/* Adjusted padding */}
+        <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-6 md:p-8 rounded-lg shadow-md text-white text-center space-y-4"> {/* Adjusted padding */}
           <h2 className="text-2xl font-semibold">Input Data Resi</h2>
           <div className="text-6xl font-bold">
             {!expedition

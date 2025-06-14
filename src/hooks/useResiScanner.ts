@@ -1,6 +1,6 @@
 import React from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { showSuccess, showError } from "@/utils/toast";
+import { showSuccess, showError, dismissToast } from "@/utils/toast"; // Import dismissToast
 import { beepSuccess, beepFailure, beepDouble } from "@/utils/audio";
 import { useDebounce } from "@/hooks/useDebounce";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
@@ -148,6 +148,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
   };
 
   const handleScanResi = async () => {
+    dismissToast(); // Dismiss any existing toast when a new scan starts
     const currentResi = resiNumber.trim();
     setResiNumber("");
 

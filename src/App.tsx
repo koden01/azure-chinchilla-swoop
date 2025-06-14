@@ -1,4 +1,4 @@
-import React, { Suspense } from "react"; // Import Suspense
+import React, { Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,50 +12,52 @@ const DashboardPage = React.lazy(() => import("./pages/DashboardPage"));
 const InputPage = React.lazy(() => import("./pages/Input"));
 const HistoryPage = React.lazy(() => import("./pages/History"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
-const ResiDetailModal = React.lazy(() => import("./components/ResiDetailModal")); // Lazy load modal if it's used directly in a route or needs to be split
+const ResiDetailModal = React.lazy(() => import("./components/ResiDetailModal"));
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner
-        position="top-center"
-        duration={200} {/* Menambahkan durasi 200ms di sini */}
-        toastOptions={{
-          success: {
-            classNames: {
-              toast: "bg-green-500 text-white",
+const App = () => {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner
+          position="top-center"
+          duration={200}
+          toastOptions={{
+            success: {
+              classNames: {
+                toast: "bg-green-500 text-white",
+              },
             },
-          },
-          error: {
-            classNames: {
-              toast: "bg-red-500 text-white",
+            error: {
+              classNames: {
+                toast: "bg-red-500 text-white",
+              },
             },
-          },
-        }}
-      />
-      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <div className="flex flex-col min-h-screen">
-          <Navbar />
-          <main className="flex-grow">
-            <ExpeditionProvider>
-              <Suspense fallback={<div className="text-center p-8 text-gray-600">Memuat aplikasi...</div>}> {/* Fallback saat komponen dimuat */}
-                <Routes>
-                  <Route path="/" element={<InputPage />} />
-                  <Route path="/dashboard" element={<DashboardPage />} />
-                  <Route path="/history" element={<HistoryPage />} />
-                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </Suspense>
-            </ExpeditionProvider>
-          </main>
-        </div>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+          }}
+        />
+        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          <div className="flex flex-col min-h-screen">
+            <Navbar />
+            <main className="flex-grow">
+              <ExpeditionProvider>
+                <Suspense fallback={<div className="text-center p-8 text-gray-600">Memuat aplikasi...</div>}>
+                  <Routes>
+                    <Route path="/" element={<InputPage />} />
+                    <Route path="/dashboard" element={<DashboardPage />} />
+                    <Route path="/history" element={<HistoryPage />} />
+                    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </Suspense>
+              </ExpeditionProvider>
+            </main>
+          </div>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;

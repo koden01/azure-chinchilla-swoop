@@ -37,17 +37,19 @@ const App = () => {
           }}
         />
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-          <Layout> {/* Menggunakan komponen Layout di sini */}
-            <Suspense fallback={<div className="text-center p-8 text-gray-600">Memuat aplikasi...</div>}>
-              <Routes>
-                <Route path="/" element={<InputPage />} />
-                <Route path="/dashboard" element={<DashboardPage />} />
-                <Route path="/history" element={<HistoryPage />} />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Suspense>
-          </Layout>
+          <ExpeditionProvider> {/* ExpeditionProvider dipindahkan ke sini */}
+            <Layout>
+              <Suspense fallback={<div className="text-center p-8 text-gray-600">Memuat aplikasi...</div>}>
+                <Routes>
+                  <Route path="/" element={<InputPage />} />
+                  <Route path="/dashboard" element={<DashboardPage />} />
+                  <Route path="/history" element={<HistoryPage />} />
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Suspense>
+            </Layout>
+          </ExpeditionProvider>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>

@@ -162,6 +162,7 @@ const HistoryPage = () => {
   const confirmDeleteResi = async () => {
     if (!resiToDelete) return;
 
+    console.log(`Attempting to delete resi: ${resiToDelete}`);
     const { error } = await supabase
       .from("tbl_resi")
       .delete()
@@ -172,11 +173,21 @@ const HistoryPage = () => {
       console.error("Error deleting resi:", error);
     } else {
       showSuccess(`Resi ${resiToDelete} berhasil dihapus.`);
-      // Invalidate all relevant dashboard queries to refresh counts
-      invalidateDashboardQueries(queryClient, new Date()); // Invalidate for current date
-      // Also invalidate for the selected date range in history if it's different
-      if (startDate) invalidateDashboardQueries(queryClient, startDate);
-      if (endDate) invalidateDashboardQueries(queryClient, endDate);
+      console.log(`Successfully deleted resi: ${resiToDelete}`);
+
+      // Invalidate history data itself
+      queryClient.invalidateQueries({ queryKey: ["historyData", formattedStartDate, formattedEndDate] });
+
+      // Invalidate the specific query used by useResiInputData for duplicate checking
+      // This query uses today's date, not the selected history date
+      const todayFormatted = format(new Date(), "yyyy-MM-dd");
+      queryClient.invalidateQueries({
+        queryKey: ["allResiForExpedition"], // Invalidate all instances of this query key
+        refetchType: "all", // Ensure all instances are refetched
+      });
+
+      // Invalidate general dashboard queries that might rely on tbl_resi counts
+      invalidateDashboardQueries(queryClient, new Date());
     }
     setIsDeleteDialogOpen(false);
     setResiToDelete(null);

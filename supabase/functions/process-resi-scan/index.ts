@@ -15,7 +15,7 @@ serve(async (req) => {
     const { resiNumber, expedition, selectedKarung, formattedDate } = await req.json();
 
     if (!resiNumber || !expedition || !selectedKarung || !formattedDate) {
-      return new Response(JSON.stringify({ success: false, message: "Missing required parameters." }), {
+      return new Response(JSON.stringify({ success: false, message: "Parameter input tidak lengkap. Mohon lengkapi semua kolom." }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
       });
@@ -45,7 +45,7 @@ serve(async (req) => {
 
     if (expError && expError.code !== 'PGRST116') { // PGRST116 means "no rows found"
       console.error("Error fetching expedisi data:", expError);
-      return new Response(JSON.stringify({ success: false, message: `Database error: ${expError.message}` }), {
+      return new Response(JSON.stringify({ success: false, message: `Kesalahan database saat mengambil data ekspedisi: ${expError.message}` }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
       });
@@ -55,14 +55,14 @@ serve(async (req) => {
 
     if (expedition === "ID") {
       if (expedisiData && expedisiData.couriername !== "ID") {
-        return new Response(JSON.stringify({ success: false, message: `Resi ini bukan milik ekspedisi ID. Ini milik ${expedisiData.couriername}.` }), {
+        return new Response(JSON.stringify({ success: false, message: `Resi ini bukan untuk ekspedisi ID, melainkan untuk ${expedisiData.couriername}.` }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 400,
         });
       }
     } else {
       if (!expedisiData) {
-        return new Response(JSON.stringify({ success: false, message: "Resi tidak ada di data base." }), {
+        return new Response(JSON.stringify({ success: false, message: "Resi tidak ditemukan dalam database ekspedisi." }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 400,
         });
@@ -86,7 +86,7 @@ serve(async (req) => {
 
     if (dupError) {
       console.error("Error fetching duplicate resi:", dupError);
-      return new Response(JSON.stringify({ success: false, message: `Database error: ${dupError.message}` }), {
+      return new Response(JSON.stringify({ success: false, message: `Kesalahan database saat memeriksa duplikat resi: ${dupError.message}` }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
       });
@@ -104,7 +104,7 @@ serve(async (req) => {
         year: 'numeric',
       });
 
-      return new Response(JSON.stringify({ success: false, message: `Resi duplikat! Sudah ada di karung No. ${existingKarung} pada tanggal ${formattedDateString}.` }), {
+      return new Response(JSON.stringify({ success: false, message: `Resi duplikat! Resi ini sudah discan di karung ${existingKarung} pada tanggal ${formattedDateString}.` }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
       });
@@ -136,20 +136,20 @@ serve(async (req) => {
 
     if (insertError) {
       console.error("Error inserting resi:", insertError);
-      return new Response(JSON.stringify({ success: false, message: `Gagal menginput resi: ${insertError.message}` }), {
+      return new Response(JSON.stringify({ success: false, message: `Gagal menyimpan resi: ${insertError.message}` }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
       });
     }
 
-    return new Response(JSON.stringify({ success: true, message: `Resi ${resiNumber} berhasil diinput.` }), {
+    return new Response(JSON.stringify({ success: true, message: `Resi ${resiNumber} berhasil discan.` }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });
 
   } catch (error) {
     console.error("Unhandled error in process-resi-scan:", error);
-    return new Response(JSON.stringify({ success: false, message: `Internal server error: ${error.message || "Unknown error"}` }), {
+    return new Response(JSON.stringify({ success: false, message: `Terjadi kesalahan internal server: ${error.message || "Silakan coba lagi."}` }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
     });

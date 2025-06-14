@@ -37,7 +37,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
 
   const handleOpenBelumKirimModal = async () => {
     if (!date) {
-      showError("Tanggal belum dipilih.");
+      showError("Mohon pilih tanggal terlebih dahulu.");
       return;
     }
     const { data, error } = await supabase
@@ -48,7 +48,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       .lt("created", endOfDay(date).toISOString());
 
     if (error) {
-      showError("Gagal memuat data Resi Belum Dikirim.");
+      showError("Gagal memuat data resi yang belum dikirim.");
       console.error("Error fetching Belum Kirim data:", error);
       return;
     }
@@ -75,7 +75,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
 
   const handleOpenScanFollowupModal = async () => {
     if (!date) {
-      showError("Tanggal belum dipilih.");
+      showError("Mohon pilih tanggal terlebih dahulu.");
       return;
     }
     const { data, error } = await supabase.rpc("get_scan_follow_up", {
@@ -134,7 +134,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
           .eq("Resi", resiNumber);
 
         if (updateError) throw updateError;
-        showSuccess(`Resi ${resiNumber} berhasil dibatalkan (diperbarui).`);
+        showSuccess(`Resi ${resiNumber} berhasil dibatalkan.`);
       } else {
         // If it doesn't exist, fetch data from tbl_expedisi and insert
         const { data: expedisiData, error: expFetchError } = await supabase
@@ -160,14 +160,14 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
           });
 
         if (insertError) throw insertError;
-        showSuccess(`Resi ${resiNumber} berhasil dibatalkan (baru diinput).`);
+        showSuccess(`Resi ${resiNumber} berhasil dibatalkan.`);
       }
 
       invalidateDashboardQueries(queryClient, date);
       setModalData(prevData => prevData.filter(item => (item.resino || item.Resi) !== resiNumber));
 
     } catch (error: any) {
-      showError(`Gagal membatalkan resi ${resiNumber}: ${error.message || "Unknown error"}`);
+      showError(`Gagal membatalkan resi ${resiNumber}. ${error.message || "Silakan coba lagi."}`);
       console.error("Error batal resi:", error);
     }
   };
@@ -223,7 +223,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
           .eq("Resi", resiNumber);
 
         if (updateResiError) throw updateResiError;
-        showSuccess(`Resi ${resiNumber} berhasil dikonfirmasi (diperbarui).`);
+        showSuccess(`Resi ${resiNumber} berhasil dikonfirmasi.`);
       } else {
         // If it doesn't exist, insert a new entry
         const { error: insertResiError } = await supabase
@@ -237,14 +237,14 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
           });
 
         if (insertResiError) throw insertResiError;
-        showSuccess(`Resi ${resiNumber} berhasil dikonfirmasi (baru diinput).`);
+        showSuccess(`Resi ${resiNumber} berhasil dikonfirmasi.`);
       }
 
       invalidateDashboardQueries(queryClient, date);
       setModalData(prevData => prevData.filter(item => (item.resino || item.Resi) !== resiNumber));
 
     } catch (error: any) {
-      showError(`Gagal mengkonfirmasi resi ${resiNumber}: ${error.message || "Unknown error"}`);
+      showError(`Gagal mengkonfirmasi resi ${resiNumber}. ${error.message || "Silakan coba lagi."}`);
       console.error("Error confirming resi:", error);
     }
   };
@@ -256,10 +256,10 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       .eq("resino", resiNumber);
 
     if (error) {
-      showError(`Gagal memperbarui status CEKFU untuk resi ${resiNumber}.`);
+      showError(`Gagal memperbarui status CEKFU resi ${resiNumber}.`);
       console.error("Error updating CEKFU status:", error);
     } else {
-      showSuccess(`Status CEKFU untuk resi ${resiNumber} berhasil diperbarui.`);
+      showSuccess(`Status CEKFU resi ${resiNumber} berhasil diperbarui.`);
       invalidateDashboardQueries(queryClient, date);
       setModalData(prevData =>
         prevData.map(item =>

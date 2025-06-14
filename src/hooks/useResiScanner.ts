@@ -39,7 +39,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
       return false;
     }
     if (!expedition || !selectedKarung) {
-      showError("Pilih Expedisi dan No Karung terlebih dahulu.");
+      showError("Mohon pilih Expedisi dan No Karung terlebih dahulu.");
       beepFailure.play();
       return false;
     }
@@ -82,11 +82,11 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
         beepSuccess.play();
         debouncedInvalidate();
       } else {
-        showError(result.message || "Terjadi kesalahan saat memproses resi.");
+        showError(result.message || "Terjadi kesalahan saat memproses resi. Silakan coba lagi.");
         beepFailure.play();
       }
     } catch (error: any) {
-      showError(`Terjadi kesalahan jaringan: ${error.message || "Unknown error"}`);
+      showError(`Terjadi kesalahan jaringan: ${error.message || "Silakan periksa koneksi internet Anda."}`);
       beepFailure.play();
       console.error("Error during resi input via Edge Function:", error);
     } finally {

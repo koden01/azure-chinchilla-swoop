@@ -124,10 +124,13 @@ const InputPage = () => {
         }
     }
 
+    // Updated RPC call to include p_resi and p_nokarung for server-side filtering
     const { data: duplicateResi, error: dupError } = await supabase.rpc("get_resi_for_expedition_and_date", {
       p_couriername: expedition,
       p_selected_date: formattedDate,
-    }).eq("Resi", currentResi).eq("nokarung", selectedKarung);
+      p_resi: currentResi, // Pass resi number to RPC
+      p_nokarung: selectedKarung, // Pass karung number to RPC
+    });
 
     if (dupError) throw dupError;
 
@@ -231,7 +234,7 @@ const InputPage = () => {
                 Expedisi
               </label>
               <Select onValueChange={setExpedition} value={expedition}>
-                <SelectTrigger id="expedition-select" className="w-full bg-white text-gray-800 h-20 text-center justify-center">
+                <SelectTrigger id="expedition-select" className="w-full bg-white text-gray-800 h-12 text-center justify-center">
                   <SelectValue placeholder="Pilih Expedisi" />
                 </SelectTrigger>
                 <SelectContent>
@@ -248,7 +251,7 @@ const InputPage = () => {
                 No Karung
               </label>
               <Select onValueChange={setSelectedKarung} value={selectedKarung} disabled={!expedition}>
-                <SelectTrigger id="no-karung-select" className="w-full bg-white text-gray-800 h-20 text-center justify-center">
+                <SelectTrigger id="no-karung-select" className="w-full bg-white text-gray-800 h-12 text-center justify-center">
                   <SelectValue placeholder="Pilih No Karung" />
                 </SelectTrigger>
                 <SelectContent>
@@ -274,8 +277,9 @@ const InputPage = () => {
                   }
                 }}
                 ref={resiInputRef}
-                className="w-full bg-white text-gray-800 h-40 text-2xl text-center"
+                className="w-full bg-white text-gray-800 h-16 text-2xl text-center"
                 disabled={!expedition || !selectedKarung}
+                inputMode="none" // Menonaktifkan keyboard virtual
               />
             </div>
           </div>

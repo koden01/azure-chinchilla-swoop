@@ -22,7 +22,7 @@ const App = () => {
         <Toaster />
         <Sonner
           position="top-center"
-          duration={500}
+          duration={1000} // Durasi toast diubah menjadi 1000ms
           toastOptions={{
             success: {
               classNames: {
@@ -37,7 +37,7 @@ const App = () => {
           }}
         />
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-          <ExpeditionProvider> {/* ExpeditionProvider dipindahkan ke sini */}
+          <ExpeditionProvider>
             <Layout>
               <Suspense fallback={<div className="text-center p-8 text-gray-600">Memuat aplikasi...</div>}>
                 <Routes>

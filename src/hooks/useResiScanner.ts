@@ -85,7 +85,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
     }
 
     // Updated RPC call to include p_resi and p_nokarung for server-side filtering
-    const { data: duplicateResi, error: dupError } = await supabase.rpc("get_resi_for_expedition_and_date", {
+    const { data: duplicateResi, error: dupError } = await supabase.rpc("get_filtered_resi_for_expedition_and_date", {
       p_couriername: expedition,
       p_selected_date: formattedDate,
       p_resi: currentResi, // Pass resi number to RPC

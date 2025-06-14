@@ -23,7 +23,7 @@ const App = () => {
         <Toaster />
         <Sonner
           position="top-center"
-          duration={200}
+          duration={500} {/* Mengubah durasi menjadi 500ms di sini */}
           toastOptions={{
             success: {
               classNames: {

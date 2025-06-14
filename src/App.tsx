@@ -18,45 +18,47 @@ const queryClient = new QueryClient();
 
 const App = () => {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner
-          position="top-center"
-          duration={500} {/* Mengubah durasi menjadi 500ms di sini */}
-          toastOptions={{
-            success: {
-              classNames: {
-                toast: "bg-green-500 text-white",
+    <React.Fragment> {/* Menambahkan React.Fragment di sini */}
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner
+            position="top-center"
+            duration={500}
+            toastOptions={{
+              success: {
+                classNames: {
+                  toast: "bg-green-500 text-white",
+                },
               },
-            },
-            error: {
-              classNames: {
-                toast: "bg-red-500 text-white",
+              error: {
+                classNames: {
+                  toast: "bg-red-500 text-white",
+                },
               },
-            },
-          }}
-        />
-        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-          <div className="flex flex-col min-h-screen">
-            <Navbar />
-            <main className="flex-grow">
-              <ExpeditionProvider>
-                <Suspense fallback={<div className="text-center p-8 text-gray-600">Memuat aplikasi...</div>}>
-                  <Routes>
-                    <Route path="/" element={<InputPage />} />
-                    <Route path="/dashboard" element={<DashboardPage />} />
-                    <Route path="/history" element={<HistoryPage />} />
-                    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </Suspense>
-              </ExpeditionProvider>
-            </main>
-          </div>
-        </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
+            }}
+          />
+          <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <div className="flex flex-col min-h-screen">
+              <Navbar />
+              <main className="flex-grow">
+                <ExpeditionProvider>
+                  <Suspense fallback={<div className="text-center p-8 text-gray-600">Memuat aplikasi...</div>}>
+                    <Routes>
+                      <Route path="/" element={<InputPage />} />
+                      <Route path="/dashboard" element={<DashboardPage />} />
+                      <Route path="/history" element={<HistoryPage />} />
+                      {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </Suspense>
+                </ExpeditionProvider>
+              </main>
+            </div>
+          </BrowserRouter>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </React.Fragment> {/* Menambahkan penutup React.Fragment di sini */}
   );
 };
 

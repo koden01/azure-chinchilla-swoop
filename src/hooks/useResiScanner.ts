@@ -43,6 +43,12 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
       beepFailure.play();
       return false;
     }
+    // NEW: Validate Supabase Anon Key before making the request
+    if (!import.meta.env.VITE_SUPABASE_ANON_KEY) {
+      showError("Kesalahan konfigurasi: Kunci API Supabase (VITE_SUPABASE_ANON_KEY) tidak ditemukan. Mohon periksa file .env Anda.");
+      beepFailure.play();
+      return false;
+    }
     return true;
   };
 

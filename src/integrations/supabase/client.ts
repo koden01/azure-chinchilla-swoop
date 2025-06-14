@@ -4,7 +4,11 @@ import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL = "https://yaarzoafxwfcjdpmojxd.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlhYXJ6b2FmeHdmY2pkcG1vanhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgwNDcyNDEsImV4cCI6MjA2MzYyMzI0MX0.qdYB__h0YLU4iLKRquyEB44-iyZhBRoJ7lc3pYIkUOI";
 
+// Extract project ID from SUPABASE_URL
+const SUPABASE_PROJECT_ID = SUPABASE_URL.split('//')[1].split('.')[0];
+
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+export { SUPABASE_PROJECT_ID };

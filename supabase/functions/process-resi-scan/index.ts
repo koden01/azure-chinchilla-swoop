@@ -21,9 +21,23 @@ serve(async (req) => {
       });
     }
 
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+
+    console.log("Edge Function: SUPABASE_URL retrieved:", supabaseUrl ? "Yes" : "No");
+    console.log("Edge Function: SUPABASE_ANON_KEY retrieved:", supabaseAnonKey ? "Yes" : "No");
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error("Edge Function: Missing Supabase environment variables.");
+      return new Response(JSON.stringify({ success: false, message: "Kesalahan konfigurasi server: Kunci Supabase tidak ditemukan." }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500,
+      });
+    }
+
     const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      supabaseUrl,
+      supabaseAnonKey,
       {
         auth: {
           persistSession: false,

@@ -10,7 +10,9 @@ import {
 } from "@/components/ui/select";
 import { useResiInputData } from "@/hooks/useResiInputData";
 import { useExpedition } from "@/context/ExpeditionContext";
-import { useResiScanner } from "@/hooks/useResiScanner"; // Import the new hook
+import { useResiScanner } from "@/hooks/useResiScanner";
+import { Loader2 } from "lucide-react"; // Import Loader2 icon
+import { cn } from "@/lib/utils"; // Import cn utility
 
 const InputPage = () => {
   const { expedition, setExpedition } = useExpedition();
@@ -31,7 +33,8 @@ const InputPage = () => {
     setResiNumber,
     handleScanResi,
     resiInputRef,
-  } = useResiScanner({ expedition, selectedKarung, formattedDate }); // Use the hook
+    isProcessing, // Get isProcessing state from the hook
+  } = useResiScanner({ expedition, selectedKarung, formattedDate });
 
   const currentCount = getCountForSelectedKarung(selectedKarung);
 
@@ -48,7 +51,7 @@ const InputPage = () => {
   }, [expedition, highestKarung]);
 
   React.useEffect(() => {
-    if (expedition && selectedKarung && resiInputRef.current) {
+    if (expedition && selectedKarung && resiInputRef.current && !isProcessing) { // Add !isProcessing condition
       const timer = setTimeout(() => {
         if (resiInputRef.current) {
           resiInputRef.current.focus();
@@ -56,7 +59,7 @@ const InputPage = () => {
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [expedition, selectedKarung]);
+  }, [expedition, selectedKarung, isProcessing]); // Add isProcessing to dependencies
 
   console.log("InputPage State:", {
     expedition,
@@ -64,12 +67,13 @@ const InputPage = () => {
     isLoadingAllResiForExpedition,
     allResiForExpeditionCount: allResiForExpedition?.length,
     currentCount,
+    isProcessing, // Log isProcessing state
   });
 
   return (
     <React.Fragment>
-      <div className="p-4 md:p-6 space-y-6 bg-gray-50 min-h-[calc(100vh-64px)]"> {/* Adjusted padding */}
-        <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-6 md:p-8 rounded-lg shadow-md text-white text-center space-y-4"> {/* Adjusted padding */}
+      <div className="p-4 md:p-6 space-y-6 bg-gray-50 min-h-[calc(100vh-64px)]">
+        <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-6 md:p-8 rounded-lg shadow-md text-white text-center space-y-4">
           <h2 className="text-2xl font-semibold">Input Data Resi</h2>
           <div className="text-6xl font-bold">
             {!expedition
@@ -90,7 +94,7 @@ const InputPage = () => {
               <label htmlFor="expedition-select" className="block text-left text-sm font-medium mb-2">
                 Expedisi
               </label>
-              <Select onValueChange={setExpedition} value={expedition}>
+              <Select onValueChange={setExpedition} value={expedition} disabled={isProcessing}> {/* Disable during processing */}
                 <SelectTrigger id="expedition-select" className="w-full bg-white text-gray-800 h-12 text-center justify-center">
                   <SelectValue placeholder="Pilih Expedisi" />
                 </SelectTrigger>
@@ -107,7 +111,7 @@ const InputPage = () => {
               <label htmlFor="no-karung-select" className="block text-left text-sm font-medium mb-2">
                 No Karung
               </label>
-              <Select onValueChange={setSelectedKarung} value={selectedKarung} disabled={!expedition}>
+              <Select onValueChange={setSelectedKarung} value={selectedKarung} disabled={!expedition || isProcessing}> {/* Disable during processing */}
                 <SelectTrigger id="no-karung-select" className="w-full bg-white text-gray-800 h-12 text-center justify-center">
                   <SelectValue placeholder="Pilih No Karung" />
                 </SelectTrigger>
@@ -118,7 +122,7 @@ const InputPage = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="md:col-span-2">
+            <div className="md:col-span-2 relative"> {/* Added relative for absolute positioning of spinner */}
               <label htmlFor="scan-resi" className="block text-left text-sm font-medium mb-2">
                 Scan Resi
               </label>
@@ -134,10 +138,16 @@ const InputPage = () => {
                   }
                 }}
                 ref={resiInputRef}
-                className="w-full bg-white text-gray-800 h-16 text-2xl text-center"
-                disabled={!expedition || !selectedKarung}
-                inputMode="none" // Menonaktifkan keyboard virtual
+                className={cn(
+                  "w-full bg-white text-gray-800 h-16 text-2xl text-center pr-10", // Added pr-10 for spinner space
+                  isProcessing && "opacity-70 cursor-not-allowed" // Dim and change cursor when processing
+                )}
+                disabled={!expedition || !selectedKarung || isProcessing} // Disable during processing
+                inputMode="none"
               />
+              {isProcessing && (
+                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-6 w-6 animate-spin text-gray-500" />
+              )}
             </div>
           </div>
         </div>

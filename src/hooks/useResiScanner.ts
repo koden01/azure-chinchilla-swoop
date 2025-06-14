@@ -14,6 +14,7 @@ interface UseResiScannerProps {
 
 export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: UseResiScannerProps) => {
   const [resiNumber, setResiNumber] = React.useState<string>("");
+  const [isProcessing, setIsProcessing] = React.useState<boolean>(false); // New state for processing
   const resiInputRef = React.useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
@@ -51,15 +52,18 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
   }
 
   const checkExpeditionAndDuplicates = async (currentResi: string): Promise<ValidationResult> => {
+    console.log("Starting checkExpeditionAndDuplicates at:", new Date().toISOString());
     const { data: expedisiData, error: expError } = await supabase
       .from("tbl_expedisi")
       .select("resino, couriername")
       .eq("resino", currentResi)
       .single();
 
-    if (expError && expError.code !== 'PGRST116') {
+    if (expError && expError.code !== 'PGRST116') { // PGRST116 means "no rows found"
+        console.error("Error fetching expedisi data:", expError);
         throw expError;
     }
+    console.log("Finished tbl_expedisi select at:", new Date().toISOString());
 
     let actualCourierNameFromExpedisi: string | null = expedisiData?.couriername || null;
 
@@ -84,6 +88,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
         }
     }
 
+    console.log("Starting get_filtered_resi_for_expedition_and_date RPC at:", new Date().toISOString());
     // Updated RPC call to include p_resi and p_nokarung for server-side filtering
     const { data: duplicateResi, error: dupError } = await supabase.rpc("get_filtered_resi_for_expedition_and_date", {
       p_couriername: expedition,
@@ -92,7 +97,11 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
       p_nokarung: selectedKarung, // Pass karung number to RPC
     });
 
-    if (dupError) throw dupError;
+    if (dupError) {
+        console.error("Error fetching duplicate resi:", dupError);
+        throw dupError;
+    }
+    console.log("Finished get_filtered_resi_for_expedition_and_date RPC at:", new Date().toISOString());
 
     if (duplicateResi && duplicateResi.length > 0) {
       const existingKarung = duplicateResi[0].nokarung;
@@ -105,6 +114,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
   };
 
   const insertResi = async (currentResi: string, actualCourierNameFromExpedisi: string | null) => {
+    console.log("Starting insertResi at:", new Date().toISOString());
     let insertPayload: any = {
         Resi: currentResi,
         nokarung: selectedKarung,
@@ -128,10 +138,12 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
     if (insertError) {
       showError(`Gagal menginput resi: ${insertError.message}`);
       beepFailure.play();
+      console.error("Error inserting resi:", insertError);
       return false;
     }
     showSuccess(`Resi ${currentResi} berhasil diinput.`);
     beepSuccess.play();
+    console.log("Finished insertResi at:", new Date().toISOString());
     return true;
   };
 
@@ -142,6 +154,9 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
     if (!validateInput(currentResi)) {
       return;
     }
+
+    setIsProcessing(true); // Start processing
+    console.log("Starting handleScanResi for:", currentResi, "at:", new Date().toISOString());
 
     try {
       const validationResult = await checkExpeditionAndDuplicates(currentResi);
@@ -158,7 +173,9 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
       beepFailure.play();
       console.error("Error during resi input:", error);
     } finally {
+      setIsProcessing(false); // End processing
       keepFocus();
+      console.log("Finished handleScanResi for:", currentResi, "at:", new Date().toISOString());
     }
   };
 
@@ -167,5 +184,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
     setResiNumber,
     handleScanResi,
     resiInputRef,
+    isProcessing, // Return isProcessing state
   };
 };

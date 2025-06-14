@@ -73,12 +73,12 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
         }
     } else {
         if (expError || !expedisiData) {
-            showError("Resi tidak ditemukan di database ekspedisi.");
+            showError("Resi tidak ada di data base."); // Updated message
             beepFailure.play();
             return { success: false };
         }
         if (expedisiData.couriername !== expedition) {
-            showError(`Resi ini bukan milik ekspedisi ${expedition}. Ini milik ${expedisiData.couriername}.`);
+            showError(`Resi ini bukan milik ekspedisi ${expedition}. Ini milik ${expedisiData.couriername}.`); // Updated message
             beepFailure.play();
             return { success: false };
         }
@@ -95,7 +95,8 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
     if (dupError) throw dupError;
 
     if (duplicateResi && duplicateResi.length > 0) {
-      showError("Resi duplikat! Data sudah ada.");
+      const existingKarung = duplicateResi[0].nokarung;
+      showError(`Resi duplikat! Sudah ada di karung No. ${existingKarung}.`); // Updated message
       beepDouble.play();
       return { success: false };
     }

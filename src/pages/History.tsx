@@ -4,7 +4,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { CalendarIcon } from "lucide-react";
-import { format, subDays } from "date-fns";
+import { format } from "date-fns"; // Removed subDays
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import {
@@ -46,7 +46,7 @@ interface HistoryData {
 }
 
 const HistoryPage = () => {
-  const [startDate, setStartDate] = React.useState<Date | undefined>(subDays(new Date(), 30));
+  const [startDate, setStartDate] = React.useState<Date | undefined>(new Date()); // Changed default to current date
   const [endDate, setEndDate] = React.useState<Date | undefined>(new Date());
   const [searchQuery, setSearchQuery] = React.useState<string>("");
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);

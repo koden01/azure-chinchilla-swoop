@@ -8,21 +8,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
-import { showSuccess, showError } from "@/utils/toast";
-import { beepSuccess, beepFailure, beepDouble } from "@/utils/audio";
 import { useResiInputData } from "@/hooks/useResiInputData";
-import { useDebounce } from "@/hooks/useDebounce";
-import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
-import { useExpedition } from "@/context/ExpeditionContext"; // Import useExpedition
+import { useExpedition } from "@/context/ExpeditionContext";
+import { useResiScanner } from "@/hooks/useResiScanner"; // Import the new hook
 
 const InputPage = () => {
-  const { expedition, setExpedition } = useExpedition(); // Gunakan dari context
+  const { expedition, setExpedition } = useExpedition();
   const [selectedKarung, setSelectedKarung] = React.useState<string>("");
-  const [resiNumber, setResiNumber] = React.useState<string>("");
-  const resiInputRef = React.useRef<HTMLInputElement>(null);
-  const queryClient = useQueryClient();
 
   const {
     allResiForExpedition,
@@ -34,12 +26,14 @@ const InputPage = () => {
     formattedDate,
   } = useResiInputData(expedition);
 
-  const currentCount = getCountForSelectedKarung(selectedKarung);
+  const {
+    resiNumber,
+    setResiNumber,
+    handleScanResi,
+    resiInputRef,
+  } = useResiScanner({ expedition, selectedKarung, formattedDate }); // Use the hook
 
-  const debouncedInvalidate = useDebounce(() => {
-    console.log("Debounced invalidation triggered!");
-    invalidateDashboardQueries(queryClient, new Date());
-  }, 150); // Dipercepat menjadi 150ms
+  const currentCount = getCountForSelectedKarung(selectedKarung);
 
   React.useEffect(() => {
     if (expedition) {
@@ -63,143 +57,6 @@ const InputPage = () => {
       return () => clearTimeout(timer);
     }
   }, [expedition, selectedKarung]);
-
-  const keepFocus = () => {
-    setTimeout(() => {
-      if (resiInputRef.current) {
-        resiInputRef.current.focus();
-      }
-    }, 0);
-  };
-
-  const validateInput = (resi: string) => {
-    if (!resi) {
-      showError("Nomor resi tidak boleh kosong.");
-      beepFailure.play();
-      return false;
-    }
-    if (!expedition || !selectedKarung) {
-      showError("Pilih Expedisi dan No Karung terlebih dahulu.");
-      beepFailure.play();
-      return false;
-    }
-    return true;
-  };
-
-  interface ValidationResult {
-    success: boolean;
-    actualCourierName?: string | null;
-  }
-
-  const checkExpeditionAndDuplicates = async (currentResi: string): Promise<ValidationResult> => {
-    const { data: expedisiData, error: expError } = await supabase
-      .from("tbl_expedisi")
-      .select("resino, couriername")
-      .eq("resino", currentResi)
-      .single();
-
-    if (expError && expError.code !== 'PGRST116') {
-        throw expError;
-    }
-
-    let actualCourierNameFromExpedisi: string | null = expedisiData?.couriername || null;
-
-    if (expedition === "ID") {
-        if (!expedisiData) {
-        } else if (expedisiData.couriername !== "ID") {
-            showError(`Resi ini bukan milik ekspedisi ID. Ini milik ${expedisiData.couriername}.`);
-            beepFailure.play();
-            return { success: false };
-        }
-    } else {
-        if (expError || !expedisiData) {
-            showError("Resi tidak ditemukan di database ekspedisi.");
-            beepFailure.play();
-            return { success: false };
-        }
-        if (expedisiData.couriername !== expedition) {
-            showError(`Resi ini bukan milik ekspedisi ${expedition}. Ini milik ${expedisiData.couriername}.`);
-            beepFailure.play();
-            return { success: false };
-        }
-    }
-
-    // Updated RPC call to include p_resi and p_nokarung for server-side filtering
-    const { data: duplicateResi, error: dupError } = await supabase.rpc("get_resi_for_expedition_and_date", {
-      p_couriername: expedition,
-      p_selected_date: formattedDate,
-      p_resi: currentResi, // Pass resi number to RPC
-      p_nokarung: selectedKarung, // Pass karung number to RPC
-    });
-
-    if (dupError) throw dupError;
-
-    if (duplicateResi && duplicateResi.length > 0) {
-      showError("Resi duplikat! Data sudah ada.");
-      beepDouble.play();
-      return { success: false };
-    }
-
-    return { success: true, actualCourierName: actualCourierNameFromExpedisi };
-  };
-
-  const insertResi = async (currentResi: string, actualCourierNameFromExpedisi: string | null) => {
-    let insertPayload: any = {
-        Resi: currentResi,
-        nokarung: selectedKarung,
-    };
-
-    if (expedition === "ID") {
-        if (actualCourierNameFromExpedisi === null) {
-            insertPayload.Keterangan = "ID_REKOMENDASI";
-            insertPayload.schedule = "idrek";
-        } else {
-            insertPayload.Keterangan = actualCourierNameFromExpedisi;
-        }
-    } else {
-        insertPayload.Keterangan = expedition;
-    }
-
-    const { error: insertError } = await supabase
-      .from("tbl_resi")
-      .insert(insertPayload);
-
-    if (insertError) {
-      showError(`Gagal menginput resi: ${insertError.message}`);
-      beepFailure.play();
-      return false;
-    }
-    showSuccess(`Resi ${currentResi} berhasil diinput.`);
-    beepSuccess.play();
-    return true;
-  };
-
-  const handleScanResi = async () => {
-    const currentResi = resiNumber.trim();
-    setResiNumber("");
-
-    if (!validateInput(currentResi)) {
-      return;
-    }
-
-    try {
-      const validationResult = await checkExpeditionAndDuplicates(currentResi);
-      if (!validationResult.success) {
-        return;
-      }
-
-      const isInserted = await insertResi(currentResi, validationResult.actualCourierName || null);
-      if (isInserted) {
-        debouncedInvalidate();
-      }
-    } catch (error: any) {
-      showError(`Terjadi kesalahan: ${error.message || "Unknown error"}`);
-      beepFailure.play();
-      console.error("Error during resi input:", error);
-    } finally {
-      keepFocus();
-    }
-  };
 
   console.log("InputPage State:", {
     expedition,

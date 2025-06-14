@@ -179,7 +179,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
   };
 
   const handleCopyTableData = async () => {
-    if (currentData.length === 0) {
+    if (sortedAndFilteredData.length === 0) { // Changed from currentData to sortedAndFilteredData
       showError("Tidak ada data untuk disalin.");
       return;
     }
@@ -188,7 +188,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
     // Exclude the "Aksi" column from headers for copying
     const headerRow = headers.slice(0, -1).join('\t');
 
-    const rows = currentData.map(item => {
+    const rows = sortedAndFilteredData.map(item => { // Changed from currentData to sortedAndFilteredData
       if (modalType === "belumKirim" || modalType === "expeditionDetail") {
         return [
           item.resino || "",
@@ -217,7 +217,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
 
     try {
       await navigator.clipboard.writeText(textToCopy);
-      showSuccess("Data tabel berhasil disalin!");
+      showSuccess(`Berhasil menyalin ${sortedAndFilteredData.length} baris data!`); // Updated success message
       console.log("Data copied successfully!");
     } catch (err: any) {
       showError(`Gagal menyalin data tabel: ${err.message || "Unknown error"}`);

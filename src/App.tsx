@@ -1,14 +1,18 @@
+import React, { Suspense } from "react"; // Import Suspense
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import DashboardPage from "./pages/DashboardPage";
-import Input from "./pages/Input";
-import History from "./pages/History";
-import NotFound from "./pages/NotFound";
 import Navbar from "./components/Navbar";
-import { ExpeditionProvider } from "./context/ExpeditionContext"; // Import ExpeditionProvider
+import { ExpeditionProvider } from "./context/ExpeditionContext";
+
+// Menggunakan React.lazy untuk memuat komponen secara dinamis
+const DashboardPage = React.lazy(() => import("./pages/DashboardPage"));
+const InputPage = React.lazy(() => import("./pages/Input"));
+const HistoryPage = React.lazy(() => import("./pages/History"));
+const NotFound = React.lazy(() => import("./pages/NotFound"));
+const ResiDetailModal = React.lazy(() => import("./components/ResiDetailModal")); // Lazy load modal if it's used directly in a route or needs to be split
 
 const queryClient = new QueryClient();
 
@@ -35,14 +39,16 @@ const App = () => (
         <div className="flex flex-col min-h-screen">
           <Navbar />
           <main className="flex-grow">
-            <ExpeditionProvider> {/* Bungkus rute dengan ExpeditionProvider */}
-              <Routes>
-                <Route path="/" element={<Input />} /> {/* Home is now Input */}
-                <Route path="/dashboard" element={<DashboardPage />} /> {/* Dashboard is now /dashboard */}
-                <Route path="/history" element={<History />} />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+            <ExpeditionProvider>
+              <Suspense fallback={<div className="text-center p-8 text-gray-600">Memuat aplikasi...</div>}> {/* Fallback saat komponen dimuat */}
+                <Routes>
+                  <Route path="/" element={<InputPage />} />
+                  <Route path="/dashboard" element={<DashboardPage />} />
+                  <Route path="/history" element={<HistoryPage />} />
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Suspense>
             </ExpeditionProvider>
           </main>
         </div>

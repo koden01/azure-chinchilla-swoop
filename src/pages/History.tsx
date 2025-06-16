@@ -38,8 +38,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { showSuccess, showError } from "@/utils/toast";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
-import * as XLSX from 'xlsx';
-import { saveAs } from 'file-saver';
+import ExcelJS from 'exceljs'; // Import ExcelJS
+import { saveAs } from 'file-saver'; // Tetap gunakan file-saver untuk menyimpan blob
 
 interface HistoryData {
   Resi: string;
@@ -197,29 +197,42 @@ const HistoryPage = () => {
     setResiToDelete(null);
   };
 
-  const handleExportToExcel = () => {
+  const handleExportToExcel = async () => {
     if (filteredHistoryData.length === 0) {
       showError("Tidak ada data untuk diekspor.");
       return;
     }
 
     try {
-      const headers = ["Nomor Resi", "Keterangan", "No Karung", "Schedule", "Tanggal Input"]; // Added Schedule
-      const dataToExport = filteredHistoryData.map(item => [
-        item.Resi,
-        item.Keterangan || "",
-        item.nokarung || "",
-        item.schedule || "", // Export schedule
-        format(new Date(item.created), "dd/MM/yyyy HH:mm")
-      ]);
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("History Resi");
 
-      const ws = XLSX.utils.aoa_to_sheet([headers, ...dataToExport]);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "History Resi");
+      // Define columns with headers and widths
+      worksheet.columns = [
+        { header: "Nomor Resi", key: "Resi", width: 20 },
+        { header: "Keterangan", key: "Keterangan", width: 15 },
+        { header: "No Karung", key: "nokarung", width: 15 },
+        { header: "Schedule", key: "schedule", width: 15 },
+        { header: "Tanggal Input", key: "created", width: 25 },
+      ];
 
-      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      // Add rows
+      filteredHistoryData.forEach(item => {
+        worksheet.addRow({
+          Resi: item.Resi,
+          Keterangan: item.Keterangan || "",
+          nokarung: item.nokarung || "",
+          schedule: item.schedule || "",
+          created: format(new Date(item.created), "dd/MM/yyyy HH:mm"),
+        });
+      });
+
+      // Generate Excel file as a Blob
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
       const fileName = `History_Resi_${formattedStartDate}_to_${formattedEndDate}.xlsx`;
-      saveAs(new Blob([wbout], { type: 'application/octet-stream' }), fileName);
+      saveAs(blob, fileName);
 
       showSuccess(`Berhasil mengekspor ${filteredHistoryData.length} data ke ${fileName}`);
     } catch (error: any) {

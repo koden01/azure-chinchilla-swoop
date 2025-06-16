@@ -1,14 +1,14 @@
 import React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, startOfDay, endOfDay } from "date-fns"; // Import startOfDay and endOfDay
+import { format, startOfDay, endOfDay } from "date-fns";
 import { showSuccess, showError } from "@/utils/toast";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
 
 interface UseDashboardModalsProps {
   date: Date | undefined;
   formattedDate: string;
-  allExpedisiData: any[] | undefined; // This is now primarily for the map in useDashboardData, not direct filtering here
+  allExpedisiData: any[] | undefined;
 }
 
 export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: UseDashboardModalsProps) => {
@@ -40,7 +40,6 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       showError("Mohon pilih tanggal terlebih dahulu.");
       return;
     }
-    // Helper to format date for timestamp without time zone (tbl_expedisi)
     const startOfSelectedDate = startOfDay(date);
     const endOfSelectedDate = endOfDay(date);
     const startString = format(startOfSelectedDate, "yyyy-MM-dd HH:mm:ss");
@@ -66,23 +65,21 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
 
   const handleOpenFollowUpFlagNoModal = async () => {
     const actualCurrentDate = new Date();
-    const actualCurrentFormattedDate = format(actualCurrentDate, 'yyyy-MM-dd'); // Get actual current date formatted
+    const actualCurrentFormattedDate = format(actualCurrentDate, 'yyyy-MM-dd');
 
-    console.log("Fetching data for 'Follow Up (Belum Kirim)' modal...");
-    console.log("Filtering by flag = 'NO' and created date NOT EQUAL to:", actualCurrentFormattedDate);
+    console.log("Fetching data for 'Follow Up (Belum Kirim)' modal using RPC...");
+    console.log("Excluding records created on:", actualCurrentFormattedDate);
 
-    const { data, error } = await supabase
-      .from("tbl_expedisi")
-      .select("resino, orderno, chanelsales, couriername, created, flag, datetrans, cekfu")
-      .eq("flag", "NO")
-      .neq("created::date", actualCurrentFormattedDate); // Filter by date part, not equal to actual current date
+    const { data, error } = await supabase.rpc("get_flag_no_expedisi_records_except_today", {
+      p_selected_date: actualCurrentFormattedDate,
+    });
 
     if (error) {
       showError("Gagal memuat data Follow Up (Belum Kirim).");
-      console.error("Error fetching Follow Up (Belum Kirim) data:", error);
+      console.error("Error fetching Follow Up (Belum Kirim) data via RPC:", error);
       return;
     }
-    console.log("Data for 'Follow Up (Belum Kirim)' modal:", data);
+    console.log("Data for 'Follow Up (Belum Kirim)' modal (from RPC):", data?.length, "records.");
     openResiModal("Follow Up (Belum Kirim)", data || [], "belumKirim");
   };
 
@@ -112,7 +109,6 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       return;
     }
 
-    // Calculate start and end of the selected date for tbl_expedisi (timestamp without time zone)
     const startOfSelectedDate = startOfDay(date);
     const endOfSelectedDate = endOfDay(date);
     const startString = format(startOfSelectedDate, "yyyy-MM-dd HH:mm:ss");
@@ -120,14 +116,13 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
 
     console.log(`Fetching detail data for '${courierName}' (Belum Kirim) for date range: ${startString} to ${endString}`);
 
-    // Fetch data directly from Supabase for the specific courier and selected date
     const { data, error } = await supabase
       .from("tbl_expedisi")
       .select("resino, orderno, chanelsales, couriername, created, flag, datetrans, cekfu")
       .eq("couriername", courierName)
       .eq("flag", "NO")
-      .gte("created", startString) // Use gte for start of day
-      .lt("created", endString); // Use lt for end of day
+      .gte("created", startString)
+      .lt("created", endString);
 
     if (error) {
       showError(`Gagal memuat detail resi untuk ${courierName}.`);
@@ -147,19 +142,17 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
 
   const handleBatalResi = async (resiNumber: string) => {
     try {
-      // 1. Check if the resi already exists in tbl_resi
       const { data: existingResi, error: checkError } = await supabase
         .from("tbl_resi")
         .select("Resi")
         .eq("Resi", resiNumber)
         .single();
 
-      if (checkError && checkError.code !== 'PGRST116') { // PGRST116 means "no rows found"
+      if (checkError && checkError.code !== 'PGRST116') {
         throw checkError;
       }
 
       if (existingResi) {
-        // If it exists, update its schedule to 'batal'
         const { error: updateError } = await supabase
           .from("tbl_resi")
           .update({ schedule: "batal" })
@@ -168,7 +161,6 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         if (updateError) throw updateError;
         showSuccess(`Resi ${resiNumber} berhasil dibatalkan.`);
       } else {
-        // If it doesn't exist, fetch data from tbl_expedisi and insert
         const { data: expedisiData, error: expFetchError } = await supabase
           .from("tbl_expedisi")
           .select("resino, created")
@@ -185,7 +177,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
           .from("tbl_resi")
           .insert({
             Resi: resiNumber,
-            created: expedisiData.created, // Use created from tbl_expedisi
+            created: expedisiData.created,
             Keterangan: "BATAL",
             nokarung: "0",
             schedule: "batal",
@@ -206,7 +198,6 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
 
   const handleConfirmResi = async (resiNumber: string) => {
     try {
-      // 1. Update tbl_expedisi.flag to 'YES'
       const { error: expUpdateError } = await supabase
         .from("tbl_expedisi")
         .update({ flag: "YES" })
@@ -216,7 +207,6 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         throw new Error(`Gagal mengkonfirmasi resi ${resiNumber} di tbl_expedisi: ${expUpdateError.message}`);
       }
 
-      // Fetch couriername from tbl_expedisi for Keterangan
       const { data: expedisiData, error: expFetchError } = await supabase
         .from("tbl_expedisi")
         .select("couriername")
@@ -229,43 +219,38 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
 
       const courierName = expedisiData.couriername;
 
-      // 2. Check if the resi already exists in tbl_resi
       const { data: existingResi, error: checkResiError } = await supabase
         .from("tbl_resi")
         .select("Resi")
         .eq("Resi", resiNumber)
         .single();
 
-      if (checkResiError && checkResiError.code !== 'PGRST116') { // PGRST116 means "no rows found"
+      if (checkResiError && checkResiError.code !== 'PGRST116') {
         throw checkResiError;
       }
 
-      const currentTimestamp = new Date().toISOString(); // Use current date for tbl_resi.created
+      const currentTimestamp = new Date().toISOString();
 
       if (existingResi) {
-        // If it exists, update its properties
         const { error: updateResiError } = await supabase
           .from("tbl_resi")
           .update({
-            created: currentTimestamp, // Update to today's date
-            Keterangan: courierName, // Set Keterangan based on couriername
-            nokarung: "0", // Set nokarung to 0
-            // schedule will be updated by the trigger based on the new 'created' date
+            created: currentTimestamp,
+            Keterangan: courierName,
+            nokarung: "0",
           })
           .eq("Resi", resiNumber);
 
         if (updateResiError) throw updateResiError;
         showSuccess(`Resi ${resiNumber} berhasil dikonfirmasi.`);
       } else {
-        // If it doesn't exist, insert a new entry
         const { error: insertResiError } = await supabase
           .from("tbl_resi")
           .insert({
             Resi: resiNumber,
-            created: currentTimestamp, // Use today's date
-            Keterangan: courierName, // Set Keterangan based on couriername
-            nokarung: "0", // Set nokarung to 0
-            // schedule will be set by the trigger
+            created: currentTimestamp,
+            Keterangan: courierName,
+            nokarung: "0",
           });
 
         if (insertResiError) throw insertResiError;

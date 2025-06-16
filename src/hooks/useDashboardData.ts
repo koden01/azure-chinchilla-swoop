@@ -222,28 +222,13 @@ export const useDashboardData = (date: Date | undefined) => {
 
     // Process tbl_expedisi data for totalTransaksi and sisa (filtered by selected date string)
     allExpedisiData.forEach(exp => {
-      // Safely parse the created date from tbl_expedisi
-      let expCreatedDate: Date | null = null;
-      if (exp.created) {
-        try {
-          expCreatedDate = new Date(exp.created);
-          // Check if parsing resulted in an invalid date (e.g., "Invalid Date")
-          if (isNaN(expCreatedDate.getTime())) {
-            expCreatedDate = null; // Mark as invalid
-          }
-        } catch (e) {
-          console.error(`Error parsing date for resi ${exp.resino}: ${exp.created}`, e);
-          expCreatedDate = null; // Parsing failed
-        }
-      }
-
-      const expCreatedDateFormatted = expCreatedDate ? format(expCreatedDate, "yyyy-MM-dd") : '';
+      // Extract only the date part (YYYY-MM-DD) from the 'created' timestamp
+      const expCreatedDatePart = exp.created ? exp.created.split('T')[0] : '';
       
       console.log(`DEBUG: Processing exp.resino: ${exp.resino}, Raw Created: "${exp.created}"`);
-      console.log(`DEBUG: Parsed Date Object: ${expCreatedDate ? expCreatedDate.toISOString() : 'Invalid Date'}`);
-      console.log(`DEBUG: Formatted Date Part: "${expCreatedDateFormatted}", Selected Date Formatted: "${selectedDateFormatted}"`);
+      console.log(`DEBUG: Extracted Date Part: "${expCreatedDatePart}", Selected Date Formatted: "${selectedDateFormatted}"`);
 
-      if (expCreatedDateFormatted === selectedDateFormatted) { // Compare formatted date strings
+      if (expCreatedDatePart === selectedDateFormatted) { // Compare only the date parts
         console.log(`DEBUG: Match found for ${exp.resino} on ${selectedDateFormatted}`);
         const courierName = exp.couriername;
         if (courierName && summaries[courierName]) {
@@ -253,7 +238,7 @@ export const useDashboardData = (date: Date | undefined) => {
           }
         }
       } else {
-        console.log(`DEBUG: No match for ${exp.resino}. Exp Created: ${expCreatedDateFormatted}, Selected: ${selectedDateFormatted}`);
+        console.log(`DEBUG: No match for ${exp.resino}. Exp Created Date Part: ${expCreatedDatePart}, Selected: ${selectedDateFormatted}`);
       }
     });
     console.log("Summaries after processing tbl_expedisi (date-filtered by string):", summaries);

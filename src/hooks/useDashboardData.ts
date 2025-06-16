@@ -239,21 +239,25 @@ export const useDashboardData = (date: Date | undefined) => {
     allExpedisiDataUnfiltered.forEach(exp => {
       const expCreatedDate = new Date(exp.created);
       const expCreatedTimestamp = expCreatedDate.getTime();
-      // console.log(`Processing tbl_expedisi resino: ${exp.resino}, created: ${exp.created} (timestamp: ${expCreatedTimestamp})`);
+      const courierName = exp.couriername;
+
+      console.log(`  Processing tbl_expedisi record: Resi=${exp.resino}, Courier=${courierName}, Created=${exp.created}`);
+      console.log(`    Parsed Timestamp: ${expCreatedTimestamp}`);
+      console.log(`    Selected Day Range: ${startOfSelectedDay} - ${endOfSelectedDay}`);
+      console.log(`    Is within range? ${expCreatedTimestamp >= startOfSelectedDay && expCreatedTimestamp <= endOfSelectedDay}`);
 
       if (expCreatedTimestamp >= startOfSelectedDay && expCreatedTimestamp <= endOfSelectedDay) {
-        const courierName = exp.couriername;
         if (courierName && summaries[courierName]) {
           summaries[courierName].totalTransaksi++;
           if (exp.flag === "NO") {
             summaries[courierName].sisa++;
           }
-          // console.log(`  -> Matched date for ${courierName}. totalTransaksi: ${summaries[courierName].totalTransaksi}, sisa: ${summaries[courierName].sisa}`);
+          console.log(`    -> Matched date and courier for ${courierName}. Current totalTransaksi: ${summaries[courierName].totalTransaksi}, sisa: ${summaries[courierName].sisa}`);
         } else {
-          // console.warn(`  -> tbl_expedisi: Courier name '${courierName}' not found in summaries or is null for resino: ${exp.resino}`);
+          console.warn(`    -> tbl_expedisi: Courier name '${courierName}' not found in summaries or is null for resino: ${exp.resino}. Skipping.`);
         }
       } else {
-        // console.log(`  -> tbl_expedisi: Resino ${exp.resino} created date ${exp.created} is outside selected range.`);
+        console.log(`    -> tbl_expedisi: Resino ${exp.resino} created date ${exp.created} is outside selected range. Skipping.`);
       }
     });
     console.log("Summaries after processing tbl_expedisi (client-side date-filtered):", summaries);

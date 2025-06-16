@@ -38,6 +38,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { showSuccess, showError } from "@/utils/toast";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation"; // Import invalidate function
+import * as XLSX from 'xlsx'; // Import xlsx library
+import { saveAs } from 'file-saver'; // Import saveAs for file download
 
 interface HistoryData {
   Resi: string;
@@ -193,6 +195,36 @@ const HistoryPage = () => {
     setResiToDelete(null);
   };
 
+  const handleExportToExcel = () => {
+    if (filteredHistoryData.length === 0) {
+      showError("Tidak ada data untuk diekspor.");
+      return;
+    }
+
+    try {
+      const headers = ["Nomor Resi", "Keterangan", "No Karung", "Tanggal Input"];
+      const dataToExport = filteredHistoryData.map(item => [
+        item.Resi,
+        item.Keterangan || "",
+        item.nokarung || "",
+        format(new Date(item.created), "dd/MM/yyyy HH:mm")
+      ]);
+
+      const ws = XLSX.utils.aoa_to_sheet([headers, ...dataToExport]);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "History Resi");
+
+      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      const fileName = `History_Resi_${formattedStartDate}_to_${formattedEndDate}.xlsx`;
+      saveAs(new Blob([wbout], { type: 'application/octet-stream' }), fileName);
+
+      showSuccess(`Berhasil mengekspor ${filteredHistoryData.length} data ke ${fileName}`);
+    } catch (error: any) {
+      showError(`Gagal mengekspor data: ${error.message || "Terjadi kesalahan."}`);
+      console.error("Error exporting to Excel:", error);
+    }
+  };
+
   return (
     <React.Fragment>
       <div className="p-6 space-y-6 bg-gray-50 min-h-[calc(100vh-64px)]">
@@ -272,7 +304,10 @@ const HistoryPage = () => {
                     className="w-full"
                   />
                 </div>
-                <Button className="bg-green-600 hover:bg-green-700 text-white whitespace-nowrap">
+                <Button
+                  className="bg-green-600 hover:bg-green-700 text-white whitespace-nowrap"
+                  onClick={handleExportToExcel} // Added onClick handler
+                >
                   Export Data ({filteredHistoryData.length} records)
                 </Button>
               </div>

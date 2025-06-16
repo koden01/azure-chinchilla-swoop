@@ -222,12 +222,16 @@ export const useDashboardData = (date: Date | undefined) => {
 
     // Process tbl_expedisi data for totalTransaksi and sisa (filtered by selected date string)
     allExpedisiData.forEach(exp => {
-      // Extract only the date part from exp.created string (e.g., "2023-10-26T10:30:00.000Z" -> "2023-10-26")
-      // Assuming Supabase returns timestamp without time zone as ISO string without 'Z' or with 'T'
-      const expCreatedDatePart = exp.created ? exp.created.split('T')[0] : ''; 
-      console.log(`Expedisi Resi: ${exp.resino}, Created Date String: ${exp.created}, Extracted Date Part: ${expCreatedDatePart}`);
+      // Extract only the date part from exp.created string (e.g., "2023-10-26T10:30:00.000Z" or "2023-10-26 10:30:00")
+      // We assume it starts with YYYY-MM-DD
+      const expCreatedDatePart = exp.created && typeof exp.created === 'string' && exp.created.length >= 10
+        ? exp.created.substring(0, 10) // Get YYYY-MM-DD part
+        : ''; 
+      console.log(`DEBUG: Processing exp.resino: ${exp.resino}, Raw Created: "${exp.created}" (Type: ${typeof exp.created})`);
+      console.log(`DEBUG: Extracted Date Part: "${expCreatedDatePart}", Selected Date Formatted: "${selectedDateFormatted}"`);
 
       if (expCreatedDatePart === selectedDateFormatted) { // Compare date strings directly
+        console.log(`DEBUG: Match found for ${exp.resino} on ${selectedDateFormatted}`);
         const courierName = exp.couriername;
         if (courierName && summaries[courierName]) {
           summaries[courierName].totalTransaksi++;

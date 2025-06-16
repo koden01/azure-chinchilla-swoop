@@ -22,14 +22,11 @@ const App = () => {
         <Toaster />
         <Sonner
           position="top-center"
-          duration={600} // Durasi sudah 600ms
+          duration={600} // Durasi tetap 600ms
           toastOptions={{
-            success: {
-              className: "!bg-green-500 !text-white", // Menggunakan className langsung
-            },
-            error: {
-              className: "!bg-red-500 !text-white", // Menggunakan className langsung
-            },
+            // Menghapus className dari sini, akan ditangani di globals.css
+            success: {}, 
+            error: {},
           }}
         />
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>

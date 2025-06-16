@@ -99,3 +99,14 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Custom styles for Sonner toasts to ensure correct colors */
+[data-sonner-toast][data-type="error"] {
+  background-color: #ef4444 !important; /* Tailwind red-500 */
+  color: #ffffff !important; /* Tailwind white */
+}
+
+[data-sonner-toast][data-type="success"] {
+  background-color: #22c55e !important; /* Tailwind green-500 */
+  color: #ffffff !important; /* Tailwind white */
+}

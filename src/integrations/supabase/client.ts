@@ -5,6 +5,14 @@ import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+// Tambahkan validasi dan pesan kesalahan yang lebih jelas
+if (!SUPABASE_URL) {
+  throw new Error("VITE_SUPABASE_URL tidak terdefinisi. Pastikan file .env Anda dikonfigurasi dengan benar dan terletak di root proyek, lalu lakukan rebuild aplikasi.");
+}
+if (!SUPABASE_PUBLISHABLE_KEY) {
+  throw new Error("VITE_SUPABASE_ANON_KEY tidak terdefinisi. Pastikan file .env Anda dikonfigurasi dengan benar dan terletak di root proyek, lalu lakukan rebuild aplikasi.");
+}
+
 // Extract project ID from SUPABASE_URL
 const SUPABASE_PROJECT_ID = SUPABASE_URL.split('//')[1].split('.')[0];
 

@@ -35,7 +35,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
   // Debounced invalidate function
   const debouncedInvalidate = useDebounce(() => {
     console.log("Debounced invalidation triggered!");
-    invalidateDashboardQueries(queryClient, new Date());
+    invalidateDashboardQueries(queryClient, new Date(), expedition); // Pass expedition here
   }, 150);
 
   const keepFocus = () => {

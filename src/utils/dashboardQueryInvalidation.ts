@@ -1,7 +1,7 @@
 import { QueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 
-export const invalidateDashboardQueries = (queryClient: QueryClient, date: Date | undefined) => {
+export const invalidateDashboardQueries = (queryClient: QueryClient, date: Date | undefined, expedition?: string) => {
   const formattedDate = date ? format(date, "yyyy-MM-dd") : "";
   const actualCurrentFormattedDate = format(new Date(), 'yyyy-MM-dd');
 
@@ -15,6 +15,10 @@ export const invalidateDashboardQueries = (queryClient: QueryClient, date: Date 
   queryClient.invalidateQueries({ queryKey: ["followUpData", formattedDate] });
   queryClient.invalidateQueries({ queryKey: ["allExpedisiData", formattedDate] });
   queryClient.invalidateQueries({ queryKey: ["allResiData", formattedDate] });
-  queryClient.invalidateQueries({ queryKey: ["karungSummary", formattedDate] }); // NEW: Invalidate karungSummary
-  queryClient.invalidateQueries({ queryKey: ["lastKarung", formattedDate] }); // NEW: Invalidate lastKarung
+  
+  // NEW: Invalidate karungSummary and lastKarung with expedition
+  if (expedition) {
+    queryClient.invalidateQueries({ queryKey: ["karungSummary", expedition, formattedDate] });
+    queryClient.invalidateQueries({ queryKey: ["lastKarung", expedition, formattedDate] });
+  }
 };

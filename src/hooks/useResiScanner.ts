@@ -30,7 +30,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
   const queryClient = useQueryClient();
 
   // Ref to store the optimistic ID of the last added entry
-  const optimisticEntryRef = React.useRef<{ resi: string; id: string } | null>(null);
+  const lastOptimisticIdRef = React.useRef<string | null>(null);
 
   // Debounced invalidate function
   const debouncedInvalidate = useDebounce(() => {
@@ -79,24 +79,23 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
     console.log("Starting handleScanResi for:", currentResi, "at:", new Date().toISOString());
 
     const queryKey = ["allResiForExpedition", expedition, formattedDate];
-    let optimisticId: string | null = null; // Declare optimisticId here
+    const currentOptimisticId = Date.now().toString() + Math.random().toString(36).substring(2, 9); // Generate unique ID for THIS scan attempt
 
     try {
       // --- Optimistic UI Update for InputPage ---
       const currentResiData = queryClient.getQueryData<ResiExpedisiData[]>(queryKey);
 
       if (currentResiData) {
-        optimisticId = Date.now().toString() + Math.random().toString(36).substring(2, 9); // Generate unique ID
         const newResiEntry: ResiExpedisiData = {
           Resi: currentResi,
           nokarung: selectedKarung,
           created: new Date().toISOString(),
           couriername: expedition, // Use expedition as initial optimistic couriername
-          optimisticId: optimisticId, // Add optimistic ID
+          optimisticId: currentOptimisticId, // Add unique optimistic ID
         };
         queryClient.setQueryData(queryKey, [...currentResiData, newResiEntry]);
-        optimisticEntryRef.current = { resi: currentResi, id: optimisticId }; // Store for potential revert
-        console.log("Optimistically updated allResiForExpedition cache with ID:", optimisticId);
+        lastOptimisticIdRef.current = currentOptimisticId; // Store the ID of this optimistic entry
+        console.log("Optimistically updated allResiForExpedition cache with ID:", currentOptimisticId);
         showSuccess(`Resi ${currentResi} berhasil discan (optimis).`);
         beepSuccess.play();
       } else {
@@ -131,16 +130,15 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
 
       if (response.ok && result.success) {
         // If optimistic update was done, update the couriername if it changed
-        if (optimisticEntryRef.current && optimisticEntryRef.current.resi === currentResi && result.actual_couriername && result.actual_couriername !== expedition) {
-            const idToUpdate = optimisticEntryRef.current.id;
+        if (lastOptimisticIdRef.current === currentOptimisticId && result.actual_couriername && result.actual_couriername !== expedition) {
             queryClient.setQueryData(queryKey, (oldData: ResiExpedisiData[] | undefined) => {
                 if (!oldData) return undefined;
-                return oldData.map(item => item.optimisticId === idToUpdate ? { ...item, couriername: result.actual_couriername } : item);
+                return oldData.map(item => item.optimisticId === currentOptimisticId ? { ...item, couriername: result.actual_couriername } : item);
             });
-            console.log(`Updated optimistic entry couriername to ${result.actual_couriername}`);
+            console.log(`Updated optimistic entry couriername to ${result.actual_couriername} for ID: ${currentOptimisticId}`);
         }
         // Clear the optimistic ref as the operation was successful
-        optimisticEntryRef.current = null;
+        lastOptimisticIdRef.current = null;
         
         debouncedInvalidate(); // Invalidate dashboard queries in the background
       } else {
@@ -153,16 +151,17 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
           beepFailure.play(); // Mainkan beep-failure untuk kesalahan lainnya
         }
 
-        // Revert optimistic update if the actual operation failed
-        if (optimisticEntryRef.current && optimisticEntryRef.current.resi === currentResi) {
-            const idToRemove = optimisticEntryRef.current.id;
+        // Revert optimistic update if the actual operation failed AND it's the most recent optimistic update
+        if (lastOptimisticIdRef.current === currentOptimisticId) {
             queryClient.setQueryData(queryKey, (oldData: ResiExpedisiData[] | undefined) => {
                 if (!oldData) return undefined;
                 // Filter out only the specific optimistic entry using its unique ID
-                return oldData.filter(item => item.optimisticId !== idToRemove);
+                return oldData.filter(item => item.optimisticId !== currentOptimisticId);
             });
-            console.log("Reverted optimistic update due to backend error.");
-            optimisticEntryRef.current = null; // Clear the ref
+            console.log(`Reverted optimistic update for ID: ${currentOptimisticId} due to backend error.`);
+            lastOptimisticIdRef.current = null; // Clear the ref
+        } else {
+            console.log(`Skipping optimistic revert for ID: ${currentOptimisticId} as it's not the last optimistic entry.`);
         }
         console.error("Error during resi input via Edge Function:", result.message);
       }
@@ -171,15 +170,16 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
       beepFailure.play();
       console.error("Error during resi input via Edge Function:", error);
 
-      // Revert optimistic update on network error
-      if (optimisticEntryRef.current && optimisticEntryRef.current.resi === currentResi) {
-          const idToRemove = optimisticEntryRef.current.id;
+      // Revert optimistic update on network error if it's the most recent optimistic update
+      if (lastOptimisticIdRef.current === currentOptimisticId) {
           queryClient.setQueryData(queryKey, (oldData: ResiExpedisiData[] | undefined) => {
               if (!oldData) return undefined;
-              return oldData.filter(item => item.optimisticId !== idToRemove);
+              return oldData.filter(item => item.optimisticId !== currentOptimisticId);
           });
-          console.log("Reverted optimistic update due to network error.");
-          optimisticEntryRef.current = null; // Clear the ref
+          console.log(`Reverted optimistic update for ID: ${currentOptimisticId} due to network error.`);
+          lastOptimisticIdRef.current = null; // Clear the ref
+      } else {
+          console.log(`Skipping optimistic revert for ID: ${currentOptimisticId} as it's not the last optimistic entry.`);
       }
     } finally {
       // No need to set setIsProcessing(false) here anymore, it's done earlier

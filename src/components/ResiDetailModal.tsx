@@ -26,8 +26,8 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { format } from "date-fns";
-import { Copy } from "lucide-react"; // Import Copy icon
-import { showSuccess, showError } from "@/utils/toast"; // Import toast utilities
+import { Copy } from "lucide-react";
+import { showSuccess, showError } from "@/utils/toast";
 
 interface ResiDetailModalProps {
   isOpen: boolean;
@@ -57,7 +57,6 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Reset to first page and clear search term when modal opens or data/type changes
   useEffect(() => {
     setCurrentPage(1);
     setSearchTerm("");
@@ -66,7 +65,6 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
   const sortedAndFilteredData = React.useMemo(() => {
     const lowerCaseSearchTerm = searchTerm.toLowerCase();
     let tempFilteredData = data.filter((item) => {
-      // Adjust properties based on modalType for searching
       if (modalType === "belumKirim" || modalType === "expeditionDetail") {
         return (
           item.resino?.toLowerCase().includes(lowerCaseSearchTerm) ||
@@ -86,18 +84,17 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
       return false;
     });
 
-    // Apply sorting based on modalType
     if (modalType === "belumKirim" || modalType === "expeditionDetail") {
       tempFilteredData.sort((a, b) => {
         const dateA = a.datetrans ? new Date(a.datetrans).getTime() : 0;
         const dateB = b.datetrans ? new Date(b.datetrans).getTime() : 0;
-        return dateA - dateB; // Ascending order (terlama)
+        return dateA - dateB;
       });
     } else if (modalType === "followUp") {
       tempFilteredData.sort((a, b) => {
         const dateA = a.created_resi ? new Date(a.created_resi).getTime() : 0;
         const dateB = b.created_resi ? new Date(b.created_resi).getTime() : 0;
-        return dateA - dateB; // Ascending order (terlama)
+        return dateA - dateB;
       });
     }
 
@@ -179,7 +176,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
   };
 
   const handleCopyTableData = async () => {
-    if (sortedAndFilteredData.length === 0) { // Changed from currentData to sortedAndFilteredData
+    if (sortedAndFilteredData.length === 0) {
       showError("Tidak ada data untuk disalin.");
       return;
     }
@@ -188,7 +185,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
     // Exclude the "Aksi" column from headers for copying
     const headerRow = headers.slice(0, -1).join('\t');
 
-    const rows = sortedAndFilteredData.map(item => { // Changed from currentData to sortedAndFilteredData
+    const rows = sortedAndFilteredData.map(item => {
       if (modalType === "belumKirim" || modalType === "expeditionDetail") {
         return [
           item.resino || "",
@@ -196,7 +193,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
           item.chanelsales || "",
           item.datetrans ? format(new Date(item.datetrans), "dd/MM/yyyy HH:mm") : "",
           item.couriername || "",
-          item.cekfu ? "YES" : "NO", // Convert boolean to string
+          item.cekfu ? "YES" : "NO",
         ];
       } else if (modalType === "followUp") {
         return [
@@ -204,7 +201,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
           item.created_resi ? format(new Date(item.created_resi), "dd/MM/yyyy HH:mm") : "",
           item.created_expedisi ? format(new Date(item.created_expedisi), "dd/MM/yyyy HH:mm") : "",
           item.couriername || "",
-          item.cekfu ? "YES" : "NO", // Convert boolean to string
+          item.cekfu ? "YES" : "NO",
         ];
       }
       return [];
@@ -213,11 +210,11 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
     const dataRows = rows.map(row => row.join('\t')).join('\n');
     const textToCopy = `${headerRow}\n${dataRows}`;
 
-    console.log("Attempting to copy data:", textToCopy); // Log data to be copied
+    console.log("Attempting to copy data:", textToCopy);
 
     try {
       await navigator.clipboard.writeText(textToCopy);
-      showSuccess(`Berhasil menyalin ${sortedAndFilteredData.length} baris data!`); // Updated success message
+      showSuccess(`Berhasil menyalin ${sortedAndFilteredData.length} baris data!`);
       console.log("Data copied successfully!");
     } catch (err: any) {
       showError(`Gagal menyalin data tabel: ${err.message || "Unknown error"}`);
@@ -225,7 +222,6 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
     }
   };
 
-  // Logic to determine which page numbers to display
   const getPaginationPages = () => {
     const pages = [];
     if (totalPages <= 3) {

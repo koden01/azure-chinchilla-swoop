@@ -22,9 +22,8 @@ const App = () => {
         <Toaster />
         <Sonner
           position="top-center"
-          duration={600} // Durasi tetap 600ms
+          duration={1000} // Durasi diubah menjadi 1000ms
           toastOptions={{
-            // Menghapus className dari sini, akan ditangani di globals.css
             success: {}, 
             error: {},
           }}

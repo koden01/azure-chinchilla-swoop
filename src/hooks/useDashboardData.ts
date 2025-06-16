@@ -102,7 +102,7 @@ export const useDashboardData = (date: Date | undefined) => {
     queryKey: ["scanFollowupLateCount", formattedDate],
     queryFn: async () => {
       if (!date) return 0;
-      const { count, error } = await supabase // FIX: Changed '=>' to '='
+      const { count, error } = await supabase
         .from("tbl_resi")
         .select("*", { count: "exact" })
         .eq("schedule", "late")
@@ -148,18 +148,21 @@ export const useDashboardData = (date: Date | undefined) => {
     enabled: !!date,
   });
 
-  // NEW: Fetch all tbl_expedisi data (without date filter)
+  // NEW: Fetch all tbl_expedisi data for the selected date
   const { data: allExpedisiData, isLoading: isLoadingAllExpedisi } = useQuery<any[]>({
-    queryKey: ["allExpedisiData"], // Removed formattedDate from queryKey
+    queryKey: ["allExpedisiData", formattedDate], // Now includes formattedDate in queryKey
     queryFn: async () => {
+      if (!date) return []; // Ensure date is available
       const { data, error } = await supabase
         .from("tbl_expedisi")
-        .select("resino, couriername, flag, created, orderno, chanelsales, datetrans, cekfu");
+        .select("resino, couriername, flag, created, orderno, chanelsales, datetrans, cekfu")
+        .gte("created", startOfDay(date).toISOString()) // Filter by selected date
+        .lt("created", endOfDay(date).toISOString());    // Filter by selected date
       if (error) throw error;
-      console.log("All Expedisi Data (unfiltered):", data);
+      console.log("All Expedisi Data (filtered by selected date):", data);
       return data || [];
     },
-    enabled: true, // Always enabled to get all mappings
+    enabled: !!date, // Enabled only when date is selected
   });
 
   // NEW: Fetch all tbl_resi data for the selected date range
@@ -187,12 +190,8 @@ export const useDashboardData = (date: Date | undefined) => {
     }
 
     console.log("Starting expedition summaries calculation...");
-    console.log("allExpedisiData for summary (full set):", allExpedisiData);
-    console.log("allResiData for summary (filtered by selected date):", allResiData);
-
-    // Format the selected date to a 'yyyy-MM-dd' string for direct comparison
-    const selectedDateFormatted = format(date, "yyyy-MM-dd");
-    console.log("Selected Date Formatted (for comparison):", selectedDateFormatted);
+    console.log("allExpedisiData for summary (already date-filtered):", allExpedisiData);
+    console.log("allResiData for summary (already date-filtered):", allResiData);
 
     // Build a comprehensive map from all expedisi data
     const resiToExpeditionMap = new Map<string, string>();
@@ -220,36 +219,18 @@ export const useDashboardData = (date: Date | undefined) => {
     });
     console.log("Initial summaries structure:", summaries);
 
-    // Process tbl_expedisi data for totalTransaksi and sisa (filtered by selected date string)
+    // Process tbl_expedisi data for totalTransaksi and sisa (already filtered by selected date)
     allExpedisiData.forEach(exp => {
-      // Robustly parse and format the 'created' date from tbl_expedisi
-      let expCreatedDatePart = '';
-      try {
-        if (exp.created) {
-          // Attempt to parse the date string, then format it to 'yyyy-MM-dd'
-          expCreatedDatePart = format(new Date(exp.created), "yyyy-MM-dd");
+      // No need for client-side date comparison here, as data is already filtered by query
+      const courierName = exp.couriername;
+      if (courierName && summaries[courierName]) {
+        summaries[courierName].totalTransaksi++;
+        if (exp.flag === "NO") {
+          summaries[courierName].sisa++;
         }
-      } catch (e) {
-        console.error(`Error parsing date for resino ${exp.resino}:`, exp.created, e);
-      }
-      
-      console.log(`DEBUG: Processing exp.resino: ${exp.resino}, Raw Created: "${exp.created}"`);
-      console.log(`DEBUG: Extracted Date Part: "${expCreatedDatePart}", Selected Date Formatted: "${selectedDateFormatted}"`);
-
-      if (expCreatedDatePart === selectedDateFormatted) { // Compare only the date parts
-        console.log(`DEBUG: Match found for ${exp.resino} on ${selectedDateFormatted}`);
-        const courierName = exp.couriername;
-        if (courierName && summaries[courierName]) {
-          summaries[courierName].totalTransaksi++;
-          if (exp.flag === "NO") {
-            summaries[courierName].sisa++;
-          }
-        }
-      } else {
-        console.log(`DEBUG: No match for ${exp.resino}. Exp Created Date Part: ${expCreatedDatePart}, Selected: ${selectedDateFormatted}`);
       }
     });
-    console.log("Summaries after processing tbl_expedisi (date-filtered by string):", summaries);
+    console.log("Summaries after processing tbl_expedisi (already date-filtered):", summaries);
 
 
     // Process tbl_resi data (already filtered by selected date)

@@ -15,6 +15,6 @@ export default defineConfig(() => ({
     },
   },
   optimizeDeps: {
-    exclude: ['@tanstack/query-persist-client-core'], // Menambahkan paket ini ke daftar pengecualian
+    exclude: [], // Menghapus '@tanstack/query-persist-client-core' dari daftar pengecualian
   },
 }));

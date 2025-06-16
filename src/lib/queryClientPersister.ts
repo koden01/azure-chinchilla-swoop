@@ -1,24 +1,19 @@
-import { createAsyncStoragePersister } from '@tanstack/query-persist-client-core'; // Mengubah impor ke createAsyncStoragePersister
 import { get, set, del } from 'idb-keyval';
+import { Persister } from '@tanstack/react-query'; // Import Persister type dari @tanstack/react-query
 
-// Custom storage object for IndexedDB using idb-keyval
-const indexedDBStorage = {
-  getItem: async (key: string) => {
-    const value = await get(key);
-    console.log(`IndexedDB getItem: key=${key}, value=${value ? 'found' : 'not found'}`);
-    return value;
+// Implementasi persister kustom yang sesuai dengan interface Persister
+export const persister: Persister = {
+  persistClient: async (client) => {
+    console.log('Persisting client...');
+    await set('scanresihg-query-cache', JSON.stringify(client));
   },
-  setItem: async (key: string, value: string) => {
-    console.log(`IndexedDB setItem: key=${key}, value length=${value.length}`);
-    await set(key, value);
+  restoreClient: async () => {
+    console.log('Restoring client...');
+    const storedClient = await get('scanresihg-query-cache');
+    return storedClient ? JSON.parse(storedClient) : undefined;
   },
-  removeItem: async (key: string) => {
-    console.log(`IndexedDB removeItem: key=${key}`);
-    await del(key);
+  removeClient: async () => {
+    console.log('Removing client...');
+    await del('scanresihg-query-cache');
   },
 };
-
-export const persister = createAsyncStoragePersister({ // Menggunakan createAsyncStoragePersister
-  storage: indexedDBStorage,
-  key: 'scanresihg-query-cache', // Unique key for your application's cache
-});

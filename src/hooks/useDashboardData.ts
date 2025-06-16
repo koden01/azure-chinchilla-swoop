@@ -34,8 +34,7 @@ export const useDashboardData = (date: Date | undefined) => {
         .from("tbl_resi")
         .select("*", { count: "exact" })
         .eq("schedule", "ontime")
-        .gte("created", startOfDay(date).toISOString())
-        .lt("created", endOfDay(date).toISOString());
+        .eq("created::date", formattedDate); // Changed to filter by date part
       if (error) throw error;
       console.log("Total Scan (Summary Card):", count);
       return count || 0;
@@ -52,8 +51,7 @@ export const useDashboardData = (date: Date | undefined) => {
         .from("tbl_resi")
         .select("*", { count: "exact" })
         .eq("Keterangan", "ID_REKOMENDASI") // Changed to Keterangan
-        .gte("created", startOfDay(date).toISOString())
-        .lt("created", endOfDay(date).toISOString());
+        .eq("created::date", formattedDate); // Changed to filter by date part
       if (error) throw error;
       console.log("ID Rekomendasi (Summary Card):", count);
       return count || 0;
@@ -104,8 +102,7 @@ export const useDashboardData = (date: Date | undefined) => {
         .from("tbl_resi")
         .select("*", { count: "exact" })
         .eq("schedule", "late")
-        .gte("created", startOfDay(date).toISOString())
-        .lt("created", endOfDay(date).toISOString());
+        .eq("created::date", formattedDate); // Changed to filter by date part
       if (error) throw error;
       console.log("Scan Followup (Late - Summary Card):", count);
       return count || 0;
@@ -122,8 +119,7 @@ export const useDashboardData = (date: Date | undefined) => {
         .from("tbl_resi")
         .select("*", { count: "exact" })
         .eq("schedule", "batal")
-        .gte("created", startOfDay(date).toISOString())
-        .lt("created", endOfDay(date).toISOString());
+        .eq("created::date", formattedDate); // Changed to filter by date part
       if (error) throw error;
       console.log("Batal Count (Summary Card):", count);
       return count || 0;
@@ -184,8 +180,7 @@ export const useDashboardData = (date: Date | undefined) => {
       const { data, error } = await supabase
         .from("tbl_resi")
         .select("Resi, nokarung, schedule, created, Keterangan")
-        .gte("created", startOfDay(date).toISOString())
-        .lt("created", endOfDay(date).toISOString());
+        .eq("created::date", formattedDate); // Changed to filter by date part
       if (error) throw error;
       console.log("All Resi Data (filtered by selected date):", data);
       return data || [];
@@ -248,6 +243,7 @@ export const useDashboardData = (date: Date | undefined) => {
     console.log("Initial summaries structure (keys):", Object.keys(summaries));
 
     // Process expedisiDataForSelectedDate for totalTransaksi and sisa
+    // This data is already filtered by date from Supabase using 'created::date'
     expedisiDataForSelectedDate.forEach(exp => {
       const normalizedCourierName = exp.couriername?.trim().toUpperCase(); // Normalize here
 

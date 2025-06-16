@@ -179,9 +179,17 @@ export const useDashboardData = (date: Date | undefined) => {
     enabled: !!date,
   });
 
+  // Debug logs for useEffect dependencies
+  console.log("useEffect dependencies check:");
+  console.log("  isLoadingAllExpedisiUnfiltered:", isLoadingAllExpedisiUnfiltered);
+  console.log("  isLoadingAllResi:", isLoadingAllResi);
+  console.log("  allExpedisiDataUnfiltered:", allExpedisiDataUnfiltered ? "Loaded" : "Not Loaded");
+  console.log("  allResiData:", allResiData ? "Loaded" : "Not Loaded");
+  console.log("  date:", date);
+
   // Process data to create expedition summaries
   useEffect(() => {
-    if (isLoadingAllExpedisiUnfiltered || isLoadingAllRes || !allExpedisiDataUnfiltered || !allResiData || !date) {
+    if (isLoadingAllExpedisiUnfiltered || isLoadingAllResi || !allExpedisiDataUnfiltered || !allResiData || !date) {
       setExpeditionSummaries([]);
       return;
     }
@@ -287,7 +295,7 @@ export const useDashboardData = (date: Date | undefined) => {
 
     setExpeditionSummaries(finalSummaries);
     console.log("Final Expedition Summaries:", finalSummaries);
-  }, [date, allExpedisiDataUnfiltered, allResiData, isLoadingAllExpedisiUnfiltered, isLoadingAllRes]);
+  }, [date, allExpedisiDataUnfiltered, allResiData, isLoadingAllExpedisiUnfiltered, isLoadingAllResi]);
 
 
   console.log("useDashboardData returning expeditionSummaries:", expeditionSummaries); // Debug log

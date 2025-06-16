@@ -14,4 +14,7 @@ export default defineConfig(() => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  optimizeDeps: {
+    exclude: ['@tanstack/query-persist-client-core'], // Menambahkan paket ini ke daftar pengecualian
+  },
 }));

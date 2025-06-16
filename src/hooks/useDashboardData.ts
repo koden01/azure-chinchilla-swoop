@@ -190,8 +190,9 @@ export const useDashboardData = (date: Date | undefined) => {
     console.log("allExpedisiData for summary (full set):", allExpedisiData);
     console.log("allResiData for summary (filtered by selected date):", allResiData);
 
-    const startOfSelectedDay = startOfDay(date).getTime();
-    const endOfSelectedDay = endOfDay(date).getTime();
+    // Convert selected date to UTC timestamps for consistent comparison
+    const startOfSelectedDayUTC = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
+    const endOfSelectedDayUTC = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
 
     // Build a comprehensive map from all expedisi data
     const resiToExpeditionMap = new Map<string, string>();
@@ -221,8 +222,9 @@ export const useDashboardData = (date: Date | undefined) => {
 
     // Process tbl_expedisi data for totalTransaksi and sisa (filtered by selected date)
     allExpedisiData.forEach(exp => {
-      const createdDate = new Date(exp.created).getTime();
-      if (createdDate >= startOfSelectedDay && createdDate <= endOfSelectedDay) { // Apply date filter here
+      // Parse exp.created as UTC for consistent comparison
+      const createdDateUTC = new Date(exp.created + 'Z').getTime(); 
+      if (createdDateUTC >= startOfSelectedDayUTC && createdDateUTC <= endOfSelectedDayUTC) { // Apply date filter here
         const courierName = exp.couriername;
         if (courierName && summaries[courierName]) {
           summaries[courierName].totalTransaksi++;

@@ -1,10 +1,12 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, startOfDay, endOfDay } from "date-fns";
 import { useEffect, useState } from "react";
+import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation"; // Import the invalidation utility
 
 export const useDashboardData = (date: Date | undefined) => {
   const formattedDate = date ? format(date, "yyyy-MM-dd") : "";
+  const queryClient = useQueryClient(); // Get query client instance
 
   // State to hold expedition summaries
   const [expeditionSummaries, setExpeditionSummaries] = useState<any[]>([]);
@@ -403,6 +405,32 @@ export const useDashboardData = (date: Date | undefined) => {
     console.log("--- useEffect for expeditionSummaries calculation finished ---");
   }, [date, allExpedisiDataUnfiltered, expedisiDataForSelectedDate, allResiData, isLoadingAllExpedisiUnfiltered, isLoadingExpedisiDataForSelectedDate, isLoadingAllResi]);
 
+  // Real-time subscription for dashboard data
+  useEffect(() => {
+    console.log("Setting up Supabase Realtime subscription for Dashboard data...");
+
+    const handleRealtimeEvent = (payload: any) => {
+      console.log("Realtime event received for Dashboard:", payload);
+      // Invalidate all relevant dashboard queries to trigger a refetch
+      invalidateDashboardQueries(queryClient, date);
+    };
+
+    const resiChannel = supabase
+      .channel('dashboard_resi_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tbl_resi' }, handleRealtimeEvent)
+      .subscribe();
+
+    const expedisiChannel = supabase
+      .channel('dashboard_expedisi_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tbl_expedisi' }, handleRealtimeEvent)
+      .subscribe();
+
+    return () => {
+      console.log("Unsubscribing Supabase Realtime channels for Dashboard data.");
+      supabase.removeChannel(resiChannel);
+      supabase.removeChannel(expedisiChannel);
+    };
+  }, [queryClient, date]); // Re-subscribe if date changes
 
   console.log("useDashboardData returning expeditionSummaries:", expeditionSummaries); // Debug log
 

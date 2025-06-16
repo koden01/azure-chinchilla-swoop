@@ -96,11 +96,9 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
         queryClient.setQueryData(queryKey, [...currentResiData, newResiEntry]);
         lastOptimisticIdRef.current = currentOptimisticId; // Store the ID of this optimistic entry
         console.log("Optimistically updated allResiForExpedition cache with ID:", currentOptimisticId);
-        showSuccess(`Resi ${currentResi} berhasil discan (optimis).`);
-        beepSuccess.play();
+        // Removed optimistic success toast here, will show after backend confirmation
       } else {
         // If data not in cache, force refetch for this specific query
-        // No immediate success toast here, wait for actual fetch result
         queryClient.invalidateQueries({ queryKey: queryKey });
         console.log("allResiForExpedition cache not found, invalidating for refetch.");
       }
@@ -129,8 +127,10 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
       const result = await response.json();
 
       if (response.ok && result.success) {
+        showSuccess(result.message); // Show success toast from backend message
+        beepSuccess.play(); // Play success sound
+
         // If optimistic update was done, update the couriername if it changed
-        // This check is still useful if the *last* optimistic entry needs its couriername updated
         if (lastOptimisticIdRef.current === currentOptimisticId && result.actual_couriername && result.actual_couriername !== expedition) {
             queryClient.setQueryData(queryKey, (oldData: ResiExpedisiData[] | undefined) => {
                 if (!oldData) return undefined;
@@ -153,7 +153,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
         }
 
         // Revert optimistic update if the actual operation failed
-        // We no longer check lastOptimisticIdRef.current here, as we want to revert the specific failed entry
         if (currentResiData && currentOptimisticId) { // Ensure we had data to optimistically update and an ID was generated
             queryClient.setQueryData(queryKey, (oldData: ResiExpedisiData[] | undefined) => {
                 if (!oldData) return undefined;
@@ -182,8 +181,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
           console.log(`Skipping optimistic revert for ID: ${currentOptimisticId} as no optimistic data was found or ID was null.`);
       }
     } finally {
-      // No need to set setIsProcessing(false) here anymore, it's done earlier
-      // No need to keepFocus() here anymore, it's done earlier
       console.log("Finished handleScanResi for:", currentResi, "at:", new Date().toISOString());
     }
   };

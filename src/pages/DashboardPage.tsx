@@ -11,12 +11,24 @@ import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
 import ResiDetailModal from "@/components/ResiDetailModal";
 import { useDashboardData } from "@/hooks/useDashboardData";
-import { useDashboardModals } from "@/hooks/useDashboardModals"; // Import the new hook
+import { useDashboardModals } from "@/hooks/useDashboardModals";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 const DashboardPage: React.FC = () => {
   console.log("DashboardPage rendering...");
   const [date, setDate] = React.useState<Date | undefined>(new Date());
   const queryClient = useQueryClient();
+
+  // State for expedition detail pagination
+  const [expeditionCurrentPage, setExpeditionCurrentPage] = React.useState(1);
+  const EXPEDITIONS_PER_PAGE = 6; // Number of expedition cards per page
 
   const {
     transaksiHariIni,
@@ -35,7 +47,7 @@ const DashboardPage: React.FC = () => {
     isLoadingBatalCount,
     formattedDate,
     allExpedisiData,
-    expeditionSummaries, // Pastikan ini diambil dari hook
+    expeditionSummaries,
   } = useDashboardData(date);
 
   const {
@@ -53,6 +65,37 @@ const DashboardPage: React.FC = () => {
     handleConfirmResi,
     handleCekfuToggle,
   } = useDashboardModals({ date, formattedDate, allExpedisiData });
+
+  // Calculate pagination for expedition details
+  const totalExpeditionPages = Math.ceil(expeditionSummaries.length / EXPEDITIONS_PER_PAGE);
+  const expeditionStartIndex = (expeditionCurrentPage - 1) * EXPEDITIONS_PER_PAGE;
+  const expeditionEndIndex = expeditionStartIndex + EXPEDITIONS_PER_PAGE;
+  const currentExpeditionSummaries = expeditionSummaries.slice(expeditionStartIndex, expeditionEndIndex);
+
+  const handleExpeditionPageChange = (page: number) => {
+    if (page >= 1 && page <= totalExpeditionPages) {
+      setExpeditionCurrentPage(page);
+    }
+  };
+
+  // Logic to determine which page numbers to display for expedition pagination
+  const getExpeditionPaginationPages = () => {
+    const pages = [];
+    if (totalExpeditionPages <= 3) {
+      for (let i = 1; i <= totalExpeditionPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (expeditionCurrentPage <= 2) {
+        pages.push(1, 2, 3);
+      } else if (expeditionCurrentPage >= totalExpeditionPages - 1) {
+        pages.push(totalExpeditionPages - 2, totalExpeditionPages - 1, totalExpeditionPages);
+      } else {
+        pages.push(expeditionCurrentPage - 1, expeditionCurrentPage, expeditionCurrentPage + 1);
+      }
+    }
+    return pages;
+  };
 
   console.log("expeditionSummaries in DashboardPage (before map):", expeditionSummaries); // Debug log
 
@@ -140,8 +183,8 @@ const DashboardPage: React.FC = () => {
             <Package className="mr-2 h-6 w-6" /> Detail per Expedisi
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {expeditionSummaries && expeditionSummaries.length > 0 ? (
-              expeditionSummaries.map((summary) => {
+            {currentExpeditionSummaries && currentExpeditionSummaries.length > 0 ? (
+              currentExpeditionSummaries.map((summary) => {
                 return (
                   <div key={summary.name} onClick={() => handleOpenExpeditionDetailModal(summary.name)}>
                     <ExpeditionDetailCard
@@ -161,6 +204,37 @@ const DashboardPage: React.FC = () => {
               <p className="text-white col-span-full text-center">Memuat detail ekspedisi atau tidak ada data.</p>
             )}
           </div>
+          {totalExpeditionPages > 1 && (
+            <Pagination className="mt-4">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    href="#"
+                    onClick={() => handleExpeditionPageChange(expeditionCurrentPage - 1)}
+                    className={expeditionCurrentPage === 1 ? "pointer-events-none opacity-50" : ""}
+                  />
+                </PaginationItem>
+                {getExpeditionPaginationPages().map((pageNumber) => (
+                  <PaginationItem key={pageNumber}>
+                    <PaginationLink
+                      href="#"
+                      isActive={pageNumber === expeditionCurrentPage}
+                      onClick={() => handleExpeditionPageChange(pageNumber)}
+                    >
+                      {pageNumber}
+                    </PaginationLink>
+                  </PaginationItem>
+                ))}
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={() => handleExpeditionPageChange(expeditionCurrentPage + 1)}
+                    className={expeditionCurrentPage === totalExpeditionPages ? "pointer-events-none opacity-50" : ""}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          )}
         </div>
         <MadeWithDyad />
 

@@ -13,12 +13,19 @@ import { useExpedition } from "@/context/ExpeditionContext";
 import { useResiScanner } from "@/hooks/useResiScanner";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import KarungSummaryModal from "@/components/KarungSummaryModal"; // Import the new modal
+import KarungSummaryModal from "@/components/KarungSummaryModal";
+import { Button } from "@/components/ui/button"; // Pastikan Button diimpor
+import { adjustResiCount } from "@/utils/dataManipulation"; // Import fungsi baru
+import { showSuccess, showError } from "@/utils/toast"; // Import toast
+import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation"; // Import invalidation
+import { useQueryClient } from "@tanstack/react-query"; // Import useQueryClient
+import { format } from "date-fns"; // Import format
 
 const InputPage = () => {
   const { expedition, setExpedition } = useExpedition();
   const [selectedKarung, setSelectedKarung] = React.useState<string>("");
-  const [isKarungSummaryModalOpen, setIsKarungSummaryModalOpen] = React.useState(false); // State for modal
+  const [isKarungSummaryModalOpen, setIsKarungSummaryModalOpen] = React.useState(false);
+  const queryClient = useQueryClient(); // Inisialisasi queryClient
 
   const {
     allResiForExpedition,
@@ -28,7 +35,7 @@ const InputPage = () => {
     highestKarung,
     karungOptions,
     formattedDate,
-    karungSummary, // Destructure karungSummary
+    karungSummary,
   } = useResiInputData(expedition);
 
   const {
@@ -64,6 +71,24 @@ const InputPage = () => {
     }
   }, [expedition, selectedKarung, isProcessing]);
 
+  // Fungsi untuk menyesuaikan jumlah resi ID Karung 1 menjadi 54
+  const handleAdjustIDKarung1Count = async () => {
+    const targetCount = 54;
+    const expeditionToAdjust = "ID";
+    const karungToAdjust = "1";
+    const today = new Date();
+
+    try {
+      const message = await adjustResiCount(targetCount, expeditionToAdjust, karungToAdjust, today);
+      showSuccess(message);
+      // Invalidate relevant queries to refresh UI
+      invalidateDashboardQueries(queryClient, today, expeditionToAdjust);
+    } catch (error: any) {
+      showError(`Gagal menyesuaikan jumlah resi: ${error.message}`);
+      console.error("Error adjusting resi count:", error);
+    }
+  };
+
   console.log("InputPage State:", {
     expedition,
     selectedKarung,
@@ -71,7 +96,7 @@ const InputPage = () => {
     allResiForExpeditionCount: allResiForExpedition?.length,
     currentCount,
     isProcessing,
-    karungSummary, // Log karungSummary
+    karungSummary,
   });
 
   return (
@@ -87,9 +112,9 @@ const InputPage = () => {
               : currentCount}
           </div>
           <div
-            className="text-xl cursor-pointer hover:underline" // Make it clickable
+            className="text-xl cursor-pointer hover:underline"
             onClick={() => {
-              if (expedition) { // Only open if an expedition is selected
+              if (expedition) {
                 setIsKarungSummaryModalOpen(true);
               }
             }}
@@ -161,6 +186,13 @@ const InputPage = () => {
               )}
             </div>
           </div>
+          {/* Tombol untuk menyesuaikan jumlah resi ID Karung 1 */}
+          <Button
+            onClick={handleAdjustIDKarung1Count}
+            className="mt-4 bg-purple-600 hover:bg-purple-700 text-white"
+          >
+            Set ID Karung 1 Count to 54 (Dev Only)
+          </Button>
         </div>
         <MadeWithDyad />
       </div>

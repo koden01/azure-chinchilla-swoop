@@ -102,7 +102,7 @@ export const useDashboardData = (date: Date | undefined) => {
     queryKey: ["scanFollowupLateCount", formattedDate],
     queryFn: async () => {
       if (!date) return 0;
-      const { count, error } => await supabase
+      const { count, error } = await supabase // FIX: Changed '=>' to '='
         .from("tbl_resi")
         .select("*", { count: "exact" })
         .eq("schedule", "late")

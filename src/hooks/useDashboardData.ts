@@ -222,12 +222,12 @@ export const useDashboardData = (date: Date | undefined) => {
 
     // Process tbl_expedisi data for totalTransaksi and sisa (filtered by selected date string)
     allExpedisiData.forEach(exp => {
-      // Format the 'created' date from tbl_expedisi to a 'yyyy-MM-dd' string
-      // Assuming exp.created is a string like 'YYYY-MM-DD HH:MM:SS'
-      const expCreatedDateFormatted = format(new Date(exp.created), "yyyy-MM-dd");
-      console.log(`Expedisi Resi: ${exp.resino}, Created Date: ${exp.created}, Formatted: ${expCreatedDateFormatted}`);
+      // Extract only the date part from exp.created string (e.g., "2023-10-26T10:30:00.000Z" -> "2023-10-26")
+      // Assuming Supabase returns timestamp without time zone as ISO string without 'Z' or with 'T'
+      const expCreatedDatePart = exp.created ? exp.created.split('T')[0] : ''; 
+      console.log(`Expedisi Resi: ${exp.resino}, Created Date String: ${exp.created}, Extracted Date Part: ${expCreatedDatePart}`);
 
-      if (expCreatedDateFormatted === selectedDateFormatted) { // Compare date strings
+      if (expCreatedDatePart === selectedDateFormatted) { // Compare date strings directly
         const courierName = exp.couriername;
         if (courierName && summaries[courierName]) {
           summaries[courierName].totalTransaksi++;

@@ -5,11 +5,20 @@ import { beepSuccess, beepFailure, beepDouble } from "@/utils/audio";
 import { useDebounce } from "@/hooks/useDebounce";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
 import { useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns"; // Import format for current timestamp
 
 interface UseResiScannerProps {
   expedition: string;
   selectedKarung: string;
   formattedDate: string;
+}
+
+// Define the type for ResiExpedisiData to match useResiInputData
+interface ResiExpedisiData {
+  Resi: string;
+  nokarung: string | null;
+  created: string;
+  couriername: string | null;
 }
 
 export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: UseResiScannerProps) => {
@@ -86,7 +95,28 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
       if (response.ok && result.success) {
         showSuccess(result.message);
         beepSuccess.play();
-        debouncedInvalidate();
+
+        // --- Optimistic UI Update for InputPage ---
+        const queryKey = ["allResiForExpedition", expedition, formattedDate];
+        const currentResiData = queryClient.getQueryData<ResiExpedisiData[]>(queryKey);
+
+        if (currentResiData) {
+          const newResiEntry: ResiExpedisiData = {
+            Resi: currentResi,
+            nokarung: selectedKarung,
+            created: new Date().toISOString(), // Use current timestamp for optimistic update
+            couriername: result.actual_couriername || expedition, // Use actual_couriername from RPC result if available, else expedition
+          };
+          queryClient.setQueryData(queryKey, [...currentResiData, newResiEntry]);
+          console.log("Optimistically updated allResiForExpedition cache.");
+        } else {
+          // If data not in cache, force refetch for this specific query
+          queryClient.invalidateQueries({ queryKey: queryKey });
+          console.log("allResiForExpedition cache not found, invalidating for refetch.");
+        }
+        // --- End Optimistic UI Update ---
+
+        debouncedInvalidate(); // Still invalidate dashboard queries in the background
       } else {
         // Memeriksa tipe kesalahan dari fungsi Edge
         if (result.type === "duplicate") {

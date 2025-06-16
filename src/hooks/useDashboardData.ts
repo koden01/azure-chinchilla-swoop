@@ -17,8 +17,7 @@ export const useDashboardData = (date: Date | undefined) => {
       const { count, error } = await supabase
         .from("tbl_expedisi")
         .select("*", { count: "exact" })
-        .gte("created", startOfDay(date).toISOString())
-        .lt("created", endOfDay(date).toISOString());
+        .eq("created::date", formattedDate); // Changed to filter by date part
       if (error) throw error;
       console.log("Transaksi Hari Ini (Summary Card):", count);
       return count || 0;
@@ -71,8 +70,7 @@ export const useDashboardData = (date: Date | undefined) => {
         .from("tbl_expedisi")
         .select("*", { count: "exact" })
         .eq("flag", "NO")
-        .gte("created", startOfDay(date).toISOString())
-        .lt("created", endOfDay(date).toISOString());
+        .eq("created::date", formattedDate); // Changed to filter by date part
       if (error) throw error;
       console.log("Belum Kirim (Summary Card):", count);
       return count || 0;
@@ -162,6 +160,22 @@ export const useDashboardData = (date: Date | undefined) => {
     enabled: true, // Always enabled to get all mappings
   });
 
+  // NEW: Fetch tbl_expedisi data specifically for the selected date
+  const { data: expedisiDataForSelectedDate, isLoading: isLoadingExpedisiDataForSelectedDate } = useQuery<any[]>({
+    queryKey: ["expedisiDataForSelectedDate", formattedDate],
+    queryFn: async () => {
+      if (!date) return [];
+      const { data, error } = await supabase
+        .from("tbl_expedisi")
+        .select("resino, couriername, flag, created, orderno, chanelsales, datetrans, cekfu")
+        .eq("created::date", formattedDate); // Filter by date part
+      if (error) throw error;
+      console.log("Expedisi Data for Selected Date (filtered):", data);
+      return data || [];
+    },
+    enabled: !!date,
+  });
+
   // Fetch tbl_resi data for the selected date range
   const { data: allResiData, isLoading: isLoadingAllResi } = useQuery<any[]>({
     queryKey: ["allResiData", formattedDate],
@@ -184,21 +198,24 @@ export const useDashboardData = (date: Date | undefined) => {
     console.log("--- useEffect for expeditionSummaries calculation started ---");
     console.log("Dependencies status:");
     console.log(`  isLoadingAllExpedisiUnfiltered: ${isLoadingAllExpedisiUnfiltered}`);
+    console.log(`  isLoadingExpedisiDataForSelectedDate: ${isLoadingExpedisiDataForSelectedDate}`);
     console.log(`  isLoadingAllResi: ${isLoadingAllResi}`);
     console.log(`  allExpedisiDataUnfiltered: ${allExpedisiDataUnfiltered ? 'Loaded (' + allExpedisiDataUnfiltered.length + ' items)' : 'Not Loaded'}`);
+    console.log(`  expedisiDataForSelectedDate: ${expedisiDataForSelectedDate ? 'Loaded (' + expedisiDataForSelectedDate.length + ' items)' : 'Not Loaded'}`);
     console.log(`  allResiData: ${allResiData ? 'Loaded (' + allResiData.length + ' items)' : 'Not Loaded'}`);
     console.log(`  date: ${date ? date.toISOString() : 'null'}`);
 
 
-    if (isLoadingAllExpedisiUnfiltered || isLoadingAllResi || !allExpedisiDataUnfiltered || !allResiData || !date) {
+    if (isLoadingAllExpedisiUnfiltered || isLoadingExpedisiDataForSelectedDate || isLoadingAllResi || !allExpedisiDataUnfiltered || !expedisiDataForSelectedDate || !allResiData || !date) {
       setExpeditionSummaries([]);
       console.log("Expedition summaries: Dependencies not ready or date is null. Setting summaries to empty.");
       return;
     }
 
     console.log("Starting detailed expedition summaries calculation...");
-    console.log("allExpedisiDataUnfiltered for summary (count):", allExpedisiDataUnfiltered.length);
-    console.log("allResiData for summary (count, already date-filtered):", allResiData.length);
+    console.log("allExpedisiDataUnfiltered for resiToExpeditionMap (count):", allExpedisiDataUnfiltered.length);
+    console.log("expedisiDataForSelectedDate for totalTransaksi/sisa (count):", expedisiDataForSelectedDate.length);
+    console.log("allResiData for other counts (count, already date-filtered):", allResiData.length);
 
     // Build a comprehensive map from all expedisi data (unfiltered)
     const resiToExpeditionMap = new Map<string, string>();
@@ -210,7 +227,6 @@ export const useDashboardData = (date: Date | undefined) => {
       }
     });
     console.log("resiToExpeditionMap (comprehensive, size):", resiToExpeditionMap.size);
-    // console.log("resiToExpeditionMap content (first 5):", Array.from(resiToExpeditionMap.entries()).slice(0, 5)); // Too verbose, enable if needed
 
     const summaries: { [key: string]: any } = {};
 
@@ -231,36 +247,23 @@ export const useDashboardData = (date: Date | undefined) => {
     });
     console.log("Initial summaries structure (keys):", Object.keys(summaries));
 
-    // Process tbl_expedisi data for totalTransaksi and sisa (apply date filter client-side here)
-    const startOfSelectedDay = startOfDay(date).getTime();
-    const endOfSelectedDay = endOfDay(date).getTime();
-    console.log(`Selected Date Range (timestamps): ${startOfSelectedDay} - ${endOfSelectedDay}`);
-
-    allExpedisiDataUnfiltered.forEach(exp => {
-      const expCreatedDate = new Date(exp.created);
-      const expCreatedTimestamp = expCreatedDate.getTime();
+    // Process expedisiDataForSelectedDate for totalTransaksi and sisa
+    expedisiDataForSelectedDate.forEach(exp => {
       const normalizedCourierName = exp.couriername?.trim().toUpperCase(); // Normalize here
 
-      console.log(`  Processing tbl_expedisi record: Resi=${exp.resino}, Courier=${exp.couriername} (Normalized: ${normalizedCourierName}), Created=${exp.created}`);
-      console.log(`    Parsed Timestamp: ${expCreatedTimestamp}`);
-      console.log(`    Selected Day Range: ${startOfSelectedDay} - ${endOfSelectedDay}`);
-      console.log(`    Is within range? ${expCreatedTimestamp >= startOfSelectedDay && expCreatedTimestamp <= endOfSelectedDay}`);
-
-      if (expCreatedTimestamp >= startOfSelectedDay && expCreatedTimestamp <= endOfSelectedDay) {
-        if (normalizedCourierName && summaries[normalizedCourierName]) {
-          summaries[normalizedCourierName].totalTransaksi++;
-          if (exp.flag === "NO") {
-            summaries[normalizedCourierName].sisa++;
-          }
-          console.log(`    -> Matched date and courier for ${normalizedCourierName}. Current totalTransaksi: ${summaries[normalizedCourierName].totalTransaksi}, sisa: ${summaries[normalizedCourierName].sisa}`);
-        } else {
-          console.warn(`    -> tbl_expedisi: Normalized Courier name '${normalizedCourierName}' not found in summaries or is null for resino: ${exp.resino}. Skipping.`);
+      console.log(`  Processing expedisiDataForSelectedDate record: Resi=${exp.resino}, Courier=${exp.couriername} (Normalized: ${normalizedCourierName}), Created (raw): ${exp.created}`);
+      
+      if (normalizedCourierName && summaries[normalizedCourierName]) {
+        summaries[normalizedCourierName].totalTransaksi++;
+        if (exp.flag === "NO") {
+          summaries[normalizedCourierName].sisa++;
         }
+        console.log(`    -> Matched courier for ${normalizedCourierName}. Current totalTransaksi: ${summaries[normalizedCourierName].totalTransaksi}, sisa: ${summaries[normalizedCourierName].sisa}`);
       } else {
-        console.log(`    -> tbl_expedisi: Resino ${exp.resino} created date ${exp.created} is outside selected range. Skipping.`);
+        console.warn(`    -> expedisiDataForSelectedDate: Normalized Courier name '${normalizedCourierName}' not found in summaries or is null for resino: ${exp.resino}. Skipping.`);
       }
     });
-    console.log("Summaries after processing tbl_expedisi (client-side date-filtered):", summaries);
+    console.log("Summaries after processing expedisiDataForSelectedDate:", summaries);
 
 
     // Process tbl_resi data (already filtered by selected date)
@@ -321,7 +324,7 @@ export const useDashboardData = (date: Date | undefined) => {
     setExpeditionSummaries(finalSummaries);
     console.log("Final Expedition Summaries:", finalSummaries);
     console.log("--- useEffect for expeditionSummaries calculation finished ---");
-  }, [date, allExpedisiDataUnfiltered, allResiData, isLoadingAllExpedisiUnfiltered, isLoadingAllResi]);
+  }, [date, allExpedisiDataUnfiltered, expedisiDataForSelectedDate, allResiData, isLoadingAllExpedisiUnfiltered, isLoadingExpedisiDataForSelectedDate, isLoadingAllResi]);
 
 
   console.log("useDashboardData returning expeditionSummaries:", expeditionSummaries); // Debug log

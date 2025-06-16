@@ -189,6 +189,10 @@ export const useDashboardData = (date: Date | undefined) => {
       return;
     }
 
+    console.log("Starting expedition summaries calculation...");
+    console.log("allExpedisiData for summary:", allExpedisiData);
+    console.log("allResiData for summary:", allResiData);
+
     const startOfSelectedDay = startOfDay(date).getTime();
     const endOfSelectedDay = endOfDay(date).getTime();
 
@@ -196,6 +200,7 @@ export const useDashboardData = (date: Date | undefined) => {
     allExpedisiData.forEach(exp => {
       resiToExpeditionMap.set(exp.resino, exp.couriername);
     });
+    console.log("resiToExpeditionMap:", resiToExpeditionMap);
 
     const summaries: { [key: string]: any } = {};
 
@@ -213,6 +218,7 @@ export const useDashboardData = (date: Date | undefined) => {
         totalScanFollowUp: 0, // Initialize new field
       };
     });
+    console.log("Initial summaries structure:", summaries);
 
     // Process tbl_expedisi data
     allExpedisiData.forEach(exp => {
@@ -227,6 +233,8 @@ export const useDashboardData = (date: Date | undefined) => {
         }
       }
     });
+    console.log("Summaries after processing tbl_expedisi:", summaries);
+
 
     // Process tbl_resi data
     allResiData.forEach(resi => {
@@ -234,17 +242,20 @@ export const useDashboardData = (date: Date | undefined) => {
       if (createdDate >= startOfSelectedDay && createdDate <= endOfSelectedDay) {
         const courierName = resiToExpeditionMap.get(resi.Resi);
         if (courierName && summaries[courierName]) {
+          console.log(`Processing Resi: ${resi.Resi}, Courier: ${courierName}, Schedule: ${resi.schedule}, Nokarung: ${resi.nokarung}`); // Added log
           if (resi.schedule === "ontime") {
             summaries[courierName].totalScan++;
           }
           if (resi.schedule === "idrek") {
             summaries[courierName].idRekomendasi++;
+            console.log(`Incremented ID Rekomendasi for ${courierName}. Current: ${summaries[courierName].idRekomendasi}`); // Added log
           }
           if (resi.schedule === "batal") { // Count 'batal'
             summaries[courierName].totalBatal++;
           }
           if (resi.schedule === "late") { // Count 'late' for scan follow up
             summaries[courierName].totalScanFollowUp++;
+            console.log(`Incremented Scan Follow Up for ${courierName}. Current: ${summaries[courierName].totalScanFollowUp}`); // Added log
           }
           if (resi.nokarung) {
             // Add nokarung to the Set for unique counting

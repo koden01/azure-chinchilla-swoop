@@ -16,6 +16,13 @@ if (!SUPABASE_PUBLISHABLE_KEY) {
 // Extract project ID from SUPABASE_URL
 const SUPABASE_PROJECT_ID = SUPABASE_URL.split('//')[1].split('.')[0];
 
+// Log untuk debugging: Pastikan kunci API dimuat dengan benar
+console.log("Supabase Client: VITE_SUPABASE_URL loaded:", SUPABASE_URL ? "Yes" : "No");
+console.log("Supabase Client: VITE_SUPABASE_ANON_KEY loaded:", SUPABASE_PUBLISHABLE_KEY ? "Yes" : "No");
+// Untuk keamanan, jangan log nilai kunci penuh di produksi, tapi untuk debugging ini membantu
+// console.log("Supabase Client: Anon Key Value (first 10 chars):", SUPABASE_PUBLISHABLE_KEY?.substring(0, 10) + "...");
+
+
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 

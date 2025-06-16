@@ -58,7 +58,7 @@ const DashboardPage: React.FC = () => {
     selectedCourier,
     handleOpenBelumKirimModal,
     handleOpenFollowUpFlagNoModal,
-    handleOpenScanFollowupModal, // Keep this function, but it won't be directly tied to a card click anymore
+    handleOpenScanFollowupModal,
     handleOpenExpeditionDetailModal,
     handleCloseModal,
     handleBatalResi,
@@ -138,7 +138,6 @@ const DashboardPage: React.FC = () => {
             value={isLoadingTransaksiHariIni ? "Loading..." : transaksiHariIni || 0}
             sisaTitle="Sisa"
             sisaValue={isLoadingBelumKirim ? "Loading..." : belumKirim || 0}
-            // onSisaClick={handleOpenBelumKirimModal} // Dihapus sesuai permintaan
             gradientFrom="from-green-400"
             gradientTo="to-blue-500"
             icon="package"
@@ -155,13 +154,13 @@ const DashboardPage: React.FC = () => {
           <SummaryCard
             title="Follow Up"
             value={isLoadingFollowUpFlagNoCount ? "Loading..." : followUpFlagNoCount || 0}
-            secondaryTitle="Scan Followup" // Added secondary title for Scan Followup
-            secondaryValue={isLoadingScanFollowupLateCount ? "Loading..." : scanFollowupLateCount || 0} // Added secondary value for Scan Followup
+            secondaryTitle="Scan Followup"
+            secondaryValue={isLoadingScanFollowupLateCount ? "Loading..." : scanFollowupLateCount || 0}
             gradientFrom="from-orange-500"
             gradientTo="to-red-500"
             icon="warning"
-            onClick={handleOpenFollowUpFlagNoModal} // This will open the Flag NO modal
-            onSisaClick={handleOpenScanFollowupModal} // This will open the Scan Followup modal when its text is clicked
+            onClick={handleOpenScanFollowupModal} // Mengubah ini agar memanggil handleOpenScanFollowupModal
+            onSisaClick={handleOpenScanFollowupModal} // Ini tetap sama
           />
           <SummaryCard
             title="Batal"
@@ -170,7 +169,6 @@ const DashboardPage: React.FC = () => {
             gradientTo="to-red-900"
             icon="info"
           />
-          {/* Removed the separate Scan Followup card */}
         </div>
 
         {/* Detail per Expedisi Section */}

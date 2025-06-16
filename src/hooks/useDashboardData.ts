@@ -179,31 +179,38 @@ export const useDashboardData = (date: Date | undefined) => {
     enabled: !!date,
   });
 
-  // Debug logs for useEffect dependencies
-  console.log("useEffect dependencies check:");
-  console.log("  isLoadingAllExpedisiUnfiltered:", isLoadingAllExpedisiUnfiltered);
-  console.log("  isLoadingAllResi:", isLoadingAllResi);
-  console.log("  allExpedisiDataUnfiltered:", allExpedisiDataUnfiltered ? "Loaded" : "Not Loaded");
-  console.log("  allResiData:", allResiData ? "Loaded" : "Not Loaded");
-  console.log("  date:", date);
-
   // Process data to create expedition summaries
   useEffect(() => {
+    console.log("--- useEffect for expeditionSummaries calculation started ---");
+    console.log("Dependencies status:");
+    console.log(`  isLoadingAllExpedisiUnfiltered: ${isLoadingAllExpedisiUnfiltered}`);
+    console.log(`  isLoadingAllResi: ${isLoadingAllResi}`);
+    console.log(`  allExpedisiDataUnfiltered: ${allExpedisiDataUnfiltered ? 'Loaded (' + allExpedisiDataUnfiltered.length + ' items)' : 'Not Loaded'}`);
+    console.log(`  allResiData: ${allResiData ? 'Loaded (' + allResiData.length + ' items)' : 'Not Loaded'}`);
+    console.log(`  date: ${date ? date.toISOString() : 'null'}`);
+
+
     if (isLoadingAllExpedisiUnfiltered || isLoadingAllResi || !allExpedisiDataUnfiltered || !allResiData || !date) {
       setExpeditionSummaries([]);
+      console.log("Expedition summaries: Dependencies not ready or date is null. Setting summaries to empty.");
       return;
     }
 
-    console.log("Starting expedition summaries calculation...");
-    console.log("allExpedisiDataUnfiltered for summary:", allExpedisiDataUnfiltered);
-    console.log("allResiData for summary (already date-filtered):", allResiData);
+    console.log("Starting detailed expedition summaries calculation...");
+    console.log("allExpedisiDataUnfiltered for summary (count):", allExpedisiDataUnfiltered.length);
+    console.log("allResiData for summary (count, already date-filtered):", allResiData.length);
 
     // Build a comprehensive map from all expedisi data (unfiltered)
     const resiToExpeditionMap = new Map<string, string>();
     allExpedisiDataUnfiltered.forEach(exp => {
-      resiToExpeditionMap.set(exp.resino, exp.couriername);
+      // Normalize resino for map key: trim spaces and convert to lowercase
+      const normalizedResino = exp.resino?.trim().toLowerCase();
+      if (normalizedResino) {
+        resiToExpeditionMap.set(normalizedResino, exp.couriername);
+      }
     });
-    console.log("resiToExpeditionMap (comprehensive):", resiToExpeditionMap);
+    console.log("resiToExpeditionMap (comprehensive, size):", resiToExpeditionMap.size);
+    // console.log("resiToExpeditionMap content (first 5):", Array.from(resiToExpeditionMap.entries()).slice(0, 5)); // Too verbose, enable if needed
 
     const summaries: { [key: string]: any } = {};
 
@@ -222,14 +229,18 @@ export const useDashboardData = (date: Date | undefined) => {
         totalScanFollowUp: 0, 
       };
     });
-    console.log("Initial summaries structure:", summaries);
+    console.log("Initial summaries structure (keys):", Object.keys(summaries));
 
     // Process tbl_expedisi data for totalTransaksi and sisa (apply date filter client-side here)
     const startOfSelectedDay = startOfDay(date).getTime();
     const endOfSelectedDay = endOfDay(date).getTime();
+    console.log(`Selected Date Range (timestamps): ${startOfSelectedDay} - ${endOfSelectedDay}`);
 
     allExpedisiDataUnfiltered.forEach(exp => {
-      const expCreatedTimestamp = new Date(exp.created).getTime();
+      const expCreatedDate = new Date(exp.created);
+      const expCreatedTimestamp = expCreatedDate.getTime();
+      // console.log(`Processing tbl_expedisi resino: ${exp.resino}, created: ${exp.created} (timestamp: ${expCreatedTimestamp})`);
+
       if (expCreatedTimestamp >= startOfSelectedDay && expCreatedTimestamp <= endOfSelectedDay) {
         const courierName = exp.couriername;
         if (courierName && summaries[courierName]) {
@@ -237,7 +248,12 @@ export const useDashboardData = (date: Date | undefined) => {
           if (exp.flag === "NO") {
             summaries[courierName].sisa++;
           }
+          // console.log(`  -> Matched date for ${courierName}. totalTransaksi: ${summaries[courierName].totalTransaksi}, sisa: ${summaries[courierName].sisa}`);
+        } else {
+          // console.warn(`  -> tbl_expedisi: Courier name '${courierName}' not found in summaries or is null for resino: ${exp.resino}`);
         }
+      } else {
+        // console.log(`  -> tbl_expedisi: Resino ${exp.resino} created date ${exp.created} is outside selected range.`);
       }
     });
     console.log("Summaries after processing tbl_expedisi (client-side date-filtered):", summaries);
@@ -245,21 +261,25 @@ export const useDashboardData = (date: Date | undefined) => {
 
     // Process tbl_resi data (already filtered by selected date)
     allResiData.forEach(resi => {
-      // Determine the target courier name for this resi using the comprehensive map
-      let targetCourierName = resiToExpeditionMap.get(resi.Resi);
+      // Normalize resi.Resi for lookup: trim spaces and convert to lowercase
+      const normalizedResi = resi.Resi?.trim().toLowerCase();
+      let targetCourierName = null;
 
-      // If resi not found in tbl_expedisi map, but Keterangan is 'ID' or 'ID_REKOMENDASI',
-      // attribute it to 'ID' expedition. This handles cases where tbl_resi exists
-      // but no corresponding tbl_expedisi entry (e.g., direct ID scans).
-      if (!targetCourierName && (resi.Keterangan === "ID" || resi.Keterangan === "ID_REKOMENDASI")) {
-        targetCourierName = "ID";
-        console.log(`Attributing Resi ${resi.Resi} with Keterangan '${resi.Keterangan}' to ID expedition for summary (not found in tbl_expedisi map).`);
-      } else if (!targetCourierName && resi.Keterangan && ["JNE", "SPX", "INSTAN", "SICEPAT"].includes(resi.Keterangan)) {
-        // Also handle other couriers if they exist in tbl_resi but not in tbl_expedisi map
-        targetCourierName = resi.Keterangan;
-        console.log(`Attributing Resi ${resi.Resi} with Keterangan '${resi.Keterangan}' to ${targetCourierName} expedition for summary (not found in tbl_expedisi map).`);
+      // First, try to get from the comprehensive map
+      if (normalizedResi) {
+        targetCourierName = resiToExpeditionMap.get(normalizedResi);
       }
 
+      // Fallback for ID or other couriers if not found in map but Keterangan matches
+      if (!targetCourierName) {
+        if (resi.Keterangan === "ID" || resi.Keterangan === "ID_REKOMENDASI") {
+          targetCourierName = "ID";
+          console.log(`Attributing Resi ${resi.Resi} with Keterangan '${resi.Keterangan}' to ID expedition for summary (not found in tbl_expedisi map).`);
+        } else if (resi.Keterangan && ["JNE", "SPX", "INSTAN", "SICEPAT"].includes(resi.Keterangan)) {
+          targetCourierName = resi.Keterangan;
+          console.log(`Attributing Resi ${resi.Resi} with Keterangan '${resi.Keterangan}' to ${targetCourierName} expedition for summary (not found in tbl_expedisi map).`);
+        }
+      }
 
       if (targetCourierName && summaries[targetCourierName]) {
         console.log(`Processing Resi: ${resi.Resi}, Target Courier: ${targetCourierName}, Schedule: ${resi.schedule}, Keterangan: ${resi.Keterangan}, Nokarung: ${resi.nokarung}`); 
@@ -295,6 +315,7 @@ export const useDashboardData = (date: Date | undefined) => {
 
     setExpeditionSummaries(finalSummaries);
     console.log("Final Expedition Summaries:", finalSummaries);
+    console.log("--- useEffect for expeditionSummaries calculation finished ---");
   }, [date, allExpedisiDataUnfiltered, allResiData, isLoadingAllExpedisiUnfiltered, isLoadingAllResi]);
 
 

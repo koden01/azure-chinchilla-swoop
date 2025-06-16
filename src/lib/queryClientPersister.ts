@@ -1,4 +1,4 @@
-import * as QueryPersist from '@tanstack/query-persist-client-core'; // Mengubah impor di sini
+import { createSyncStoragePersister } from '@tanstack/query-persist-client-core'; // Mengembalikan impor ke named import
 import { get, set, del } from 'idb-keyval';
 
 // Custom storage object for IndexedDB using idb-keyval
@@ -18,7 +18,7 @@ const indexedDBStorage = {
   },
 };
 
-export const persister = QueryPersist.createSyncStoragePersister({ // Menggunakan QueryPersist.createSyncStoragePersister
+export const persister = createSyncStoragePersister({
   storage: indexedDBStorage,
   key: 'scanresihg-query-cache', // Unique key for your application's cache
 });

@@ -17,7 +17,7 @@ export const useDashboardData = (date: Date | undefined) => {
       const { count, error } = await supabase
         .from("tbl_expedisi")
         .select("*", { count: "exact" })
-        .eq("created::date", formattedDate); // Changed to filter by date part
+        .eq("created::date", formattedDate); // Correct for timestamp without time zone
       if (error) throw error;
       console.log("Transaksi Hari Ini (Summary Card):", count);
       return count || 0;
@@ -34,7 +34,8 @@ export const useDashboardData = (date: Date | undefined) => {
         .from("tbl_resi")
         .select("*", { count: "exact" })
         .eq("schedule", "ontime")
-        .eq("created::date", formattedDate); // Changed to filter by date part
+        .gte("created", startOfDay(date).toISOString()) // Correct for timestamp with time zone
+        .lt("created", endOfDay(date).toISOString()); // Correct for timestamp with time zone
       if (error) throw error;
       console.log("Total Scan (Summary Card):", count);
       return count || 0;
@@ -51,7 +52,8 @@ export const useDashboardData = (date: Date | undefined) => {
         .from("tbl_resi")
         .select("*", { count: "exact" })
         .eq("Keterangan", "ID_REKOMENDASI") // Changed to Keterangan
-        .eq("created::date", formattedDate); // Changed to filter by date part
+        .gte("created", startOfDay(date).toISOString()) // Correct for timestamp with time zone
+        .lt("created", endOfDay(date).toISOString()); // Correct for timestamp with time zone
       if (error) throw error;
       console.log("ID Rekomendasi (Summary Card):", count);
       return count || 0;
@@ -68,7 +70,7 @@ export const useDashboardData = (date: Date | undefined) => {
         .from("tbl_expedisi")
         .select("*", { count: "exact" })
         .eq("flag", "NO")
-        .eq("created::date", formattedDate); // Changed to filter by date part
+        .eq("created::date", formattedDate); // Correct for timestamp without time zone
       if (error) throw error;
       console.log("Belum Kirim (Summary Card):", count);
       return count || 0;
@@ -102,7 +104,8 @@ export const useDashboardData = (date: Date | undefined) => {
         .from("tbl_resi")
         .select("*", { count: "exact" })
         .eq("schedule", "late")
-        .eq("created::date", formattedDate); // Changed to filter by date part
+        .gte("created", startOfDay(date).toISOString()) // Correct for timestamp with time zone
+        .lt("created", endOfDay(date).toISOString()); // Correct for timestamp with time zone
       if (error) throw error;
       console.log("Scan Followup (Late - Summary Card):", count);
       return count || 0;
@@ -119,7 +122,8 @@ export const useDashboardData = (date: Date | undefined) => {
         .from("tbl_resi")
         .select("*", { count: "exact" })
         .eq("schedule", "batal")
-        .eq("created::date", formattedDate); // Changed to filter by date part
+        .gte("created", startOfDay(date).toISOString()) // Correct for timestamp with time zone
+        .lt("created", endOfDay(date).toISOString()); // Correct for timestamp with time zone
       if (error) throw error;
       console.log("Batal Count (Summary Card):", count);
       return count || 0;
@@ -164,7 +168,7 @@ export const useDashboardData = (date: Date | undefined) => {
       const { data, error } = await supabase
         .from("tbl_expedisi")
         .select("resino, couriername, flag, created, orderno, chanelsales, datetrans, cekfu")
-        .eq("created::date", formattedDate); // Filter by date part
+        .eq("created::date", formattedDate); // Correct for timestamp without time zone
       if (error) throw error;
       console.log("Expedisi Data for Selected Date (filtered):", data);
       return data || [];
@@ -180,7 +184,8 @@ export const useDashboardData = (date: Date | undefined) => {
       const { data, error } = await supabase
         .from("tbl_resi")
         .select("Resi, nokarung, schedule, created, Keterangan")
-        .eq("created::date", formattedDate); // Changed to filter by date part
+        .gte("created", startOfDay(date).toISOString()) // Correct for timestamp with time zone
+        .lt("created", endOfDay(date).toISOString()); // Correct for timestamp with time zone
       if (error) throw error;
       console.log("All Resi Data (filtered by selected date):", data);
       return data || [];

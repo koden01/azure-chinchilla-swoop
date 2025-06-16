@@ -45,104 +45,50 @@ serve(async (req) => {
       }
     );
 
-    // Calculate start and end of the day for the formattedDate
-    const selectedDate = new Date(formattedDate);
-    const startOfDay = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 0, 0, 0, 0);
-    const endOfDay = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 23, 59, 59, 999);
+    // Call the new RPC function to validate and check for duplicates
+    const { data: validationResult, error: rpcError } = await supabaseClient.rpc("validate_and_check_duplicate_resi", {
+      p_resi_number: resiNumber,
+      p_expedition: expedition,
+      p_selected_karung: selectedKarung,
+      p_scan_date: formattedDate, // Pass formattedDate as date
+    }).single(); // Use .single() as the RPC returns a single row
 
-    // 1. Check tbl_expedisi
-    const { data: expedisiData, error: expError } = await supabaseClient
-      .from("tbl_expedisi")
-      .select("resino, couriername, created")
-      .eq("resino", resiNumber)
-      .single();
-
-    if (expError && expError.code !== 'PGRST116') { // PGRST116 means "no rows found"
-      console.error("Error fetching expedisi data:", expError);
-      return new Response(JSON.stringify({ success: false, message: `Kesalahan database saat mengambil data ekspedisi: ${expError.message}` }), {
+    if (rpcError) {
+      console.error("Error calling validate_and_check_duplicate_resi RPC:", rpcError);
+      return new Response(JSON.stringify({ success: false, message: `Kesalahan database saat validasi resi: ${rpcError.message}` }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
       });
     }
 
-    // Validation for expedition match
-    if (expedition === "ID") {
-      if (expedisiData && expedisiData.couriername !== "ID") {
-        return new Response(JSON.stringify({ success: false, message: `Resi ini bukan untuk ekspedisi ID, melainkan untuk ${expedisiData.couriername}.` }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400,
-        });
-      }
-    } else { // For non-ID expeditions
-      if (!expedisiData) {
-        return new Response(JSON.stringify({ success: false, message: "Resi tidak ditemukan dalam database ekspedisi." }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400,
-        });
-      }
-      if (expedisiData.couriername !== expedition) {
-        return new Response(JSON.stringify({ success: false, message: `Resi ini bukan milik ekspedisi ${expedition}. Ini milik ${expedisiData.couriername}.` }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400,
-        });
-      }
-    }
+    // Handle results from the RPC
+    if (validationResult.status !== 'OK') {
+      let responseStatus = 400; // Default to bad request for validation errors
+      let responseType = undefined;
 
-    // 2. Check tbl_resi for duplicates using RPC
-    const { data: duplicateResi, error: dupError } = await supabaseClient.rpc("get_filtered_resi_for_expedition_and_date", {
-      p_couriername: expedition,
-      p_start_date: startOfDay.toISOString(),
-      p_end_date: endOfDay.toISOString(),
-      p_resi: resiNumber,
-      p_nokarung: selectedKarung,
-    });
+      if (validationResult.status === 'DUPLICATE_RESI') {
+        responseType = "duplicate";
+      } else if (validationResult.status === 'NOT_FOUND_EXPEDISI') {
+        // Could be 404 or 400 depending on desired strictness
+        responseStatus = 400;
+      } else if (validationResult.status === 'MISMATCH_EXPEDISI') {
+        responseStatus = 400;
+      }
 
-    if (dupError) {
-      console.error("Error fetching duplicate resi:", dupError);
-      return new Response(JSON.stringify({ success: false, message: `Kesalahan database saat memeriksa duplikat resi: ${dupError.message}` }), {
+      return new Response(JSON.stringify({ success: false, message: validationResult.message, type: responseType }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
+        status: responseStatus,
       });
     }
 
-    if (duplicateResi && duplicateResi.length > 0) {
-      const existingKarung = duplicateResi[0].nokarung;
-      const existingCreated = duplicateResi[0].created;
-      
-      const dateObj = new Date(existingCreated);
-      const formattedDateString = dateObj.toLocaleDateString('id-ID', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-      });
-
-      // Menambahkan properti 'type: "duplicate"' di sini
-      return new Response(JSON.stringify({ success: false, message: `Resi duplikat! Resi ini sudah discan di karung ${existingKarung} pada tanggal ${formattedDateString}.`, type: "duplicate" }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
-      });
-    }
-
-    // 3. Insert into tbl_resi
-    let insertPayload: any = {
+    // If validationResult.status is 'OK', proceed with insertion
+    const insertPayload: any = {
       Resi: resiNumber,
       nokarung: selectedKarung,
       created: new Date().toISOString(), // Use current timestamp for insertion
+      Keterangan: validationResult.actual_couriername, // Use courier name from RPC result
       // schedule will be set by the trigger 'trg_update_schedule_if_null'
     };
-
-    if (expedition === "ID") {
-      // If resi not found in tbl_expedisi, it's an 'ID_REKOMENDASI' case
-      if (!expedisiData) {
-        insertPayload.Keterangan = "ID_REKOMENDASI";
-      } else {
-        // If found and couriername is 'ID', use 'ID' as Keterangan
-        insertPayload.Keterangan = "ID";
-      }
-    } else {
-      // For non-ID expeditions, Keterangan is the expedition name
-      insertPayload.Keterangan = expedition;
-    }
 
     const { error: insertError } = await supabaseClient
       .from("tbl_resi")

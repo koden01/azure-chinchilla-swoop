@@ -51,11 +51,15 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       console.error("Error fetching Belum Kirim data:", error);
       return;
     }
-    openResiModal("Detail Resi Belum Dikirim", data || [], "belumKirim");
+    console.log("Data for 'Belum Kirim (Hari Ini)' modal:", data);
+    openResiModal("Belum Kirim (Hari Ini)", data || [], "belumKirim");
   };
 
   const handleOpenFollowUpFlagNoModal = async () => {
     const actualCurrentFormattedDate = format(new Date(), 'yyyy-MM-dd'); // Get actual current date formatted
+
+    console.log("Fetching data for 'Follow Up (Belum Kirim)' modal...");
+    console.log("Filtering by flag = 'NO' and created date NOT EQUAL to:", actualCurrentFormattedDate);
 
     const { data, error } = await supabase
       .from("tbl_expedisi")
@@ -64,11 +68,12 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       .neq("created::date", actualCurrentFormattedDate); // Filter by date part, not equal to actual current date
 
     if (error) {
-      showError("Gagal memuat data Follow Up (Flag NO kecuali hari ini).");
-      console.error("Error fetching Follow Up (Flag NO except today):", error);
+      showError("Gagal memuat data Follow Up (Belum Kirim).");
+      console.error("Error fetching Follow Up (Belum Kirim) data:", error);
       return;
     }
-    openResiModal("Detail Resi Follow Up", data || [], "belumKirim");
+    console.log("Data for 'Follow Up (Belum Kirim)' modal:", data);
+    openResiModal("Follow Up (Belum Kirim)", data || [], "belumKirim");
   };
 
   const handleOpenScanFollowupModal = async () => {
@@ -76,6 +81,9 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       showError("Mohon pilih tanggal terlebih dahulu.");
       return;
     }
+    console.log("Fetching data for 'Follow Up (Scan Tidak Sesuai Tanggal)' modal...");
+    console.log("Using selected dashboard date:", formattedDate);
+
     const { data, error } = await supabase.rpc("get_scan_follow_up", {
       selected_date: formattedDate,
     });
@@ -84,7 +92,8 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       console.error("Error fetching Scan Follow Up:", error);
       return;
     }
-    openResiModal("Detail Resi Scan Follow Up (Scan Tidak Sesuai Tanggal)", data || [], "followUp");
+    console.log("Data for 'Follow Up (Scan Tidak Sesuai Tanggal)' modal:", data);
+    openResiModal("Follow Up (Scan Tidak Sesuai Tanggal)", data || [], "followUp");
   };
 
   const handleOpenExpeditionDetailModal = async (courierName: string) => {
@@ -105,6 +114,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       console.error(`Error fetching expedition detail data for ${courierName}:`, error);
       return;
     }
+    console.log(`Data for 'Detail Resi ${courierName} (Belum Kirim)' modal:`, data);
     openResiModal(`Detail Resi ${courierName} (Belum Kirim)`, data || [], "expeditionDetail", courierName);
   };
 

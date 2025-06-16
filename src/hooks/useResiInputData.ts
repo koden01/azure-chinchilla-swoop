@@ -63,6 +63,22 @@ export const useResiInputData = (expedition: string) => {
     return Array.from({ length: maxKarung }, (_, i) => (i + 1).toString());
   }, [highestKarung]);
 
+  const karungSummary = React.useMemo(() => {
+    if (!allResiForExpedition) return [];
+    const summary: { [key: string]: number } = {};
+    allResiForExpedition.forEach(item => {
+      if (item.nokarung) {
+        summary[item.nokarung] = (summary[item.nokarung] || 0) + 1;
+      }
+    });
+    return Object.keys(summary)
+      .sort((a, b) => parseInt(a) - parseInt(b))
+      .map(karungNumber => ({
+        karungNumber,
+        quantity: summary[karungNumber],
+      }));
+  }, [allResiForExpedition]);
+
   return {
     allResiForExpedition,
     isLoadingAllResiForExpedition,
@@ -71,5 +87,6 @@ export const useResiInputData = (expedition: string) => {
     highestKarung,
     karungOptions,
     formattedDate,
+    karungSummary, // Return the new karungSummary
   };
 };

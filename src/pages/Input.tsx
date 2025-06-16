@@ -11,12 +11,14 @@ import {
 import { useResiInputData } from "@/hooks/useResiInputData";
 import { useExpedition } from "@/context/ExpeditionContext";
 import { useResiScanner } from "@/hooks/useResiScanner";
-import { Loader2 } from "lucide-react"; // Import Loader2 icon
-import { cn } from "@/lib/utils"; // Import cn utility
+import { Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import KarungSummaryModal from "@/components/KarungSummaryModal"; // Import the new modal
 
 const InputPage = () => {
   const { expedition, setExpedition } = useExpedition();
   const [selectedKarung, setSelectedKarung] = React.useState<string>("");
+  const [isKarungSummaryModalOpen, setIsKarungSummaryModalOpen] = React.useState(false); // State for modal
 
   const {
     allResiForExpedition,
@@ -26,6 +28,7 @@ const InputPage = () => {
     highestKarung,
     karungOptions,
     formattedDate,
+    karungSummary, // Destructure karungSummary
   } = useResiInputData(expedition);
 
   const {
@@ -33,7 +36,7 @@ const InputPage = () => {
     setResiNumber,
     handleScanResi,
     resiInputRef,
-    isProcessing, // Get isProcessing state from the hook
+    isProcessing,
   } = useResiScanner({ expedition, selectedKarung, formattedDate });
 
   const currentCount = getCountForSelectedKarung(selectedKarung);
@@ -51,7 +54,7 @@ const InputPage = () => {
   }, [expedition, highestKarung]);
 
   React.useEffect(() => {
-    if (expedition && selectedKarung && resiInputRef.current && !isProcessing) { // Add !isProcessing condition
+    if (expedition && selectedKarung && resiInputRef.current && !isProcessing) {
       const timer = setTimeout(() => {
         if (resiInputRef.current) {
           resiInputRef.current.focus();
@@ -59,7 +62,7 @@ const InputPage = () => {
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [expedition, selectedKarung, isProcessing]); // Add isProcessing to dependencies
+  }, [expedition, selectedKarung, isProcessing]);
 
   console.log("InputPage State:", {
     expedition,
@@ -67,7 +70,8 @@ const InputPage = () => {
     isLoadingAllResiForExpedition,
     allResiForExpeditionCount: allResiForExpedition?.length,
     currentCount,
-    isProcessing, // Log isProcessing state
+    isProcessing,
+    karungSummary, // Log karungSummary
   });
 
   return (
@@ -82,9 +86,16 @@ const InputPage = () => {
               ? "..."
               : currentCount}
           </div>
-          <p className="text-xl">
+          <div
+            className="text-xl cursor-pointer hover:underline" // Make it clickable
+            onClick={() => {
+              if (expedition) { // Only open if an expedition is selected
+                setIsKarungSummaryModalOpen(true);
+              }
+            }}
+          >
             {expedition ? `${expedition} - Karung ${selectedKarung || '?'}` : "Pilih Expedisi"}
-          </p>
+          </div>
           <p className="text-sm opacity-80">
             No Karung (Last: {isLoadingAllResiForExpedition ? "..." : lastKarung}, Highest: {isLoadingAllResiForExpedition ? "..." : highestKarung})
           </p>
@@ -94,7 +105,7 @@ const InputPage = () => {
               <label htmlFor="expedition-select" className="block text-left text-sm font-medium mb-2">
                 Expedisi
               </label>
-              <Select onValueChange={setExpedition} value={expedition} disabled={isProcessing}> {/* Disable during processing */}
+              <Select onValueChange={setExpedition} value={expedition} disabled={isProcessing}>
                 <SelectTrigger id="expedition-select" className="w-full bg-white text-gray-800 h-12 text-center justify-center">
                   <SelectValue placeholder="Pilih Expedisi" />
                 </SelectTrigger>
@@ -111,7 +122,7 @@ const InputPage = () => {
               <label htmlFor="no-karung-select" className="block text-left text-sm font-medium mb-2">
                 No Karung
               </label>
-              <Select onValueChange={setSelectedKarung} value={selectedKarung} disabled={!expedition || isProcessing}> {/* Disable during processing */}
+              <Select onValueChange={setSelectedKarung} value={selectedKarung} disabled={!expedition || isProcessing}>
                 <SelectTrigger id="no-karung-select" className="w-full bg-white text-gray-800 h-12 text-center justify-center">
                   <SelectValue placeholder="Pilih No Karung" />
                 </SelectTrigger>
@@ -122,7 +133,7 @@ const InputPage = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="md:col-span-2 relative"> {/* Added relative for absolute positioning of spinner */}
+            <div className="md:col-span-2 relative">
               <label htmlFor="scan-resi" className="block text-left text-sm font-medium mb-2">
                 Scan Resi
               </label>
@@ -139,10 +150,10 @@ const InputPage = () => {
                 }}
                 ref={resiInputRef}
                 className={cn(
-                  "w-full bg-white text-gray-800 h-16 text-2xl text-center pr-10", // Added pr-10 for spinner space
-                  isProcessing && "opacity-70 cursor-not-allowed" // Dim and change cursor when processing
+                  "w-full bg-white text-gray-800 h-16 text-2xl text-center pr-10",
+                  isProcessing && "opacity-70 cursor-not-allowed"
                 )}
-                disabled={!expedition || !selectedKarung || isProcessing} // Disable during processing
+                disabled={!expedition || !selectedKarung || isProcessing}
                 inputMode="none"
               />
               {isProcessing && (
@@ -153,6 +164,14 @@ const InputPage = () => {
         </div>
         <MadeWithDyad />
       </div>
+
+      <KarungSummaryModal
+        isOpen={isKarungSummaryModalOpen}
+        onClose={() => setIsKarungSummaryModalOpen(false)}
+        expedition={expedition}
+        date={formattedDate}
+        summaryData={karungSummary}
+      />
     </React.Fragment>
   );
 };

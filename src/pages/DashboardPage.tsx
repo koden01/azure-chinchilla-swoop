@@ -58,7 +58,7 @@ const DashboardPage: React.FC = () => {
     selectedCourier,
     handleOpenBelumKirimModal,
     handleOpenFollowUpFlagNoModal,
-    handleOpenScanFollowupModal,
+    handleOpenScanFollowupModal, // Keep this function, but it won't be directly tied to a card click anymore
     handleOpenExpeditionDetailModal,
     handleCloseModal,
     handleBatalResi,
@@ -81,15 +81,15 @@ const DashboardPage: React.FC = () => {
   // Logic to determine which page numbers to display for expedition pagination
   const getExpeditionPaginationPages = () => {
     const pages = [];
-    if (totalExpeditionPages <= 3) {
-      for (let i = 1; i <= totalExpeditionPages; i++) {
+    if (totalPages <= 3) {
+      for (let i = 1; i <= totalPages; i++) {
         pages.push(i);
       }
     } else {
       if (expeditionCurrentPage <= 2) {
         pages.push(1, 2, 3);
-      } else if (expeditionCurrentPage >= totalExpeditionPages - 1) {
-        pages.push(totalExpeditionPages - 2, totalExpeditionPages - 1, totalExpeditionPages);
+      } else if (expeditionCurrentPage >= totalPages - 1) {
+        pages.push(totalPages - 2, totalPages - 1, totalPages);
       } else {
         pages.push(expeditionCurrentPage - 1, expeditionCurrentPage, expeditionCurrentPage + 1);
       }
@@ -155,10 +155,13 @@ const DashboardPage: React.FC = () => {
           <SummaryCard
             title="Follow Up"
             value={isLoadingFollowUpFlagNoCount ? "Loading..." : followUpFlagNoCount || 0}
+            secondaryTitle="Scan Followup" // Added secondary title for Scan Followup
+            secondaryValue={isLoadingScanFollowupLateCount ? "Loading..." : scanFollowupLateCount || 0} // Added secondary value for Scan Followup
             gradientFrom="from-orange-500"
             gradientTo="to-red-500"
             icon="warning"
-            onClick={handleOpenFollowUpFlagNoModal}
+            onClick={handleOpenFollowUpFlagNoModal} // This will open the Flag NO modal
+            onSisaClick={handleOpenScanFollowupModal} // This will open the Scan Followup modal when its text is clicked
           />
           <SummaryCard
             title="Batal"
@@ -167,14 +170,7 @@ const DashboardPage: React.FC = () => {
             gradientTo="to-red-900"
             icon="info"
           />
-          <SummaryCard
-            title="Scan Followup" 
-            value={isLoadingScanFollowupLateCount ? "Loading..." : scanFollowupLateCount || 0}
-            gradientFrom="from-blue-500"
-            gradientTo="to-purple-600"
-            icon="clock"
-            onClick={handleOpenScanFollowupModal}
-          />
+          {/* Removed the separate Scan Followup card */}
         </div>
 
         {/* Detail per Expedisi Section */}

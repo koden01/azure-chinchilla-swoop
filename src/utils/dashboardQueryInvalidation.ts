@@ -15,4 +15,6 @@ export const invalidateDashboardQueries = (queryClient: QueryClient, date: Date 
   queryClient.invalidateQueries({ queryKey: ["followUpData", formattedDate] });
   queryClient.invalidateQueries({ queryKey: ["allExpedisiData", formattedDate] });
   queryClient.invalidateQueries({ queryKey: ["allResiData", formattedDate] });
+  queryClient.invalidateQueries({ queryKey: ["karungSummary", formattedDate] }); // NEW: Invalidate karungSummary
+  queryClient.invalidateQueries({ queryKey: ["lastKarung", formattedDate] }); // NEW: Invalidate lastKarung
 };

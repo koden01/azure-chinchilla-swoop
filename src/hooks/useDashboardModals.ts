@@ -8,7 +8,7 @@ import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
 interface UseDashboardModalsProps {
   date: Date | undefined;
   formattedDate: string;
-  allExpedisiData: any[] | undefined;
+  allExpedisiData: any[] | undefined; // This is now primarily for the map in useDashboardData, not direct filtering here
 }
 
 export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: UseDashboardModalsProps) => {
@@ -44,9 +44,8 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       .from("tbl_expedisi")
       .select("resino, orderno, chanelsales, couriername, created, flag, datetrans, cekfu")
       .eq("flag", "NO")
-      .gte("created", startOfDay(date).toISOString())
-      .lt("created", endOfDay(date).toISOString());
-
+      .eq("created::date", formattedDate); // Changed to filter by date part
+      
     if (error) {
       showError("Gagal memuat data resi yang belum dikirim.");
       console.error("Error fetching Belum Kirim data:", error);
@@ -56,14 +55,13 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
   };
 
   const handleOpenFollowUpFlagNoModal = async () => {
-    const actualCurrentDate = new Date();
-    const startOfActualCurrentDay = startOfDay(actualCurrentDate).toISOString();
+    const actualCurrentFormattedDate = format(new Date(), 'yyyy-MM-dd'); // Get actual current date formatted
 
     const { data, error } = await supabase
       .from("tbl_expedisi")
       .select("resino, orderno, chanelsales, couriername, created, flag, datetrans, cekfu")
       .eq("flag", "NO")
-      .lt("created", startOfActualCurrentDay);
+      .neq("created::date", actualCurrentFormattedDate); // Filter by date part, not equal to actual current date
 
     if (error) {
       showError("Gagal memuat data Follow Up (Flag NO kecuali hari ini).");
@@ -89,21 +87,25 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
     openResiModal("Detail Resi Scan Follow Up (Scan Tidak Sesuai Tanggal)", data || [], "followUp");
   };
 
-  const handleOpenExpeditionDetailModal = (courierName: string) => {
-    if (!date || !allExpedisiData) {
-      showError("Data belum siap.");
+  const handleOpenExpeditionDetailModal = async (courierName: string) => {
+    if (!date) {
+      showError("Mohon pilih tanggal terlebih dahulu.");
       return;
     }
-    const startOfSelectedDay = startOfDay(date).getTime();
-    const endOfSelectedDay = endOfDay(date).getTime();
+    // Fetch data directly from Supabase for the specific courier and selected date
+    const { data, error } = await supabase
+      .from("tbl_expedisi")
+      .select("resino, orderno, chanelsales, couriername, created, flag, datetrans, cekfu")
+      .eq("couriername", courierName)
+      .eq("flag", "NO")
+      .eq("created::date", formattedDate); // Filter by date part
 
-    const filteredExpeditionData = allExpedisiData.filter(item =>
-      item.couriername === courierName &&
-      item.flag === "NO" &&
-      new Date(item.created).getTime() >= startOfSelectedDay &&
-      new Date(item.created).getTime() <= endOfSelectedDay
-    );
-    openResiModal(`Detail Resi ${courierName} (Belum Kirim)`, filteredExpeditionData, "expeditionDetail", courierName);
+    if (error) {
+      showError(`Gagal memuat detail resi untuk ${courierName}.`);
+      console.error(`Error fetching expedition detail data for ${courierName}:`, error);
+      return;
+    }
+    openResiModal(`Detail Resi ${courierName} (Belum Kirim)`, data || [], "expeditionDetail", courierName);
   };
 
   const handleCloseModal = () => {

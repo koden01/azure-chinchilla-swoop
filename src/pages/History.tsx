@@ -66,6 +66,38 @@ const HistoryPage = () => {
   console.log("HistoryPage: formattedStartDate", formattedStartDate);
   console.log("HistoryPage: formattedEndDate", formattedEndDate);
 
+  // Function to fetch all data from tbl_resi with pagination for a given date range
+  const fetchAllResiDataPaginated = async (startIso: string, endIso: string) => {
+    let allRecords: HistoryData[] = [];
+    let offset = 0;
+    const limit = 1000; // Fetch 1000 records at a time
+    let hasMore = true;
+
+    while (hasMore) {
+      const { data, error } = await supabase
+        .from("tbl_resi")
+        .select("Resi, Keterangan, nokarung, created, schedule")
+        .gte("created", startIso)
+        .lte("created", endIso)
+        .order("created", { ascending: false })
+        .range(offset, offset + limit - 1);
+
+      if (error) {
+        console.error(`Error fetching paginated history data:`, error);
+        throw error;
+      }
+
+      if (data && data.length > 0) {
+        allRecords = allRecords.concat(data);
+        offset += data.length;
+        hasMore = data.length === limit; // If less than limit, no more data
+      } else {
+        hasMore = false;
+      }
+    }
+    return allRecords;
+  };
+
   const { data: historyData, isLoading: isLoadingHistory, error: historyError } = useQuery<HistoryData[]>({
     queryKey: ["historyData", formattedStartDate, formattedEndDate],
     queryFn: async () => {
@@ -80,22 +112,13 @@ const HistoryPage = () => {
       const endOfSelectedEndDate = new Date(endDate);
       endOfSelectedEndDate.setHours(23, 59, 59, 999);
 
-      console.log("HistoryPage: Querying Supabase with range (ISO):", startOfSelectedStartDate.toISOString(), "to", endOfSelectedEndDate.toISOString());
+      const startIso = startOfSelectedStartDate.toISOString();
+      const endIso = endOfSelectedEndDate.toISOString();
 
-      let query = supabase
-        .from("tbl_resi")
-        .select("Resi, Keterangan, nokarung, created, schedule")
-        .gte("created", startOfSelectedStartDate.toISOString())
-        .lte("created", endOfSelectedEndDate.toISOString())
-        .order("created", { ascending: false });
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.error("Error fetching history data:", error);
-        throw error;
-      }
-      console.log("HistoryPage: Fetched history data:", data);
+      console.log("HistoryPage: Querying Supabase with range (ISO) using pagination:", startIso, "to", endIso);
+      
+      const data = await fetchAllResiDataPaginated(startIso, endIso);
+      console.log("HistoryPage: Fetched all history data (paginated):", data.length, "records.");
       return data || [];
     },
     enabled: !!startDate && !!endDate,

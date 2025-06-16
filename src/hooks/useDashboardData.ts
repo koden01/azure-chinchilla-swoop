@@ -172,7 +172,7 @@ export const useDashboardData = (date: Date | undefined) => {
       if (!date) return [];
       const { data, error } = await supabase
         .from("tbl_resi")
-        .select("Resi, nokarung, schedule, created, Keterangan") // Added Keterangan
+        .select("Resi, nokarung, schedule, created, Keterangan") // *** Keterangan DITAMBAHKAN DI SINI ***
         .gte("created", startOfDay(date).toISOString())
         .lt("created", endOfDay(date).toISOString());
       if (error) throw error;

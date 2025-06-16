@@ -5,7 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ExpeditionProvider } from "./context/ExpeditionContext";
-import Layout from "./components/Layout"; // Import Layout component
+import Layout from "./components/Layout";
 
 // Menggunakan React.lazy untuk memuat komponen secara dinamis
 const DashboardPage = React.lazy(() => import("./pages/DashboardPage"));
@@ -22,7 +22,7 @@ const App = () => {
         <Toaster />
         <Sonner
           position="top-center"
-          duration={1000} // Durasi toast diubah menjadi 1000ms
+          duration={1000}
           toastOptions={{
             success: {
               classNames: {
@@ -31,7 +31,7 @@ const App = () => {
             },
             error: {
               classNames: {
-                toast: "bg-red-500 text-white",
+                toast: "!bg-red-500 text-white", // Menggunakan !bg-red-500 untuk prioritas
               },
             },
           }}

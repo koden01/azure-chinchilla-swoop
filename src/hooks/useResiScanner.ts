@@ -88,8 +88,14 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
         beepSuccess.play();
         debouncedInvalidate();
       } else {
-        showError(result.message || "Terjadi kesalahan saat memproses resi. Silakan coba lagi.");
-        beepFailure.play();
+        // Memeriksa tipe kesalahan dari fungsi Edge
+        if (result.type === "duplicate") {
+          showError(result.message);
+          beepDouble.play(); // Mainkan beep-double untuk duplikat
+        } else {
+          showError(result.message || "Terjadi kesalahan saat memproses resi. Silakan coba lagi.");
+          beepFailure.play(); // Mainkan beep-failure untuk kesalahan lainnya
+        }
       }
     } catch (error: any) {
       showError(`Terjadi kesalahan jaringan: ${error.message || "Silakan periksa koneksi internet Anda."}`);

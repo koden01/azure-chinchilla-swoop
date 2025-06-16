@@ -116,7 +116,8 @@ serve(async (req) => {
         year: 'numeric',
       });
 
-      return new Response(JSON.stringify({ success: false, message: `Resi duplikat! Resi ini sudah discan di karung ${existingKarung} pada tanggal ${formattedDateString}.` }), {
+      // Menambahkan properti 'type: "duplicate"' di sini
+      return new Response(JSON.stringify({ success: false, message: `Resi duplikat! Resi ini sudah discan di karung ${existingKarung} pada tanggal ${formattedDateString}.`, type: "duplicate" }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
       });

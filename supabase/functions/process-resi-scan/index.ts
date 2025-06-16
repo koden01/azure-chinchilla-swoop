@@ -6,6 +6,17 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Helper function to get start and end of day in ISO string format
+function getStartAndEndOfDay(dateString: string): { start: string, end: string } {
+  const date = new Date(dateString);
+  date.setUTCHours(0, 0, 0, 0); // Set to start of the day in UTC
+  const start = date.toISOString();
+
+  date.setUTCHours(23, 59, 59, 999); // Set to end of the day in UTC
+  const end = date.toISOString();
+  return { start, end };
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -47,13 +58,17 @@ serve(async (req) => {
       }
     );
 
+    const { start: p_scan_date_start, end: p_scan_date_end } = getStartAndEndOfDay(formattedDate);
+    console.log(`[${new Date().toISOString()}] Edge Function: Calculated date range for RPC: Start=${p_scan_date_start}, End=${p_scan_date_end}`);
+
     const rpcCallStartTime = Date.now();
     // Call the new RPC function to validate and check for duplicates
     const { data: validationResult, error: rpcError } = await supabaseClient.rpc("validate_and_check_duplicate_resi", {
       p_resi_number: resiNumber,
       p_expedition: expedition,
       p_selected_karung: selectedKarung,
-      p_scan_date: formattedDate, // Pass formattedDate as date
+      p_scan_date_start: p_scan_date_start,
+      p_scan_date_end: p_scan_date_end,
     }).single(); // Use .single() as the RPC returns a single row
     console.log(`[${new Date().toISOString()}] Edge Function: RPC 'validate_and_check_duplicate_resi' took ${Date.now() - rpcCallStartTime}ms.`);
 

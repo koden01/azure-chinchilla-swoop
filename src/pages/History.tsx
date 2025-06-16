@@ -3,7 +3,7 @@ import { MadeWithDyad } from "@/components/made-with-dyad";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Loader2 } from "lucide-react"; // Import Loader2 for loading state
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -38,8 +38,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { showSuccess, showError } from "@/utils/toast";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
-import ExcelJS from 'exceljs';
-import { saveAs } from 'file-saver';
+// ExcelJS dan file-saver tidak lagi diimpor di sini, akan diimpor secara dinamis
 
 interface HistoryData {
   Resi: string;
@@ -55,6 +54,7 @@ const HistoryPage = () => {
   const [searchQuery, setSearchQuery] = React.useState<string>("");
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [resiToDelete, setResiToDelete] = React.useState<string | null>(null);
+  const [isExporting, setIsExporting] = React.useState(false); // New state for export loading
 
   const queryClient = useQueryClient();
 
@@ -198,7 +198,12 @@ const HistoryPage = () => {
       return;
     }
 
+    setIsExporting(true); // Set loading state to true
     try {
+      // Dynamic import of ExcelJS and file-saver
+      const ExcelJS = (await import('exceljs')).default;
+      const { saveAs } = await import('file-saver');
+
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("History Resi");
 
@@ -230,6 +235,8 @@ const HistoryPage = () => {
     } catch (error: any) {
       showError(`Gagal mengekspor data: ${error.message || "Terjadi kesalahan."}`);
       console.error("Error exporting to Excel:", error);
+    } finally {
+      setIsExporting(false); // Set loading state to false
     }
   };
 
@@ -314,8 +321,16 @@ const HistoryPage = () => {
                 <Button
                   className="bg-green-600 hover:bg-green-700 text-white whitespace-nowrap"
                   onClick={handleExportToExcel}
+                  disabled={isExporting || filteredHistoryData.length === 0} // Disable if exporting or no data
                 >
-                  Export Data ({filteredHistoryData.length} records)
+                  {isExporting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Mengekspor...
+                    </>
+                  ) : (
+                    `Export Data (${filteredHistoryData.length} records)`
+                  )}
                 </Button>
               </div>
             </div>

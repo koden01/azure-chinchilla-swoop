@@ -159,7 +159,7 @@ const DashboardPage: React.FC = () => {
             gradientFrom="from-orange-500"
             gradientTo="to-red-500"
             icon="warning"
-            onClick={handleOpenScanFollowupModal} // Mengubah ini agar memanggil handleOpenScanFollowupModal
+            onClick={handleOpenFollowUpFlagNoModal} // Mengubah ini agar memanggil handleOpenFollowUpFlagNoModal
             onSisaClick={handleOpenScanFollowupModal} // Ini tetap sama
           />
           <SummaryCard

@@ -9,16 +9,28 @@ export const useDashboardData = (date: Date | undefined) => {
   // State to hold expedition summaries
   const [expeditionSummaries, setExpeditionSummaries] = useState<any[]>([]);
 
+  // Helper to format date for timestamp without time zone (tbl_expedisi)
+  const getExpedisiDateRange = (selectedDate: Date) => {
+    const start = startOfDay(selectedDate);
+    const end = endOfDay(selectedDate);
+    // Format to 'YYYY-MM-DD HH:mm:ss' for timestamp without time zone comparison
+    const startString = format(start, "yyyy-MM-dd HH:mm:ss");
+    const endString = format(end, "yyyy-MM-dd HH:mm:ss");
+    return { startString, endString };
+  };
+
   // Query for Transaksi Hari Ini (tbl_expedisi count for selected date)
   const { data: transaksiHariIni, isLoading: isLoadingTransaksiHariIni } = useQuery<number>({
     queryKey: ["transaksiHariIni", formattedDate],
     queryFn: async () => {
       if (!date) return 0;
-      console.log(`Fetching transaksiHariIni for date: ${formattedDate}`);
+      const { startString, endString } = getExpedisiDateRange(date);
+      console.log(`Fetching transaksiHariIni for date range: ${startString} to ${endString}`);
       const { count, error } = await supabase
         .from("tbl_expedisi")
         .select("*", { count: "exact" })
-        .eq("created::date", formattedDate); // Correct for timestamp without time zone
+        .gte("created", startString)
+        .lt("created", endString); // Use lt for end of day to include all seconds up to 23:59:59
       if (error) {
         console.error("Error fetching Transaksi Hari Ini:", error);
         throw error;
@@ -78,12 +90,14 @@ export const useDashboardData = (date: Date | undefined) => {
     queryKey: ["belumKirim", formattedDate],
     queryFn: async () => {
       if (!date) return 0;
-      console.log(`Fetching belumKirim for date: ${formattedDate}`);
+      const { startString, endString } = getExpedisiDateRange(date);
+      console.log(`Fetching belumKirim for date range: ${startString} to ${endString}`);
       const { count, error } = await supabase
         .from("tbl_expedisi")
         .select("*", { count: "exact" })
         .eq("flag", "NO")
-        .eq("created::date", formattedDate); // Correct for timestamp without time zone
+        .gte("created", startString)
+        .lt("created", endString);
       if (error) {
         console.error("Error fetching Belum Kirim:", error);
         throw error;
@@ -201,11 +215,13 @@ export const useDashboardData = (date: Date | undefined) => {
     queryKey: ["expedisiDataForSelectedDate", formattedDate],
     queryFn: async () => {
       if (!date) return [];
-      console.log(`Fetching expedisiDataForSelectedDate for date: ${formattedDate}`);
+      const { startString, endString } = getExpedisiDateRange(date);
+      console.log(`Fetching expedisiDataForSelectedDate for date range: ${startString} to ${endString}`);
       const { data, error } = await supabase
         .from("tbl_expedisi")
         .select("resino, couriername, flag, created, orderno, chanelsales, datetrans, cekfu")
-        .eq("created::date", formattedDate); // Correct for timestamp without time zone
+        .gte("created", startString)
+        .lt("created", endString);
       if (error) {
         console.error("Error fetching Expedisi Data for Selected Date (filtered):", error);
         throw error;

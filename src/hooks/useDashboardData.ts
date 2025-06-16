@@ -14,11 +14,15 @@ export const useDashboardData = (date: Date | undefined) => {
     queryKey: ["transaksiHariIni", formattedDate],
     queryFn: async () => {
       if (!date) return 0;
+      console.log(`Fetching transaksiHariIni for date: ${formattedDate}`);
       const { count, error } = await supabase
         .from("tbl_expedisi")
         .select("*", { count: "exact" })
         .eq("created::date", formattedDate); // Correct for timestamp without time zone
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching Transaksi Hari Ini:", error);
+        throw error;
+      }
       console.log("Transaksi Hari Ini (Summary Card):", count);
       return count || 0;
     },
@@ -30,13 +34,17 @@ export const useDashboardData = (date: Date | undefined) => {
     queryKey: ["totalScan", formattedDate],
     queryFn: async () => {
       if (!date) return 0;
+      console.log(`Fetching totalScan for date: ${formattedDate}`);
       const { count, error } = await supabase
         .from("tbl_resi")
         .select("*", { count: "exact" })
         .eq("schedule", "ontime")
         .gte("created", startOfDay(date).toISOString()) // Correct for timestamp with time zone
         .lt("created", endOfDay(date).toISOString()); // Correct for timestamp with time zone
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching Total Scan:", error);
+        throw error;
+      }
       console.log("Total Scan (Summary Card):", count);
       return count || 0;
     },
@@ -48,13 +56,17 @@ export const useDashboardData = (date: Date | undefined) => {
     queryKey: ["idRekCount", formattedDate],
     queryFn: async () => {
       if (!date) return 0;
+      console.log(`Fetching idRekCount for date: ${formattedDate}`);
       const { count, error } = await supabase
         .from("tbl_resi")
         .select("*", { count: "exact" })
         .eq("Keterangan", "ID_REKOMENDASI") // Changed to Keterangan
         .gte("created", startOfDay(date).toISOString()) // Correct for timestamp with time zone
         .lt("created", endOfDay(date).toISOString()); // Correct for timestamp with time zone
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching ID Rekomendasi:", error);
+        throw error;
+      }
       console.log("ID Rekomendasi (Summary Card):", count);
       return count || 0;
     },
@@ -66,12 +78,16 @@ export const useDashboardData = (date: Date | undefined) => {
     queryKey: ["belumKirim", formattedDate],
     queryFn: async () => {
       if (!date) return 0;
+      console.log(`Fetching belumKirim for date: ${formattedDate}`);
       const { count, error } = await supabase
         .from("tbl_expedisi")
         .select("*", { count: "exact" })
         .eq("flag", "NO")
         .eq("created::date", formattedDate); // Correct for timestamp without time zone
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching Belum Kirim:", error);
+        throw error;
+      }
       console.log("Belum Kirim (Summary Card):", count);
       return count || 0;
     },
@@ -84,10 +100,14 @@ export const useDashboardData = (date: Date | undefined) => {
     queryFn: async () => {
       // Always use the actual current date for this specific query
       const actualCurrentFormattedDate = format(new Date(), 'yyyy-MM-dd');
+      console.log(`Fetching followUpFlagNoCount for actual current date: ${actualCurrentFormattedDate}`);
       const { data: countData, error: rpcError } = await supabase.rpc("get_flag_no_except_today_count", {
         p_selected_date: actualCurrentFormattedDate,
       });
-      if (rpcError) throw rpcError;
+      if (rpcError) {
+        console.error("Error fetching Follow Up (Flag NO except today):", rpcError);
+        throw rpcError;
+      }
       console.log("Follow Up (Flag NO except actual today - Summary Card):", countData);
       return countData || 0;
     },
@@ -100,13 +120,17 @@ export const useDashboardData = (date: Date | undefined) => {
     queryKey: ["scanFollowupLateCount", formattedDate],
     queryFn: async () => {
       if (!date) return 0;
+      console.log(`Fetching scanFollowupLateCount for date: ${formattedDate}`);
       const { count, error } = await supabase
         .from("tbl_resi")
         .select("*", { count: "exact" })
         .eq("schedule", "late")
         .gte("created", startOfDay(date).toISOString()) // Correct for timestamp with time zone
         .lt("created", endOfDay(date).toISOString()); // Correct for timestamp with time zone
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching Scan Followup (Late):", error);
+        throw error;
+      }
       console.log("Scan Followup (Late - Summary Card):", count);
       return count || 0;
     },
@@ -118,13 +142,17 @@ export const useDashboardData = (date: Date | undefined) => {
     queryKey: ["batalCount", formattedDate],
     queryFn: async () => {
       if (!date) return 0;
+      console.log(`Fetching batalCount for date: ${formattedDate}`);
       const { count, error } = await supabase
         .from("tbl_resi")
         .select("*", { count: "exact" })
         .eq("schedule", "batal")
         .gte("created", startOfDay(date).toISOString()) // Correct for timestamp with time zone
         .lt("created", endOfDay(date).toISOString()); // Correct for timestamp with time zone
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching Batal Count:", error);
+        throw error;
+      }
       console.log("Batal Count (Summary Card):", count);
       return count || 0;
     },
@@ -136,10 +164,14 @@ export const useDashboardData = (date: Date | undefined) => {
     queryKey: ["followUpData", formattedDate],
     queryFn: async () => {
       if (!date) return [];
+      console.log(`Fetching followUpData for date: ${formattedDate}`);
       const { data, error } = await supabase.rpc("get_scan_follow_up", {
         selected_date: formattedDate,
       });
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching Follow Up Data (RPC):", error);
+        throw error;
+      }
       console.log("Follow Up Data (RPC):", data);
       return data || [];
     },
@@ -150,10 +182,14 @@ export const useDashboardData = (date: Date | undefined) => {
   const { data: allExpedisiDataUnfiltered, isLoading: isLoadingAllExpedisiUnfiltered } = useQuery<any[]>({
     queryKey: ["allExpedisiDataUnfiltered"], // No date in key, fetch all
     queryFn: async () => {
+      console.log("Fetching allExpedisiDataUnfiltered.");
       const { data, error } = await supabase
         .from("tbl_expedisi")
         .select("resino, couriername, flag, created, orderno, chanelsales, datetrans, cekfu");
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching All Expedisi Data (unfiltered):", error);
+        throw error;
+      }
       console.log("All Expedisi Data (unfiltered):", data);
       return data || [];
     },
@@ -165,11 +201,15 @@ export const useDashboardData = (date: Date | undefined) => {
     queryKey: ["expedisiDataForSelectedDate", formattedDate],
     queryFn: async () => {
       if (!date) return [];
+      console.log(`Fetching expedisiDataForSelectedDate for date: ${formattedDate}`);
       const { data, error } = await supabase
         .from("tbl_expedisi")
         .select("resino, couriername, flag, created, orderno, chanelsales, datetrans, cekfu")
         .eq("created::date", formattedDate); // Correct for timestamp without time zone
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching Expedisi Data for Selected Date (filtered):", error);
+        throw error;
+      }
       console.log("Expedisi Data for Selected Date (filtered):", data);
       return data || [];
     },
@@ -181,12 +221,16 @@ export const useDashboardData = (date: Date | undefined) => {
     queryKey: ["allResiData", formattedDate],
     queryFn: async () => {
       if (!date) return [];
+      console.log(`Fetching allResiData for date: ${formattedDate}`);
       const { data, error } = await supabase
         .from("tbl_resi")
         .select("Resi, nokarung, schedule, created, Keterangan")
         .gte("created", startOfDay(date).toISOString()) // Correct for timestamp with time zone
         .lt("created", endOfDay(date).toISOString()); // Correct for timestamp with time zone
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching All Resi Data (filtered by selected date):", error);
+        throw error;
+      }
       console.log("All Resi Data (filtered by selected date):", data);
       return data || [];
     },

@@ -199,7 +199,8 @@ export const useDashboardData = (date: Date | undefined) => {
       console.log("Fetching allExpedisiDataUnfiltered.");
       const { data, error } = await supabase
         .from("tbl_expedisi")
-        .select("resino, couriername, flag, created, orderno, chanelsales, datetrans, cekfu");
+        .select("resino, couriername, flag, created, orderno, chanelsales, datetrans, cekfu")
+        .limit(Number.MAX_SAFE_INTEGER); // Added limit to fetch all records
       if (error) {
         console.error("Error fetching All Expedisi Data (unfiltered):", error);
         throw error;
@@ -221,7 +222,8 @@ export const useDashboardData = (date: Date | undefined) => {
         .from("tbl_expedisi")
         .select("resino, couriername, flag, created, orderno, chanelsales, datetrans, cekfu")
         .gte("created", startString)
-        .lt("created", endString);
+        .lt("created", endString)
+        .limit(Number.MAX_SAFE_INTEGER); // Added limit to fetch all records
       if (error) {
         console.error("Error fetching Expedisi Data for Selected Date (filtered):", error);
         throw error;

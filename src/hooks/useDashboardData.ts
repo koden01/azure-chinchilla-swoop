@@ -192,65 +192,73 @@ export const useDashboardData = (date: Date | undefined) => {
     enabled: !!date,
   });
 
+  // Function to fetch all data from a table with pagination
+  const fetchAllDataPaginated = async (tableName: string, dateFilterColumn?: string, startDate?: string, endDate?: string) => {
+    let allRecords: any[] = [];
+    let offset = 0;
+    const limit = 1000; // Fetch 1000 records at a time
+    let hasMore = true;
+
+    while (hasMore) {
+      let query = supabase.from(tableName).select("*").range(offset, offset + limit - 1);
+
+      if (dateFilterColumn && startDate && endDate) {
+        query = query.gte(dateFilterColumn, startDate).lt(dateFilterColumn, endDate);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error(`Error fetching paginated data from ${tableName}:`, error);
+        throw error;
+      }
+
+      if (data && data.length > 0) {
+        allRecords = allRecords.concat(data);
+        offset += data.length;
+        hasMore = data.length === limit; // If less than limit, no more data
+      } else {
+        hasMore = false;
+      }
+    }
+    return allRecords;
+  };
+
   // Fetch ALL tbl_expedisi data (unfiltered by date) to build a comprehensive resi-to-courier map
   const { data: allExpedisiDataUnfiltered, isLoading: isLoadingAllExpedisiUnfiltered } = useQuery<any[]>({
     queryKey: ["allExpedisiDataUnfiltered"], // No date in key, fetch all
     queryFn: async () => {
-      console.log("Fetching allExpedisiDataUnfiltered.");
-      const { data, error } = await supabase
-        .from("tbl_expedisi")
-        .select("resino, couriername, flag, created, orderno, chanelsales, datetrans, cekfu")
-        .limit(Number.MAX_SAFE_INTEGER); // Added limit to fetch all records
-      if (error) {
-        console.error("Error fetching All Expedisi Data (unfiltered):", error);
-        throw error;
-      }
-      console.log("All Expedisi Data (unfiltered):", data);
-      return data || [];
+      console.log("Fetching allExpedisiDataUnfiltered (paginated).");
+      const data = await fetchAllDataPaginated("tbl_expedisi");
+      console.log("All Expedisi Data (unfiltered, paginated):", data.length, "items");
+      return data;
     },
     enabled: true, // Always enabled to get all mappings
   });
 
-  // NEW: Fetch tbl_expedisi data specifically for the selected date
+  // NEW: Fetch tbl_expedisi data specifically for the selected date (paginated)
   const { data: expedisiDataForSelectedDate, isLoading: isLoadingExpedisiDataForSelectedDate } = useQuery<any[]>({
     queryKey: ["expedisiDataForSelectedDate", formattedDate],
     queryFn: async () => {
       if (!date) return [];
       const { startString, endString } = getExpedisiDateRange(date);
-      console.log(`Fetching expedisiDataForSelectedDate for date range: ${startString} to ${endString}`);
-      const { data, error } = await supabase
-        .from("tbl_expedisi")
-        .select("resino, couriername, flag, created, orderno, chanelsales, datetrans, cekfu")
-        .gte("created", startString)
-        .lt("created", endString)
-        .limit(Number.MAX_SAFE_INTEGER); // Added limit to fetch all records
-      if (error) {
-        console.error("Error fetching Expedisi Data for Selected Date (filtered):", error);
-        throw error;
-      }
-      console.log("Expedisi Data for Selected Date (filtered):", data);
-      return data || [];
+      console.log(`Fetching expedisiDataForSelectedDate for date range (paginated): ${startString} to ${endString}`);
+      const data = await fetchAllDataPaginated("tbl_expedisi", "created", startString, endString);
+      console.log("Expedisi Data for Selected Date (filtered, paginated):", data.length, "items");
+      return data;
     },
     enabled: !!date,
   });
 
-  // Fetch tbl_resi data for the selected date range
+  // Fetch tbl_resi data for the selected date range (paginated)
   const { data: allResiData, isLoading: isLoadingAllResi } = useQuery<any[]>({
     queryKey: ["allResiData", formattedDate],
     queryFn: async () => {
       if (!date) return [];
-      console.log(`Fetching allResiData for date: ${formattedDate}`);
-      const { data, error } = await supabase
-        .from("tbl_resi")
-        .select("Resi, nokarung, schedule, created, Keterangan")
-        .gte("created", startOfDay(date).toISOString()) // Correct for timestamp with time zone
-        .lt("created", endOfDay(date).toISOString()); // Correct for timestamp with time zone
-      if (error) {
-        console.error("Error fetching All Resi Data (filtered by selected date):", error);
-        throw error;
-      }
-      console.log("All Resi Data (filtered by selected date):", data);
-      return data || [];
+      console.log(`Fetching allResiData for date (paginated): ${formattedDate}`);
+      const data = await fetchAllDataPaginated("tbl_resi", "created", startOfDay(date).toISOString(), endOfDay(date).toISOString());
+      console.log("All Resi Data (filtered by selected date, paginated):", data.length, "items");
+      return data;
     },
     enabled: !!date,
   });

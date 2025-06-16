@@ -148,21 +148,18 @@ export const useDashboardData = (date: Date | undefined) => {
     enabled: !!date,
   });
 
-  // NEW: Fetch all tbl_expedisi data for the selected date range with all necessary columns
+  // NEW: Fetch all tbl_expedisi data (without date filter)
   const { data: allExpedisiData, isLoading: isLoadingAllExpedisi } = useQuery<any[]>({
-    queryKey: ["allExpedisiData", formattedDate],
+    queryKey: ["allExpedisiData"], // Removed formattedDate from queryKey
     queryFn: async () => {
-      if (!date) return [];
       const { data, error } = await supabase
         .from("tbl_expedisi")
-        .select("resino, couriername, flag, created, orderno, chanelsales, datetrans, cekfu") // Added orderno, chanelsales, datetrans, cekfu
-        .gte("created", startOfDay(date).toISOString())
-        .lt("created", endOfDay(date).toISOString());
+        .select("resino, couriername, flag, created, orderno, chanelsales, datetrans, cekfu");
       if (error) throw error;
-      console.log("All Expedisi Data:", data);
+      console.log("All Expedisi Data (unfiltered):", data);
       return data || [];
     },
-    enabled: !!date,
+    enabled: true, // Always enabled to get all mappings
   });
 
   // NEW: Fetch all tbl_resi data for the selected date range
@@ -172,11 +169,11 @@ export const useDashboardData = (date: Date | undefined) => {
       if (!date) return [];
       const { data, error } = await supabase
         .from("tbl_resi")
-        .select("Resi, nokarung, schedule, created, Keterangan") // Added Keterangan
+        .select("Resi, nokarung, schedule, created, Keterangan")
         .gte("created", startOfDay(date).toISOString())
         .lt("created", endOfDay(date).toISOString());
       if (error) throw error;
-      console.log("All Resi Data:", data);
+      console.log("All Resi Data (filtered by selected date):", data);
       return data || [];
     },
     enabled: !!date,
@@ -190,31 +187,31 @@ export const useDashboardData = (date: Date | undefined) => {
     }
 
     console.log("Starting expedition summaries calculation...");
-    console.log("allExpedisiData for summary:", allExpedisiData);
-    console.log("allResiData for summary:", allResiData);
+    console.log("allExpedisiData for summary (full set):", allExpedisiData);
+    console.log("allResiData for summary (filtered by selected date):", allResiData);
 
     const startOfSelectedDay = startOfDay(date).getTime();
     const endOfSelectedDay = endOfDay(date).getTime();
 
-    const resiToExpeditionMap = new Map<string, string>(); // Map Resi to Couriername from tbl_expedisi
+    // Build a comprehensive map from all expedisi data
+    const resiToExpeditionMap = new Map<string, string>();
     allExpedisiData.forEach(exp => {
       resiToExpeditionMap.set(exp.resino, exp.couriername);
     });
-    console.log("resiToExpeditionMap:", resiToExpeditionMap);
+    console.log("resiToExpeditionMap (comprehensive):", resiToExpeditionMap);
 
     const summaries: { [key: string]: any } = {};
 
     // Initialize summaries for all unique courier names from tbl_expedisi
     const uniqueCourierNames = new Set(allExpedisiData.map(e => e.couriername).filter(Boolean));
-    // Ensure 'ID' is always initialized, even if no 'ID' data in tbl_expedisi for the day
-    uniqueCourierNames.add("ID"); 
+    uniqueCourierNames.add("ID"); // Ensure 'ID' is always initialized
     uniqueCourierNames.forEach(name => {
       summaries[name] = {
         name,
         totalTransaksi: 0,
         totalScan: 0,
         sisa: 0,
-        jumlahKarung: new Set<string>(), // Use a Set to count unique karung numbers
+        jumlahKarung: new Set<string>(),
         idRekomendasi: 0,
         totalBatal: 0, 
         totalScanFollowUp: 0, 
@@ -222,10 +219,10 @@ export const useDashboardData = (date: Date | undefined) => {
     });
     console.log("Initial summaries structure:", summaries);
 
-    // Process tbl_expedisi data
+    // Process tbl_expedisi data for totalTransaksi and sisa (filtered by selected date)
     allExpedisiData.forEach(exp => {
       const createdDate = new Date(exp.created).getTime();
-      if (createdDate >= startOfSelectedDay && createdDate <= endOfSelectedDay) {
+      if (createdDate >= startOfSelectedDay && createdDate <= endOfSelectedDay) { // Apply date filter here
         const courierName = exp.couriername;
         if (courierName && summaries[courierName]) {
           summaries[courierName].totalTransaksi++;
@@ -235,46 +232,50 @@ export const useDashboardData = (date: Date | undefined) => {
         }
       }
     });
-    console.log("Summaries after processing tbl_expedisi:", summaries);
+    console.log("Summaries after processing tbl_expedisi (date-filtered):", summaries);
 
 
-    // Process tbl_resi data
+    // Process tbl_resi data (already filtered by selected date)
     allResiData.forEach(resi => {
-      const createdDate = new Date(resi.created).getTime();
-      if (createdDate >= startOfSelectedDay && createdDate <= endOfSelectedDay) {
-        let targetCourierName = resiToExpeditionMap.get(resi.Resi);
+      // Determine the target courier name for this resi
+      let targetCourierName = resiToExpeditionMap.get(resi.Resi);
 
-        // Special handling for 'ID_REKOMENDASI' in Keterangan for 'late' schedule
-        // If Keterangan is 'ID_REKOMENDASI', it should always be attributed to 'ID' expedition for Scan Follow Up
-        if (resi.schedule === "late" && resi.Keterangan === "ID_REKOMENDASI") {
-          targetCourierName = "ID"; // Force attribution to 'ID' expedition
-          console.log(`Special case: Resi ${resi.Resi} (Keterangan: ID_REKOMENDASI, Schedule: late) attributed to ID for Scan Follow Up.`);
-        }
+      // If resi not found in tbl_expedisi map, but Keterangan is 'ID' or 'ID_REKOMENDASI',
+      // attribute it to 'ID' expedition. This handles cases where tbl_resi exists
+      // but no corresponding tbl_expedisi entry (e.g., direct ID scans).
+      if (!targetCourierName && (resi.Keterangan === "ID" || resi.Keterangan === "ID_REKOMENDASI")) {
+        targetCourierName = "ID";
+        console.log(`Attributing Resi ${resi.Resi} with Keterangan '${resi.Keterangan}' to ID expedition for summary (not found in tbl_expedisi map).`);
+      } else if (!targetCourierName && resi.Keterangan && ["JNE", "SPX", "INSTAN", "SICEPAT"].includes(resi.Keterangan)) {
+        // Also handle other couriers if they exist in tbl_resi but not in tbl_expedisi map
+        targetCourierName = resi.Keterangan;
+        console.log(`Attributing Resi ${resi.Resi} with Keterangan '${resi.Keterangan}' to ${targetCourierName} expedition for summary (not found in tbl_expedisi map).`);
+      }
 
-        if (targetCourierName && summaries[targetCourierName]) {
-          console.log(`Processing Resi: ${resi.Resi}, Target Courier: ${targetCourierName}, Schedule: ${resi.schedule}, Keterangan: ${resi.Keterangan}, Nokarung: ${resi.nokarung}`); 
-          
-          if (resi.schedule === "ontime") {
-            summaries[targetCourierName].totalScan++;
-          }
-          // Count ID Rekomendasi based on Keterangan
-          if (resi.Keterangan === "ID_REKOMENDASI") { // Changed to Keterangan
-            summaries[targetCourierName].idRekomendasi++;
-            console.log(`Incremented ID Rekomendasi for ${targetCourierName}. Current: ${summaries[targetCourierName].idRekomendasi}`); 
-          }
-          if (resi.schedule === "batal") { 
-            summaries[targetCourierName].totalBatal++;
-          }
-          if (resi.schedule === "late") { 
-            summaries[targetCourierName].totalScanFollowUp++;
-            console.log(`Incremented Scan Follow Up for ${targetCourierName}. Current: ${summaries[targetCourierName].totalScanFollowUp}`); 
-          }
-          if (resi.nokarung) {
-            summaries[targetCourierName].jumlahKarung.add(resi.nokarung);
-          }
-        } else {
-          console.warn(`Resi ${resi.Resi} has no matching courier in summaries or targetCourierName is null/undefined.`);
+
+      if (targetCourierName && summaries[targetCourierName]) {
+        console.log(`Processing Resi: ${resi.Resi}, Target Courier: ${targetCourierName}, Schedule: ${resi.schedule}, Keterangan: ${resi.Keterangan}, Nokarung: ${resi.nokarung}`); 
+        
+        if (resi.schedule === "ontime") {
+          summaries[targetCourierName].totalScan++;
         }
+        // Count ID Rekomendasi based on Keterangan
+        if (resi.Keterangan === "ID_REKOMENDASI") {
+          summaries[targetCourierName].idRekomendasi++;
+          console.log(`Incremented ID Rekomendasi for ${targetCourierName}. Current: ${summaries[targetCourierName].idRekomendasi}`); 
+        }
+        if (resi.schedule === "batal") { 
+          summaries[targetCourierName].totalBatal++;
+        }
+        if (resi.schedule === "late") { 
+          summaries[targetCourierName].totalScanFollowUp++;
+          console.log(`Incremented Scan Follow Up for ${targetCourierName}. Current: ${summaries[targetCourierName].totalScanFollowUp}`); 
+        }
+        if (resi.nokarung) {
+          summaries[targetCourierName].jumlahKarung.add(resi.nokarung);
+        }
+      } else {
+        console.warn(`Resi ${resi.Resi} has no matching courier in summaries or targetCourierName is null/undefined. Keterangan: ${resi.Keterangan}`);
       }
     });
 

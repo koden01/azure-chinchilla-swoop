@@ -3,6 +3,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { persistQueryClient } from '@tanstack/query-persist-client-core'; // Import persistQueryClient
+import { persister } from "@/lib/queryClientPersister"; // Import persister
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ExpeditionProvider } from "./context/ExpeditionContext";
 import Layout from "./components/Layout";
@@ -13,7 +15,31 @@ const InputPage = React.lazy(() => import("./pages/Input"));
 const HistoryPage = React.lazy(() => import("./pages/History"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      gcTime: 1000 * 60 * 60, // Cache garbage collection time: 1 hour
+      staleTime: 1000 * 60 * 5, // Data is considered fresh for 5 minutes
+    },
+  },
+});
+
+// Persist the query client to IndexedDB
+persistQueryClient({
+  queryClient,
+  persister,
+  maxAge: 1000 * 60 * 60 * 24, // Cache will be cleared after 24 hours if not accessed
+  dehydrateOptions: {
+    shouldDehydrateQuery: (query) =>
+      query.queryHash.includes("historyData") || // Persist history data
+      query.queryHash.includes("dashboard") || // Persist dashboard summaries
+      query.queryHash.includes("karungSummary") || // Persist karung summary
+      query.queryHash.includes("lastKarung") || // Persist last karung
+      query.queryHash.includes("allExpedisiDataUnfiltered") || // Persist all expedisi data
+      query.queryHash.includes("expedisiDataForSelectedDate") || // Persist expedisi data for selected date
+      query.queryHash.includes("allResiData"), // Persist all resi data
+  },
+});
 
 const App = () => {
   return (

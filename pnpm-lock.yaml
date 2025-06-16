@@ -95,6 +95,9 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2.50.0
         version: 2.50.0
+      '@tanstack/query-persist-client-core':
+        specifier: ^5.80.7
+        version: 5.80.7
       '@tanstack/react-query':
         specifier: ^5.56.2
         version: 5.74.4(react@18.3.1)
@@ -119,6 +122,9 @@ importers:
       file-saver:
         specifier: ^2.0.5
         version: 2.0.5
+      idb-keyval:
+        specifier: ^6.2.2
+        version: 6.2.2
       input-otp:
         specifier: ^1.2.4
         version: 1.4.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -1341,6 +1347,12 @@ packages:
   '@tanstack/query-core@5.74.4':
     resolution: {integrity: sha512-YuG0A0+3i9b2Gfo9fkmNnkUWh5+5cFhWBN0pJAHkHilTx6A0nv8kepkk4T4GRt4e5ahbtFj2eTtkiPcVU1xO4A==}
 
+  '@tanstack/query-core@5.80.7':
+    resolution: {integrity: sha512-s09l5zeUKC8q7DCCCIkVSns8zZrK4ZDT6ryEjxNBFi68G4z2EBobBS7rdOY3r6W1WbUDpc1fe5oY+YO/+2UVUg==}
+
+  '@tanstack/query-persist-client-core@5.80.7':
+    resolution: {integrity: sha512-/V+zw5cGseMzzI9SfI5eem+826gMhnouMi0X7Da41dVC96xNvdyed+FHtIKaSXyCm4YpcPUtyA5eHG4Ng7yU8g==}
+
   '@tanstack/react-query@5.74.4':
     resolution: {integrity: sha512-mAbxw60d4ffQ4qmRYfkO1xzRBPUEf/72Dgo3qqea0J66nIKuDTLEqQt0ku++SDFlMGMnB6uKDnEG1xD/TDse4Q==}
     peerDependencies:
@@ -1956,6 +1968,9 @@ packages:
   hasown@2.0.2:
     resolution: {integrity: sha512-0hJU9SCPvmMzIBdZFqNPXWa6dqh7WdH0cII9y+CyS8rG3nL48Bclra9HmKhVVUHyPWNH5Y7xDwAB7bfgSjkUMQ==}
     engines: {node: '>= 0.4'}
+
+  idb-keyval@6.2.2:
+    resolution: {integrity: sha512-yjD9nARJ/jb1g+CvD0tlhUHOrJ9Sy0P8T9MF3YaLlHnSRpwPfpTX0XIvpmw3gAJUmEu3FiICLBDPXVwyEvrleg==}
 
   ieee754@1.2.1:
     resolution: {integrity: sha512-dcyqhDvX1C46lXZcVqCpK+FtMRQVdIMN6/Df5js2zouUsqG7I6sFxitIC+7KYK29KdXOLHdu9zL4sFnoVQnqaA==}
@@ -3849,6 +3864,12 @@ snapshots:
 
   '@tanstack/query-core@5.74.4': {}
 
+  '@tanstack/query-core@5.80.7': {}
+
+  '@tanstack/query-persist-client-core@5.80.7':
+    dependencies:
+      '@tanstack/query-core': 5.80.7
+
   '@tanstack/react-query@5.74.4(react@18.3.1)':
     dependencies:
       '@tanstack/query-core': 5.74.4
@@ -4537,6 +4558,8 @@ snapshots:
   hasown@2.0.2:
     dependencies:
       function-bind: 1.1.2
+
+  idb-keyval@6.2.2: {}
 
   ieee754@1.2.1: {}
 

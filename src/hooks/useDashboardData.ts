@@ -172,7 +172,7 @@ export const useDashboardData = (date: Date | undefined) => {
       if (!date) return [];
       const { data, error } = await supabase
         .from("tbl_resi")
-        .select("Resi, nokarung, schedule, created")
+        .select("Resi, nokarung, schedule, created, Keterangan") // Added Keterangan
         .gte("created", startOfDay(date).toISOString())
         .lt("created", endOfDay(date).toISOString());
       if (error) throw error;
@@ -196,7 +196,7 @@ export const useDashboardData = (date: Date | undefined) => {
     const startOfSelectedDay = startOfDay(date).getTime();
     const endOfSelectedDay = endOfDay(date).getTime();
 
-    const resiToExpeditionMap = new Map<string, string>(); // Map Resi to Couriername
+    const resiToExpeditionMap = new Map<string, string>(); // Map Resi to Couriername from tbl_expedisi
     allExpedisiData.forEach(exp => {
       resiToExpeditionMap.set(exp.resino, exp.couriername);
     });
@@ -206,6 +206,8 @@ export const useDashboardData = (date: Date | undefined) => {
 
     // Initialize summaries for all unique courier names from tbl_expedisi
     const uniqueCourierNames = new Set(allExpedisiData.map(e => e.couriername).filter(Boolean));
+    // Ensure 'ID' is always initialized, even if no 'ID' data in tbl_expedisi for the day
+    uniqueCourierNames.add("ID"); 
     uniqueCourierNames.forEach(name => {
       summaries[name] = {
         name,
@@ -214,8 +216,8 @@ export const useDashboardData = (date: Date | undefined) => {
         sisa: 0,
         jumlahKarung: new Set<string>(), // Use a Set to count unique karung numbers
         idRekomendasi: 0,
-        totalBatal: 0, // Initialize new field
-        totalScanFollowUp: 0, // Initialize new field
+        totalBatal: 0, 
+        totalScanFollowUp: 0, 
       };
     });
     console.log("Initial summaries structure:", summaries);
@@ -240,27 +242,36 @@ export const useDashboardData = (date: Date | undefined) => {
     allResiData.forEach(resi => {
       const createdDate = new Date(resi.created).getTime();
       if (createdDate >= startOfSelectedDay && createdDate <= endOfSelectedDay) {
-        const courierName = resiToExpeditionMap.get(resi.Resi);
-        if (courierName && summaries[courierName]) {
-          console.log(`Processing Resi: ${resi.Resi}, Courier: ${courierName}, Schedule: ${resi.schedule}, Nokarung: ${resi.nokarung}`); // Added log
+        let targetCourierName = resiToExpeditionMap.get(resi.Resi);
+
+        // Special handling for 'ID_REKOMENDASI' in Keterangan for 'late' schedule
+        if (resi.schedule === "late" && resi.Keterangan === "ID_REKOMENDASI") {
+          targetCourierName = "ID"; // Force attribution to 'ID' expedition
+          console.log(`Special case: Resi ${resi.Resi} (Keterangan: ID_REKOMENDASI, Schedule: late) attributed to ID for Scan Follow Up.`);
+        }
+
+        if (targetCourierName && summaries[targetCourierName]) {
+          console.log(`Processing Resi: ${resi.Resi}, Target Courier: ${targetCourierName}, Schedule: ${resi.schedule}, Keterangan: ${resi.Keterangan}, Nokarung: ${resi.nokarung}`); 
+          
           if (resi.schedule === "ontime") {
-            summaries[courierName].totalScan++;
+            summaries[targetCourierName].totalScan++;
           }
           if (resi.schedule === "idrek") {
-            summaries[courierName].idRekomendasi++;
-            console.log(`Incremented ID Rekomendasi for ${courierName}. Current: ${summaries[courierName].idRekomendasi}`); // Added log
+            summaries[targetCourierName].idRekomendasi++;
+            console.log(`Incremented ID Rekomendasi for ${targetCourierName}. Current: ${summaries[targetCourierName].idRekomendasi}`); 
           }
-          if (resi.schedule === "batal") { // Count 'batal'
-            summaries[courierName].totalBatal++;
+          if (resi.schedule === "batal") { 
+            summaries[targetCourierName].totalBatal++;
           }
-          if (resi.schedule === "late") { // Count 'late' for scan follow up
-            summaries[courierName].totalScanFollowUp++;
-            console.log(`Incremented Scan Follow Up for ${courierName}. Current: ${summaries[courierName].totalScanFollowUp}`); // Added log
+          if (resi.schedule === "late") { 
+            summaries[targetCourierName].totalScanFollowUp++;
+            console.log(`Incremented Scan Follow Up for ${targetCourierName}. Current: ${summaries[targetCourierName].totalScanFollowUp}`); 
           }
           if (resi.nokarung) {
-            // Add nokarung to the Set for unique counting
-            summaries[courierName].jumlahKarung.add(resi.nokarung);
+            summaries[targetCourierName].jumlahKarung.add(resi.nokarung);
           }
+        } else {
+          console.warn(`Resi ${resi.Resi} has no matching courier in summaries or targetCourierName is null/undefined.`);
         }
       }
     });
@@ -283,20 +294,20 @@ export const useDashboardData = (date: Date | undefined) => {
     isLoadingTransaksiHariIni,
     totalScan,
     isLoadingTotalScan,
-    idRekCount, // Renamed for clarity
+    idRekCount, 
     isLoadingIdRekCount,
     belumKirim,
     isLoadingBelumKirim,
-    followUpFlagNoCount, // New
-    isLoadingFollowUpFlagNoCount, // New
-    scanFollowupLateCount, // New
-    isLoadingScanFollowupLateCount, // New
+    followUpFlagNoCount, 
+    isLoadingFollowUpFlagNoCount, 
+    scanFollowupLateCount, 
+    isLoadingScanFollowupLateCount, 
     batalCount,
     isLoadingBatalCount,
     followUpData,
     isLoadingFollowUp,
     expeditionSummaries,
     formattedDate,
-    allExpedisiData, // Return allExpedisiData
+    allExpedisiData, 
   };
 };

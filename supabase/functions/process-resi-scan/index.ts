@@ -132,16 +132,15 @@ serve(async (req) => {
     };
 
     if (expedition === "ID") {
+      insertPayload.schedule = "idrek"; // Always set schedule to 'idrek' for ID expedition
       if (actualCourierNameFromExpedisi === null) {
         insertPayload.Keterangan = "ID_REKOMENDASI";
-        insertPayload.schedule = "idrek"; // Explicitly set schedule for ID_REKOMENDASI
       } else {
         insertPayload.Keterangan = actualCourierNameFromExpedisi;
-        // schedule will be set by trigger for non-ID_REKOMENDASI cases
       }
     } else {
       insertPayload.Keterangan = expedition;
-      // schedule will be set by trigger
+      // schedule will be set by trigger for other expeditions
     }
 
     const { error: insertError } = await supabaseClient

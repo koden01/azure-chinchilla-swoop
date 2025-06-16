@@ -148,24 +148,21 @@ export const useDashboardData = (date: Date | undefined) => {
     enabled: !!date,
   });
 
-  // NEW: Fetch all tbl_expedisi data for the selected date
-  const { data: allExpedisiData, isLoading: isLoadingAllExpedisi } = useQuery<any[]>({
-    queryKey: ["allExpedisiData", formattedDate], // Now includes formattedDate in queryKey
+  // Fetch ALL tbl_expedisi data (unfiltered by date) to build a comprehensive resi-to-courier map
+  const { data: allExpedisiDataUnfiltered, isLoading: isLoadingAllExpedisiUnfiltered } = useQuery<any[]>({
+    queryKey: ["allExpedisiDataUnfiltered"], // No date in key, fetch all
     queryFn: async () => {
-      if (!date) return []; // Ensure date is available
       const { data, error } = await supabase
         .from("tbl_expedisi")
-        .select("resino, couriername, flag, created, orderno, chanelsales, datetrans, cekfu")
-        .gte("created", startOfDay(date).toISOString()) // Filter by selected date
-        .lt("created", endOfDay(date).toISOString());    // Filter by selected date
+        .select("resino, couriername, flag, created, orderno, chanelsales, datetrans, cekfu");
       if (error) throw error;
-      console.log("All Expedisi Data (filtered by selected date):", data);
+      console.log("All Expedisi Data (unfiltered):", data);
       return data || [];
     },
-    enabled: !!date, // Enabled only when date is selected
+    enabled: true, // Always enabled to get all mappings
   });
 
-  // NEW: Fetch all tbl_resi data for the selected date range
+  // Fetch tbl_resi data for the selected date range
   const { data: allResiData, isLoading: isLoadingAllResi } = useQuery<any[]>({
     queryKey: ["allResiData", formattedDate],
     queryFn: async () => {
@@ -184,26 +181,26 @@ export const useDashboardData = (date: Date | undefined) => {
 
   // Process data to create expedition summaries
   useEffect(() => {
-    if (isLoadingAllExpedisi || isLoadingAllResi || !allExpedisiData || !allResiData || !date) {
+    if (isLoadingAllExpedisiUnfiltered || isLoadingAllRes || !allExpedisiDataUnfiltered || !allResiData || !date) {
       setExpeditionSummaries([]);
       return;
     }
 
     console.log("Starting expedition summaries calculation...");
-    console.log("allExpedisiData for summary (already date-filtered):", allExpedisiData);
+    console.log("allExpedisiDataUnfiltered for summary:", allExpedisiDataUnfiltered);
     console.log("allResiData for summary (already date-filtered):", allResiData);
 
-    // Build a comprehensive map from all expedisi data
+    // Build a comprehensive map from all expedisi data (unfiltered)
     const resiToExpeditionMap = new Map<string, string>();
-    allExpedisiData.forEach(exp => {
+    allExpedisiDataUnfiltered.forEach(exp => {
       resiToExpeditionMap.set(exp.resino, exp.couriername);
     });
     console.log("resiToExpeditionMap (comprehensive):", resiToExpeditionMap);
 
     const summaries: { [key: string]: any } = {};
 
-    // Initialize summaries for all unique courier names from tbl_expedisi
-    const uniqueCourierNames = new Set(allExpedisiData.map(e => e.couriername).filter(Boolean));
+    // Initialize summaries for all unique courier names from tbl_expedisi (unfiltered)
+    const uniqueCourierNames = new Set(allExpedisiDataUnfiltered.map(e => e.couriername).filter(Boolean));
     uniqueCourierNames.add("ID"); // Ensure 'ID' is always initialized
     uniqueCourierNames.forEach(name => {
       summaries[name] = {
@@ -219,23 +216,28 @@ export const useDashboardData = (date: Date | undefined) => {
     });
     console.log("Initial summaries structure:", summaries);
 
-    // Process tbl_expedisi data for totalTransaksi and sisa (already filtered by selected date)
-    allExpedisiData.forEach(exp => {
-      // No need for client-side date comparison here, as data is already filtered by query
-      const courierName = exp.couriername;
-      if (courierName && summaries[courierName]) {
-        summaries[courierName].totalTransaksi++;
-        if (exp.flag === "NO") {
-          summaries[courierName].sisa++;
+    // Process tbl_expedisi data for totalTransaksi and sisa (apply date filter client-side here)
+    const startOfSelectedDay = startOfDay(date).getTime();
+    const endOfSelectedDay = endOfDay(date).getTime();
+
+    allExpedisiDataUnfiltered.forEach(exp => {
+      const expCreatedTimestamp = new Date(exp.created).getTime();
+      if (expCreatedTimestamp >= startOfSelectedDay && expCreatedTimestamp <= endOfSelectedDay) {
+        const courierName = exp.couriername;
+        if (courierName && summaries[courierName]) {
+          summaries[courierName].totalTransaksi++;
+          if (exp.flag === "NO") {
+            summaries[courierName].sisa++;
+          }
         }
       }
     });
-    console.log("Summaries after processing tbl_expedisi (already date-filtered):", summaries);
+    console.log("Summaries after processing tbl_expedisi (client-side date-filtered):", summaries);
 
 
     // Process tbl_resi data (already filtered by selected date)
     allResiData.forEach(resi => {
-      // Determine the target courier name for this resi
+      // Determine the target courier name for this resi using the comprehensive map
       let targetCourierName = resiToExpeditionMap.get(resi.Resi);
 
       // If resi not found in tbl_expedisi map, but Keterangan is 'ID' or 'ID_REKOMENDASI',
@@ -285,7 +287,7 @@ export const useDashboardData = (date: Date | undefined) => {
 
     setExpeditionSummaries(finalSummaries);
     console.log("Final Expedition Summaries:", finalSummaries);
-  }, [date, allExpedisiData, allResiData, isLoadingAllExpedisi, isLoadingAllResi]);
+  }, [date, allExpedisiDataUnfiltered, allResiData, isLoadingAllExpedisiUnfiltered, isLoadingAllRes]);
 
 
   console.log("useDashboardData returning expeditionSummaries:", expeditionSummaries); // Debug log
@@ -309,6 +311,6 @@ export const useDashboardData = (date: Date | undefined) => {
     isLoadingFollowUp,
     expeditionSummaries,
     formattedDate,
-    allExpedisiData, 
+    allExpedisiData: allExpedisiDataUnfiltered, // Return the unfiltered data for other uses if needed
   };
 };

@@ -307,12 +307,16 @@ export const useDashboardData = (date: Date | undefined) => {
     });
     console.log("Initial summaries structure (keys):", Object.keys(summaries));
 
+    // --- START: Debugging for discrepancy ---
+    const uncountedExpedisiRecords: any[] = [];
+    // --- END: Debugging for discrepancy ---
+
     // Process expedisiDataForSelectedDate for totalTransaksi and sisa
     // This data is already filtered by date from Supabase using 'created::date'
     expedisiDataForSelectedDate.forEach(exp => {
       const normalizedCourierName = exp.couriername?.trim().toUpperCase(); // Normalize here
 
-      console.log(`  Processing expedisiDataForSelectedDate record: Resi=${exp.resino}, Courier=${exp.couriername} (Normalized: ${normalizedCourierName}), Created (raw): ${exp.created}`);
+      console.log(`  Processing expedisiDataForSelectedDate record: Resi=${exp.resino}, Courier (raw)=${exp.couriername} (Normalized: ${normalizedCourierName}), Created (raw): ${exp.created}`);
       
       if (normalizedCourierName && summaries[normalizedCourierName]) {
         summaries[normalizedCourierName].totalTransaksi++;
@@ -321,10 +325,12 @@ export const useDashboardData = (date: Date | undefined) => {
         }
         console.log(`    -> Matched courier for ${normalizedCourierName}. Current totalTransaksi: ${summaries[normalizedCourierName].totalTransaksi}, sisa: ${summaries[normalizedCourierName].sisa}`);
       } else {
-        console.warn(`    -> expedisiDataForSelectedDate: Normalized Courier name '${normalizedCourierName}' not found in summaries or is null for resino: ${exp.resino}. Skipping.`);
+        console.warn(`    -> expedisiDataForSelectedDate: Normalized Courier name '${normalizedCourierName}' not found in summaries or is null/empty for resino: ${exp.resino}. This record will not be counted in expedition summaries.`);
+        uncountedExpedisiRecords.push(exp); // Add to uncounted list
       }
     });
     console.log("Summaries after processing expedisiDataForSelectedDate:", summaries);
+    console.log("Uncounted expedisi records (due to missing/unrecognized couriername):", uncountedExpedisiRecords);
 
 
     // Process tbl_resi data (already filtered by selected date)

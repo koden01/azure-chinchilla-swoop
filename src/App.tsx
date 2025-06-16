@@ -22,17 +22,13 @@ const App = () => {
         <Toaster />
         <Sonner
           position="top-center"
-          duration={600} // Durasi diubah menjadi 600ms
+          duration={600} // Durasi sudah 600ms
           toastOptions={{
             success: {
-              classNames: {
-                toast: "!bg-green-500 !text-white", // Menambahkan !important pada background dan text
-              },
+              className: "!bg-green-500 !text-white", // Menggunakan className langsung
             },
             error: {
-              classNames: {
-                toast: "!bg-red-500 !text-white", // Menambahkan !important pada background dan text
-              },
+              className: "!bg-red-500 !text-white", // Menggunakan className langsung
             },
           }}
         />

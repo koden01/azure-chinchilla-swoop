@@ -102,7 +102,7 @@ export const useDashboardData = (date: Date | undefined) => {
     queryKey: ["scanFollowupLateCount", formattedDate],
     queryFn: async () => {
       if (!date) return 0;
-      const { count, error } = await supabase
+      const { count, error } => await supabase
         .from("tbl_resi")
         .select("*", { count: "exact" })
         .eq("schedule", "late")
@@ -222,8 +222,16 @@ export const useDashboardData = (date: Date | undefined) => {
 
     // Process tbl_expedisi data for totalTransaksi and sisa (filtered by selected date string)
     allExpedisiData.forEach(exp => {
-      // Extract only the date part (YYYY-MM-DD) from the 'created' timestamp
-      const expCreatedDatePart = exp.created ? exp.created.split('T')[0] : '';
+      // Robustly parse and format the 'created' date from tbl_expedisi
+      let expCreatedDatePart = '';
+      try {
+        if (exp.created) {
+          // Attempt to parse the date string, then format it to 'yyyy-MM-dd'
+          expCreatedDatePart = format(new Date(exp.created), "yyyy-MM-dd");
+        }
+      } catch (e) {
+        console.error(`Error parsing date for resino ${exp.resino}:`, exp.created, e);
+      }
       
       console.log(`DEBUG: Processing exp.resino: ${exp.resino}, Raw Created: "${exp.created}"`);
       console.log(`DEBUG: Extracted Date Part: "${expCreatedDatePart}", Selected Date Formatted: "${selectedDateFormatted}"`);

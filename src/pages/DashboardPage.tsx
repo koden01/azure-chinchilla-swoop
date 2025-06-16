@@ -138,7 +138,7 @@ const DashboardPage: React.FC = () => {
             value={isLoadingTransaksiHariIni ? "Loading..." : transaksiHariIni || 0}
             sisaTitle="Sisa"
             sisaValue={isLoadingBelumKirim ? "Loading..." : belumKirim || 0}
-            onSisaClick={handleOpenBelumKirimModal}
+            // onSisaClick={handleOpenBelumKirimModal} // Dihapus sesuai permintaan
             gradientFrom="from-green-400"
             gradientTo="to-blue-500"
             icon="package"

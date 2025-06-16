@@ -1,7 +1,7 @@
 import React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, startOfDay, endOfDay } from "date-fns";
+import { format, startOfDay, endOfDay } from "date-fns"; // Import startOfDay and endOfDay
 import { showSuccess, showError } from "@/utils/toast";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
 
@@ -40,11 +40,20 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       showError("Mohon pilih tanggal terlebih dahulu.");
       return;
     }
+    // Helper to format date for timestamp without time zone (tbl_expedisi)
+    const startOfSelectedDate = startOfDay(date);
+    const endOfSelectedDate = endOfDay(date);
+    const startString = format(startOfSelectedDate, "yyyy-MM-dd HH:mm:ss");
+    const endString = format(endOfSelectedDate, "yyyy-MM-dd HH:mm:ss");
+
+    console.log(`Fetching data for 'Belum Kirim (Hari Ini)' modal for date range: ${startString} to ${endString}`);
+
     const { data, error } = await supabase
       .from("tbl_expedisi")
       .select("resino, orderno, chanelsales, couriername, created, flag, datetrans, cekfu")
       .eq("flag", "NO")
-      .eq("created::date", formattedDate); // Changed to filter by date part
+      .gte("created", startString)
+      .lt("created", endString);
       
     if (error) {
       showError("Gagal memuat data resi yang belum dikirim.");
@@ -56,7 +65,8 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
   };
 
   const handleOpenFollowUpFlagNoModal = async () => {
-    const actualCurrentFormattedDate = format(new Date(), 'yyyy-MM-dd'); // Get actual current date formatted
+    const actualCurrentDate = new Date();
+    const actualCurrentFormattedDate = format(actualCurrentDate, 'yyyy-MM-dd'); // Get actual current date formatted
 
     console.log("Fetching data for 'Follow Up (Belum Kirim)' modal...");
     console.log("Filtering by flag = 'NO' and created date NOT EQUAL to:", actualCurrentFormattedDate);
@@ -101,13 +111,23 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       showError("Mohon pilih tanggal terlebih dahulu.");
       return;
     }
+
+    // Calculate start and end of the selected date for tbl_expedisi (timestamp without time zone)
+    const startOfSelectedDate = startOfDay(date);
+    const endOfSelectedDate = endOfDay(date);
+    const startString = format(startOfSelectedDate, "yyyy-MM-dd HH:mm:ss");
+    const endString = format(endOfSelectedDate, "yyyy-MM-dd HH:mm:ss");
+
+    console.log(`Fetching detail data for '${courierName}' (Belum Kirim) for date range: ${startString} to ${endString}`);
+
     // Fetch data directly from Supabase for the specific courier and selected date
     const { data, error } = await supabase
       .from("tbl_expedisi")
       .select("resino, orderno, chanelsales, couriername, created, flag, datetrans, cekfu")
       .eq("couriername", courierName)
       .eq("flag", "NO")
-      .eq("created::date", formattedDate); // Filter by date part
+      .gte("created", startString) // Use gte for start of day
+      .lt("created", endString); // Use lt for end of day
 
     if (error) {
       showError(`Gagal memuat detail resi untuk ${courierName}.`);

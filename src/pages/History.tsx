@@ -37,15 +37,16 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { showSuccess, showError } from "@/utils/toast";
-import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation"; // Import invalidate function
-import * as XLSX from 'xlsx'; // Import xlsx library
-import { saveAs } from 'file-saver'; // Import saveAs for file download
+import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 
 interface HistoryData {
   Resi: string;
   Keterangan: string | null;
   nokarung: string | null;
   created: string;
+  schedule: string | null; // Added schedule field
 }
 
 const HistoryPage = () => {
@@ -84,9 +85,9 @@ const HistoryPage = () => {
 
       let query = supabase
         .from("tbl_resi")
-        .select("Resi, Keterangan, nokarung, created")
+        .select("Resi, Keterangan, nokarung, created, schedule") // Select schedule column
         .gte("created", startOfSelectedStartDate.toISOString())
-        .lte("created", endOfSelectedEndDate.toISOString()) // Changed to lte for end of day
+        .lte("created", endOfSelectedEndDate.toISOString())
         .order("created", { ascending: false });
 
       const { data, error } = await query;
@@ -112,6 +113,7 @@ const HistoryPage = () => {
       data.Resi.toLowerCase().includes(lowerCaseSearchQuery) ||
       (data.Keterangan?.toLowerCase() || "").includes(lowerCaseSearchQuery) ||
       (data.nokarung?.toLowerCase() || "").includes(lowerCaseSearchQuery) ||
+      (data.schedule?.toLowerCase() || "").includes(lowerCaseSearchQuery) || // Include schedule in search
       format(new Date(data.created), "dd/MM/yyyy").includes(lowerCaseSearchQuery)
     );
     console.log("HistoryPage: filteredHistoryData", filtered);
@@ -202,11 +204,12 @@ const HistoryPage = () => {
     }
 
     try {
-      const headers = ["Nomor Resi", "Keterangan", "No Karung", "Tanggal Input"];
+      const headers = ["Nomor Resi", "Keterangan", "No Karung", "Schedule", "Tanggal Input"]; // Added Schedule
       const dataToExport = filteredHistoryData.map(item => [
         item.Resi,
         item.Keterangan || "",
         item.nokarung || "",
+        item.schedule || "", // Export schedule
         format(new Date(item.created), "dd/MM/yyyy HH:mm")
       ]);
 
@@ -306,7 +309,7 @@ const HistoryPage = () => {
                 </div>
                 <Button
                   className="bg-green-600 hover:bg-green-700 text-white whitespace-nowrap"
-                  onClick={handleExportToExcel} // Added onClick handler
+                  onClick={handleExportToExcel}
                 >
                   Export Data ({filteredHistoryData.length} records)
                 </Button>
@@ -323,23 +326,24 @@ const HistoryPage = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[50px]">No</TableHead>
-                  <TableHead className="w-[30%]">Nomor Resi</TableHead>
+                  <TableHead className="w-[25%]">Nomor Resi</TableHead>
                   <TableHead>Keterangan</TableHead>
                   <TableHead>No Karung</TableHead>
+                  <TableHead>Schedule</TableHead> {/* New Table Head */}
                   <TableHead>Tanggal Input</TableHead>
-                  <TableHead>Aksi</TableHead> {/* Added Aksi column */}
+                  <TableHead>Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoadingHistory ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center"> {/* Updated colspan */}
+                    <TableCell colSpan={7} className="text-center"> {/* Updated colspan */}
                       Memuat data...
                     </TableCell>
                   </TableRow>
                 ) : currentData.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center"> {/* Updated colspan */}
+                    <TableCell colSpan={7} className="text-center"> {/* Updated colspan */}
                       Tidak ada data.
                     </TableCell>
                   </TableRow>
@@ -347,7 +351,7 @@ const HistoryPage = () => {
                   currentData.map((data, index) => (
                     <TableRow key={data.Resi + index} className="hover:bg-gray-100">
                       <TableCell className="font-medium">{startIndex + index + 1}</TableCell>
-                      <TableCell className="w-[30%]">{data.Resi}</TableCell>
+                      <TableCell className="w-[25%]">{data.Resi}</TableCell>
                       <TableCell>
                         <span className="px-2 py-1 rounded-full text-xs font-semibold"
                           style={{
@@ -359,6 +363,7 @@ const HistoryPage = () => {
                         </span>
                       </TableCell>
                       <TableCell>{data.nokarung}</TableCell>
+                      <TableCell>{data.schedule || "-"}</TableCell> {/* Display schedule */}
                       <TableCell>{format(new Date(data.created), "dd/MM/yyyy HH:mm")}</TableCell>
                       <TableCell>
                         <Button

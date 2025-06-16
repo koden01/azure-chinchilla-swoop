@@ -20,7 +20,7 @@ export const useDashboardData = (date: Date | undefined) => {
         .gte("created", startOfDay(date).toISOString())
         .lt("created", endOfDay(date).toISOString());
       if (error) throw error;
-      console.log("Transaksi Hari Ini:", count);
+      console.log("Transaksi Hari Ini (Summary Card):", count);
       return count || 0;
     },
     enabled: !!date,
@@ -38,7 +38,7 @@ export const useDashboardData = (date: Date | undefined) => {
         .gte("created", startOfDay(date).toISOString())
         .lt("created", endOfDay(date).toISOString());
       if (error) throw error;
-      console.log("Total Scan:", count);
+      console.log("Total Scan (Summary Card):", count);
       return count || 0;
     },
     enabled: !!date,
@@ -56,7 +56,7 @@ export const useDashboardData = (date: Date | undefined) => {
         .gte("created", startOfDay(date).toISOString())
         .lt("created", endOfDay(date).toISOString());
       if (error) throw error;
-      console.log("ID Rekomendasi:", count);
+      console.log("ID Rekomendasi (Summary Card):", count);
       return count || 0;
     },
     enabled: !!date,
@@ -74,7 +74,7 @@ export const useDashboardData = (date: Date | undefined) => {
         .gte("created", startOfDay(date).toISOString())
         .lt("created", endOfDay(date).toISOString());
       if (error) throw error;
-      console.log("Belum Kirim:", count);
+      console.log("Belum Kirim (Summary Card):", count);
       return count || 0;
     },
     enabled: !!date,
@@ -90,7 +90,7 @@ export const useDashboardData = (date: Date | undefined) => {
         p_selected_date: actualCurrentFormattedDate,
       });
       if (rpcError) throw rpcError;
-      console.log("Follow Up (Flag NO except actual today):", countData);
+      console.log("Follow Up (Flag NO except actual today - Summary Card):", countData);
       return countData || 0;
     },
     // This query should always be enabled as it's independent of the dashboard's selected date filter
@@ -109,7 +109,7 @@ export const useDashboardData = (date: Date | undefined) => {
         .gte("created", startOfDay(date).toISOString())
         .lt("created", endOfDay(date).toISOString());
       if (error) throw error;
-      console.log("Scan Followup (Late):", count);
+      console.log("Scan Followup (Late - Summary Card):", count);
       return count || 0;
     },
     enabled: !!date,
@@ -127,7 +127,7 @@ export const useDashboardData = (date: Date | undefined) => {
         .gte("created", startOfDay(date).toISOString())
         .lt("created", endOfDay(date).toISOString());
       if (error) throw error;
-      console.log("Batal Count:", count);
+      console.log("Batal Count (Summary Card):", count);
       return count || 0;
     },
     enabled: !!date,
@@ -206,7 +206,7 @@ export const useDashboardData = (date: Date | undefined) => {
       // Normalize resino for map key: trim spaces and convert to lowercase
       const normalizedResino = exp.resino?.trim().toLowerCase();
       if (normalizedResino) {
-        resiToExpeditionMap.set(normalizedResino, exp.couriername);
+        resiToExpeditionMap.set(normalizedResino, exp.couriername?.trim().toUpperCase() || ""); // Normalize couriername here too
       }
     });
     console.log("resiToExpeditionMap (comprehensive, size):", resiToExpeditionMap.size);
@@ -215,7 +215,7 @@ export const useDashboardData = (date: Date | undefined) => {
     const summaries: { [key: string]: any } = {};
 
     // Initialize summaries for all unique courier names from tbl_expedisi (unfiltered)
-    const uniqueCourierNames = new Set(allExpedisiDataUnfiltered.map(e => e.couriername).filter(Boolean));
+    const uniqueCourierNames = new Set(allExpedisiDataUnfiltered.map(e => e.couriername?.trim().toUpperCase()).filter(Boolean));
     uniqueCourierNames.add("ID"); // Ensure 'ID' is always initialized
     uniqueCourierNames.forEach(name => {
       summaries[name] = {
@@ -239,22 +239,22 @@ export const useDashboardData = (date: Date | undefined) => {
     allExpedisiDataUnfiltered.forEach(exp => {
       const expCreatedDate = new Date(exp.created);
       const expCreatedTimestamp = expCreatedDate.getTime();
-      const courierName = exp.couriername;
+      const normalizedCourierName = exp.couriername?.trim().toUpperCase(); // Normalize here
 
-      console.log(`  Processing tbl_expedisi record: Resi=${exp.resino}, Courier=${courierName}, Created=${exp.created}`);
+      console.log(`  Processing tbl_expedisi record: Resi=${exp.resino}, Courier=${exp.couriername} (Normalized: ${normalizedCourierName}), Created=${exp.created}`);
       console.log(`    Parsed Timestamp: ${expCreatedTimestamp}`);
       console.log(`    Selected Day Range: ${startOfSelectedDay} - ${endOfSelectedDay}`);
       console.log(`    Is within range? ${expCreatedTimestamp >= startOfSelectedDay && expCreatedTimestamp <= endOfSelectedDay}`);
 
       if (expCreatedTimestamp >= startOfSelectedDay && expCreatedTimestamp <= endOfSelectedDay) {
-        if (courierName && summaries[courierName]) {
-          summaries[courierName].totalTransaksi++;
+        if (normalizedCourierName && summaries[normalizedCourierName]) {
+          summaries[normalizedCourierName].totalTransaksi++;
           if (exp.flag === "NO") {
-            summaries[courierName].sisa++;
+            summaries[normalizedCourierName].sisa++;
           }
-          console.log(`    -> Matched date and courier for ${courierName}. Current totalTransaksi: ${summaries[courierName].totalTransaksi}, sisa: ${summaries[courierName].sisa}`);
+          console.log(`    -> Matched date and courier for ${normalizedCourierName}. Current totalTransaksi: ${summaries[normalizedCourierName].totalTransaksi}, sisa: ${summaries[normalizedCourierName].sisa}`);
         } else {
-          console.warn(`    -> tbl_expedisi: Courier name '${courierName}' not found in summaries or is null for resino: ${exp.resino}. Skipping.`);
+          console.warn(`    -> tbl_expedisi: Normalized Courier name '${normalizedCourierName}' not found in summaries or is null for resino: ${exp.resino}. Skipping.`);
         }
       } else {
         console.log(`    -> tbl_expedisi: Resino ${exp.resino} created date ${exp.created} is outside selected range. Skipping.`);
@@ -276,11 +276,12 @@ export const useDashboardData = (date: Date | undefined) => {
 
       // Fallback for ID or other couriers if not found in map but Keterangan matches
       if (!targetCourierName) {
-        if (resi.Keterangan === "ID" || resi.Keterangan === "ID_REKOMENDASI") {
+        const normalizedKeterangan = resi.Keterangan?.trim().toUpperCase();
+        if (normalizedKeterangan === "ID" || normalizedKeterangan === "ID_REKOMENDASI") {
           targetCourierName = "ID";
           console.log(`Attributing Resi ${resi.Resi} with Keterangan '${resi.Keterangan}' to ID expedition for summary (not found in tbl_expedisi map).`);
-        } else if (resi.Keterangan && ["JNE", "SPX", "INSTAN", "SICEPAT"].includes(resi.Keterangan)) {
-          targetCourierName = resi.Keterangan;
+        } else if (normalizedKeterangan && ["JNE", "SPX", "INSTAN", "SICEPAT"].includes(normalizedKeterangan)) {
+          targetCourierName = normalizedKeterangan;
           console.log(`Attributing Resi ${resi.Resi} with Keterangan '${resi.Keterangan}' to ${targetCourierName} expedition for summary (not found in tbl_expedisi map).`);
         }
       }
@@ -292,7 +293,7 @@ export const useDashboardData = (date: Date | undefined) => {
           summaries[targetCourierName].totalScan++;
         }
         // Count ID Rekomendasi based on Keterangan
-        if (resi.Keterangan === "ID_REKOMENDASI") {
+        if (resi.Keterangan === "ID_REKOMENDASI") { // Keterangan itself is "ID_REKOMENDASI", no need to normalize here
           summaries[targetCourierName].idRekomendasi++;
           console.log(`Incremented ID Rekomendasi for ${targetCourierName}. Current: ${summaries[targetCourierName].idRekomendasi}`); 
         }

@@ -38,15 +38,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { showSuccess, showError } from "@/utils/toast";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
-import ExcelJS from 'exceljs'; // Import ExcelJS
-import { saveAs } from 'file-saver'; // Tetap gunakan file-saver untuk menyimpan blob
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 
 interface HistoryData {
   Resi: string;
   Keterangan: string | null;
   nokarung: string | null;
   created: string;
-  schedule: string | null; // Added schedule field
+  schedule: string | null;
 }
 
 const HistoryPage = () => {
@@ -74,18 +74,17 @@ const HistoryPage = () => {
         return [];
       }
 
-      // Calculate start of startDate and end of endDate for precise range
       const startOfSelectedStartDate = new Date(startDate);
-      startOfSelectedStartDate.setHours(0, 0, 0, 0); // Set to start of the day
+      startOfSelectedStartDate.setHours(0, 0, 0, 0);
 
       const endOfSelectedEndDate = new Date(endDate);
-      endOfSelectedEndDate.setHours(23, 59, 59, 999); // Set to end of the day
+      endOfSelectedEndDate.setHours(23, 59, 59, 999);
 
       console.log("HistoryPage: Querying Supabase with range (ISO):", startOfSelectedStartDate.toISOString(), "to", endOfSelectedEndDate.toISOString());
 
       let query = supabase
         .from("tbl_resi")
-        .select("Resi, Keterangan, nokarung, created, schedule") // Select schedule column
+        .select("Resi, Keterangan, nokarung, created, schedule")
         .gte("created", startOfSelectedStartDate.toISOString())
         .lte("created", endOfSelectedEndDate.toISOString())
         .order("created", { ascending: false });
@@ -113,7 +112,7 @@ const HistoryPage = () => {
       data.Resi.toLowerCase().includes(lowerCaseSearchQuery) ||
       (data.Keterangan?.toLowerCase() || "").includes(lowerCaseSearchQuery) ||
       (data.nokarung?.toLowerCase() || "").includes(lowerCaseSearchQuery) ||
-      (data.schedule?.toLowerCase() || "").includes(lowerCaseSearchQuery) || // Include schedule in search
+      (data.schedule?.toLowerCase() || "").includes(lowerCaseSearchQuery) ||
       format(new Date(data.created), "dd/MM/yyyy").includes(lowerCaseSearchQuery)
     );
     console.log("HistoryPage: filteredHistoryData", filtered);
@@ -179,18 +178,14 @@ const HistoryPage = () => {
       showSuccess(`Resi ${resiToDelete} berhasil dihapus.`);
       console.log(`Successfully deleted resi: ${resiToDelete}`);
 
-      // Invalidate history data itself
       queryClient.invalidateQueries({ queryKey: ["historyData", formattedStartDate, formattedEndDate] });
 
-      // Invalidate the specific query used by useResiInputData for duplicate checking
-      // This query uses today's date, not the selected history date
       const todayFormatted = format(new Date(), "yyyy-MM-dd");
       queryClient.invalidateQueries({
-        queryKey: ["allResiForExpedition"], // Invalidate all instances of this query key
-        refetchType: "all", // Ensure all instances are refetched
+        queryKey: ["allResiForExpedition"],
+        refetchType: "all",
       });
 
-      // Invalidate general dashboard queries that might rely on tbl_resi counts
       invalidateDashboardQueries(queryClient, new Date());
     }
     setIsDeleteDialogOpen(false);
@@ -207,7 +202,6 @@ const HistoryPage = () => {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("History Resi");
 
-      // Define columns with headers and widths
       worksheet.columns = [
         { header: "Nomor Resi", key: "Resi", width: 20 },
         { header: "Keterangan", key: "Keterangan", width: 15 },
@@ -216,7 +210,6 @@ const HistoryPage = () => {
         { header: "Tanggal Input", key: "created", width: 25 },
       ];
 
-      // Add rows
       filteredHistoryData.forEach(item => {
         worksheet.addRow({
           Resi: item.Resi,
@@ -227,7 +220,6 @@ const HistoryPage = () => {
         });
       });
 
-      // Generate Excel file as a Blob
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 
@@ -244,7 +236,6 @@ const HistoryPage = () => {
   return (
     <React.Fragment>
       <div className="p-6 space-y-6 bg-gray-50 min-h-[calc(100vh-64px)]">
-        {/* History Data Input Section */}
         <div className="bg-gradient-to-r from-green-500 to-blue-600 p-6 rounded-lg shadow-md">
           <h2 className="text-white text-xl font-semibold mb-4">History Data Input</h2>
           <div className="bg-white p-4 rounded-md shadow-sm">
@@ -331,7 +322,6 @@ const HistoryPage = () => {
           </div>
         </div>
 
-        {/* Data History Table Section */}
         <div className="bg-white p-6 rounded-lg shadow-md">
           <h2 className="text-2xl font-bold text-gray-800 mb-4">Data History ({filteredHistoryData.length} records)</h2>
           <div className="overflow-x-auto">
@@ -342,7 +332,7 @@ const HistoryPage = () => {
                   <TableHead className="w-[25%]">Nomor Resi</TableHead>
                   <TableHead>Keterangan</TableHead>
                   <TableHead>No Karung</TableHead>
-                  <TableHead>Schedule</TableHead> {/* New Table Head */}
+                  <TableHead>Schedule</TableHead>
                   <TableHead>Tanggal Input</TableHead>
                   <TableHead>Aksi</TableHead>
                 </TableRow>
@@ -350,13 +340,13 @@ const HistoryPage = () => {
               <TableBody>
                 {isLoadingHistory ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center"> {/* Updated colspan */}
+                    <TableCell colSpan={7} className="text-center">
                       Memuat data...
                     </TableCell>
                   </TableRow>
                 ) : currentData.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center"> {/* Updated colspan */}
+                    <TableCell colSpan={7} className="text-center">
                       Tidak ada data.
                     </TableCell>
                   </TableRow>
@@ -376,7 +366,7 @@ const HistoryPage = () => {
                         </span>
                       </TableCell>
                       <TableCell>{data.nokarung}</TableCell>
-                      <TableCell>{data.schedule || "-"}</TableCell> {/* Display schedule */}
+                      <TableCell>{data.schedule || "-"}</TableCell>
                       <TableCell>{format(new Date(data.created), "dd/MM/yyyy HH:mm")}</TableCell>
                       <TableCell>
                         <Button

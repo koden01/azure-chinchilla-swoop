@@ -3,13 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import React from "react";
 
-interface ResiExpedisiData {
-  Resi: string;
-  nokarung: string | null;
-  created: string;
-  couriername: string | null;
-}
-
 interface KarungSummaryItem {
   karung_number: string;
   quantity: number;
@@ -19,22 +12,22 @@ export const useResiInputData = (expedition: string) => {
   const today = new Date();
   const formattedDate = format(today, "yyyy-MM-dd");
 
-  // Query to fetch all individual resi for the expedition and date (still needed for lastKarung and potential future needs)
-  const { data: allResiForExpedition, isLoading: isLoadingAllResiForExpedition } = useQuery<ResiExpedisiData[]>({
-    queryKey: ["allResiForExpedition", expedition, formattedDate],
+  // NEW: Query to fetch lastKarung directly from database using RPC
+  const { data: lastKarungData, isLoading: isLoadingLastKarung } = useQuery<string | null>({
+    queryKey: ["lastKarung", expedition, formattedDate],
     queryFn: async () => {
-      if (!expedition) return [];
+      if (!expedition) return null;
 
-      const { data, error } = await supabase.rpc("get_resi_for_expedition_and_date", {
+      const { data, error } = await supabase.rpc("get_last_karung_for_expedition_and_date", {
         p_couriername: expedition,
         p_selected_date: formattedDate,
       });
 
       if (error) {
-        console.error("Error fetching all resi for expedition:", error);
+        console.error("Error fetching last karung:", error);
         throw error;
       }
-      return data || [];
+      return data || null;
     },
     enabled: !!expedition,
   });
@@ -66,16 +59,10 @@ export const useResiInputData = (expedition: string) => {
     return summaryItem ? summaryItem.quantity : 0;
   }, [karungSummaryData]);
 
-  // Derive lastKarung from allResiForExpedition (still needs individual records)
+  // lastKarung is now directly from lastKarungData
   const lastKarung = React.useMemo(() => {
-    if (!allResiForExpedition || allResiForExpedition.length === 0) return 0;
-    const sortedByCreated = [...allResiForExpedition].sort((a, b) => {
-      const dateA = new Date(a.created).getTime();
-      const dateB = new Date(b.created).getTime();
-      return dateB - dateA;
-    });
-    return parseInt(sortedByCreated[0].nokarung || "0") || 0;
-  }, [allResiForExpedition]);
+    return parseInt(lastKarungData || "0") || 0;
+  }, [lastKarungData]);
 
   // Derive highestKarung from karungSummaryData
   const highestKarung = React.useMemo(() => {
@@ -101,14 +88,14 @@ export const useResiInputData = (expedition: string) => {
   }, [karungSummaryData]);
 
   return {
-    allResiForExpedition,
-    isLoadingAllResiForExpedition,
+    // allResiForExpedition is no longer returned as it's not needed
+    isLoadingAllResiForExpedition: isLoadingLastKarung || isLoadingKarungSummary, // Combine loading states
     currentCount,
     lastKarung,
     highestKarung,
     karungOptions,
     formattedDate,
     karungSummary,
-    isLoadingKarungSummary, // Expose loading state for karung summary
+    isLoadingKarungSummary,
   };
 };

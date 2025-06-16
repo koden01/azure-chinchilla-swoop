@@ -190,9 +190,9 @@ export const useDashboardData = (date: Date | undefined) => {
     console.log("allExpedisiData for summary (full set):", allExpedisiData);
     console.log("allResiData for summary (filtered by selected date):", allResiData);
 
-    // Convert selected date to UTC timestamps for consistent comparison
-    const startOfSelectedDayUTC = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
-    const endOfSelectedDayUTC = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
+    // Format the selected date to a 'yyyy-MM-dd' string for direct comparison
+    const selectedDateFormatted = format(date, "yyyy-MM-dd");
+    console.log("Selected Date Formatted (for comparison):", selectedDateFormatted);
 
     // Build a comprehensive map from all expedisi data
     const resiToExpeditionMap = new Map<string, string>();
@@ -220,11 +220,14 @@ export const useDashboardData = (date: Date | undefined) => {
     });
     console.log("Initial summaries structure:", summaries);
 
-    // Process tbl_expedisi data for totalTransaksi and sisa (filtered by selected date)
+    // Process tbl_expedisi data for totalTransaksi and sisa (filtered by selected date string)
     allExpedisiData.forEach(exp => {
-      // Parse exp.created as UTC for consistent comparison
-      const createdDateUTC = new Date(exp.created + 'Z').getTime(); 
-      if (createdDateUTC >= startOfSelectedDayUTC && createdDateUTC <= endOfSelectedDayUTC) { // Apply date filter here
+      // Format the 'created' date from tbl_expedisi to a 'yyyy-MM-dd' string
+      // Assuming exp.created is a string like 'YYYY-MM-DD HH:MM:SS'
+      const expCreatedDateFormatted = format(new Date(exp.created), "yyyy-MM-dd");
+      console.log(`Expedisi Resi: ${exp.resino}, Created Date: ${exp.created}, Formatted: ${expCreatedDateFormatted}`);
+
+      if (expCreatedDateFormatted === selectedDateFormatted) { // Compare date strings
         const courierName = exp.couriername;
         if (courierName && summaries[courierName]) {
           summaries[courierName].totalTransaksi++;
@@ -234,7 +237,7 @@ export const useDashboardData = (date: Date | undefined) => {
         }
       }
     });
-    console.log("Summaries after processing tbl_expedisi (date-filtered):", summaries);
+    console.log("Summaries after processing tbl_expedisi (date-filtered by string):", summaries);
 
 
     // Process tbl_resi data (already filtered by selected date)

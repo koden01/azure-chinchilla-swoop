@@ -15,17 +15,17 @@ import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import KarungSummaryModal from "@/components/KarungSummaryModal";
 import { Button } from "@/components/ui/button"; // Pastikan Button diimpor
-import { adjustResiCount } from "@/utils/dataManipulation"; // Import fungsi baru
-import { showSuccess, showError } from "@/utils/toast"; // Import toast
-import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation"; // Import invalidation
-import { useQueryClient } from "@tanstack/react-query"; // Import useQueryClient
-import { format } from "date-fns"; // Import format
+// import { adjustResiCount } from "@/utils/dataManipulation"; // Import fungsi baru - DIHAPUS
+// import { showSuccess, showError } from "@/utils/toast"; // Import toast - DIHAPUS
+// import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation"; // Import invalidation - DIHAPUS
+// import { useQueryClient } from "@tanstack/react-query"; // Import useQueryClient - DIHAPUS
+// import { format } from "date-fns"; // Import format - DIHAPUS
 
 const InputPage = () => {
   const { expedition, setExpedition } = useExpedition();
   const [selectedKarung, setSelectedKarung] = React.useState<string>("");
   const [isKarungSummaryModalOpen, setIsKarungSummaryModalOpen] = React.useState(false);
-  const queryClient = useQueryClient(); // Inisialisasi queryClient
+  // const queryClient = useQueryClient(); // Inisialisasi queryClient - DIHAPUS
 
   const {
     allResiForExpedition,
@@ -71,23 +71,23 @@ const InputPage = () => {
     }
   }, [expedition, selectedKarung, isProcessing]);
 
-  // Fungsi untuk menyesuaikan jumlah resi ID Karung 1 menjadi 54
-  const handleAdjustIDKarung1Count = async () => {
-    const targetCount = 54;
-    const expeditionToAdjust = "ID";
-    const karungToAdjust = "1";
-    const today = new Date();
+  // Fungsi untuk menyesuaikan jumlah resi ID Karung 1 menjadi 54 - DIHAPUS
+  // const handleAdjustIDKarung1Count = async () => {
+  //   const targetCount = 54;
+  //   const expeditionToAdjust = "ID";
+  //   const karungToAdjust = "1";
+  //   const today = new Date();
 
-    try {
-      const message = await adjustResiCount(targetCount, expeditionToAdjust, karungToAdjust, today);
-      showSuccess(message);
-      // Invalidate relevant queries to refresh UI
-      invalidateDashboardQueries(queryClient, today, expeditionToAdjust);
-    } catch (error: any) {
-      showError(`Gagal menyesuaikan jumlah resi: ${error.message}`);
-      console.error("Error adjusting resi count:", error);
-    }
-  };
+  //   try {
+  //     const message = await adjustResiCount(targetCount, expeditionToAdjust, karungToAdjust, today);
+  //     showSuccess(message);
+  //     // Invalidate relevant queries to refresh UI
+  //     invalidateDashboardQueries(queryClient, today, expeditionToAdjust);
+  //   } catch (error: any) {
+  //     showError(`Gagal menyesuaikan jumlah resi: ${error.message}`);
+  //     console.error("Error adjusting resi count:", error);
+  //   }
+  // };
 
   console.log("InputPage State:", {
     expedition,
@@ -186,13 +186,13 @@ const InputPage = () => {
               )}
             </div>
           </div>
-          {/* Tombol untuk menyesuaikan jumlah resi ID Karung 1 */}
-          <Button
+          {/* Tombol untuk menyesuaikan jumlah resi ID Karung 1 - DIHAPUS */}
+          {/* <Button
             onClick={handleAdjustIDKarung1Count}
             className="mt-4 bg-purple-600 hover:bg-purple-700 text-white"
           >
             Set ID Karung 1 Count to 54 (Dev Only)
-          </Button>
+          </Button> */}
         </div>
         <MadeWithDyad />
       </div>

@@ -44,7 +44,7 @@ export const useDashboardData = (date: Date | undefined) => {
     enabled: !!date,
   });
 
-  // Query for ID Rekomendasi (tbl_resi count where schedule = 'idrek' for selected date)
+  // Query for ID Rekomendasi (tbl_resi count where Keterangan = 'ID_REKOMENDASI' for selected date)
   const { data: idRekCount, isLoading: isLoadingIdRekCount } = useQuery<number>({
     queryKey: ["idRekCount", formattedDate],
     queryFn: async () => {
@@ -52,7 +52,7 @@ export const useDashboardData = (date: Date | undefined) => {
       const { count, error } = await supabase
         .from("tbl_resi")
         .select("*", { count: "exact" })
-        .eq("schedule", "idrek")
+        .eq("Keterangan", "ID_REKOMENDASI") // Changed to Keterangan
         .gte("created", startOfDay(date).toISOString())
         .lt("created", endOfDay(date).toISOString());
       if (error) throw error;
@@ -172,7 +172,7 @@ export const useDashboardData = (date: Date | undefined) => {
       if (!date) return [];
       const { data, error } = await supabase
         .from("tbl_resi")
-        .select("Resi, nokarung, schedule, created, Keterangan") // *** Keterangan DITAMBAHKAN DI SINI ***
+        .select("Resi, nokarung, schedule, created, Keterangan") // Added Keterangan
         .gte("created", startOfDay(date).toISOString())
         .lt("created", endOfDay(date).toISOString());
       if (error) throw error;
@@ -245,6 +245,7 @@ export const useDashboardData = (date: Date | undefined) => {
         let targetCourierName = resiToExpeditionMap.get(resi.Resi);
 
         // Special handling for 'ID_REKOMENDASI' in Keterangan for 'late' schedule
+        // If Keterangan is 'ID_REKOMENDASI', it should always be attributed to 'ID' expedition for Scan Follow Up
         if (resi.schedule === "late" && resi.Keterangan === "ID_REKOMENDASI") {
           targetCourierName = "ID"; // Force attribution to 'ID' expedition
           console.log(`Special case: Resi ${resi.Resi} (Keterangan: ID_REKOMENDASI, Schedule: late) attributed to ID for Scan Follow Up.`);
@@ -256,7 +257,8 @@ export const useDashboardData = (date: Date | undefined) => {
           if (resi.schedule === "ontime") {
             summaries[targetCourierName].totalScan++;
           }
-          if (resi.schedule === "idrek") {
+          // Count ID Rekomendasi based on Keterangan
+          if (resi.Keterangan === "ID_REKOMENDASI") { // Changed to Keterangan
             summaries[targetCourierName].idRekomendasi++;
             console.log(`Incremented ID Rekomendasi for ${targetCourierName}. Current: ${summaries[targetCourierName].idRekomendasi}`); 
           }

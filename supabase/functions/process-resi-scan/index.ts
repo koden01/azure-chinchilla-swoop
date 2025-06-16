@@ -65,8 +65,7 @@ serve(async (req) => {
       });
     }
 
-    let actualCourierNameFromExpedisi: string | null = expedisiData?.couriername || null;
-
+    // Validation for expedition match
     if (expedition === "ID") {
       if (expedisiData && expedisiData.couriername !== "ID") {
         return new Response(JSON.stringify({ success: false, message: `Resi ini bukan untuk ekspedisi ID, melainkan untuk ${expedisiData.couriername}.` }), {
@@ -74,7 +73,7 @@ serve(async (req) => {
           status: 400,
         });
       }
-    } else {
+    } else { // For non-ID expeditions
       if (!expedisiData) {
         return new Response(JSON.stringify({ success: false, message: "Resi tidak ditemukan dalam database ekspedisi." }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -92,8 +91,8 @@ serve(async (req) => {
     // 2. Check tbl_resi for duplicates using RPC
     const { data: duplicateResi, error: dupError } = await supabaseClient.rpc("get_filtered_resi_for_expedition_and_date", {
       p_couriername: expedition,
-      p_start_date: startOfDay.toISOString(), // Pass start of day
-      p_end_date: endOfDay.toISOString(),     // Pass end of day
+      p_start_date: startOfDay.toISOString(),
+      p_end_date: endOfDay.toISOString(),
       p_resi: resiNumber,
       p_nokarung: selectedKarung,
     });
@@ -110,7 +109,6 @@ serve(async (req) => {
       const existingKarung = duplicateResi[0].nokarung;
       const existingCreated = duplicateResi[0].created;
       
-      // Format the date for the message (only date, no time)
       const dateObj = new Date(existingCreated);
       const formattedDateString = dateObj.toLocaleDateString('id-ID', {
         day: '2-digit',
@@ -129,18 +127,20 @@ serve(async (req) => {
       Resi: resiNumber,
       nokarung: selectedKarung,
       created: new Date().toISOString(), // Use current timestamp for insertion
+      // schedule will be set by the trigger 'trg_update_schedule_if_null'
     };
 
     if (expedition === "ID") {
-      insertPayload.schedule = "idrek"; // Always set schedule to 'idrek' for ID expedition
-      if (actualCourierNameFromExpedisi === null) {
+      // If resi not found in tbl_expedisi, it's an 'ID_REKOMENDASI' case
+      if (!expedisiData) {
         insertPayload.Keterangan = "ID_REKOMENDASI";
       } else {
-        insertPayload.Keterangan = actualCourierNameFromExpedisi;
+        // If found and couriername is 'ID', use 'ID' as Keterangan
+        insertPayload.Keterangan = "ID";
       }
     } else {
+      // For non-ID expeditions, Keterangan is the expedition name
       insertPayload.Keterangan = expedition;
-      // schedule will be set by trigger for other expeditions
     }
 
     const { error: insertError } = await supabaseClient

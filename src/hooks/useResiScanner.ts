@@ -1,7 +1,7 @@
 import React from "react";
 import { supabase, SUPABASE_PROJECT_ID } from "@/integrations/supabase/client";
 import { showSuccess, showError, dismissToast } from "@/utils/toast";
-import { beepSuccess, beepFailure, beepDouble } from "@/utils/audio";
+import { beepSuccess, beepFailure, beepDouble, beepCancel } from "@/utils/audio";
 import { useDebounce } from "@/hooks/useDebounce";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
 import { useQueryClient } from "@tanstack/react-query";
@@ -191,7 +191,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
         // Handle specific duplicate key error
         if (insertError.code === '23505') { // PostgreSQL unique_violation error code
           console.warn(`Duplicate key error for Resi ${currentResi}. Attempting to update to 'BATAL'.`);
-          beepDouble.play();
+          beepCancel.play(); // Play beep-cancel sound for duplicate/batal
 
           // Fetch the existing record to get its creation date
           const { data: existingResiData, error: fetchExistingError } = await supabase

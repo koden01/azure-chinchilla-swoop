@@ -188,6 +188,58 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
         });
 
       if (insertError) {
+        // Handle specific duplicate key error
+        if (insertError.code === '23505') { // PostgreSQL unique_violation error code
+          console.warn(`Duplicate key error for Resi ${currentResi}. Attempting to update to 'BATAL'.`);
+          beepDouble.play();
+
+          // Fetch the existing record to get its creation date
+          const { data: existingResiData, error: fetchExistingError } = await supabase
+            .from("tbl_resi")
+            .select("created")
+            .eq("Resi", currentResi)
+            .single();
+
+          if (fetchExistingError || !existingResiData) {
+            console.error("Failed to fetch existing resi data for duplicate:", fetchExistingError);
+            showError(`Resi "${currentResi}" sudah ada, tetapi gagal mengambil detailnya untuk pembatalan.`);
+            // Revert optimistic update on error
+            if (lastOptimisticIdRef.current) {
+                queryClient.setQueryData(queryKey, (oldData: ResiExpedisiData[] | undefined) => {
+                    return (oldData || []).filter(item => item.optimisticId !== lastOptimisticIdRef.current);
+                });
+            }
+            lastOptimisticIdRef.current = null;
+            return; // Exit early
+          }
+
+          const existingCreatedDate = new Date(existingResiData.created);
+          const formattedExistingDate = format(existingCreatedDate, "dd/MM/yyyy");
+
+          // Update the existing record to 'batal'
+          const { error: updateError } = await supabase
+            .from("tbl_resi")
+            .update({ schedule: "batal", Keterangan: "BATAL" })
+            .eq("Resi", currentResi);
+
+          if (updateError) {
+            console.error("Failed to update existing resi to BATAL:", updateError);
+            showError(`Resi "${currentResi}" sudah ada, tetapi gagal mengubah statusnya menjadi "BATAL".`);
+            // Revert optimistic update on error
+            if (lastOptimisticIdRef.current) {
+                queryClient.setQueryData(queryKey, (oldData: ResiExpedisiData[] | undefined) => {
+                    return (oldData || []).filter(item => item.optimisticId !== lastOptimisticIdRef.current);
+                });
+            }
+            lastOptimisticIdRef.current = null;
+            return; // Exit early
+          }
+
+          showSuccess(`Resi "${currentResi}" sudah ada dan diubah menjadi "BATAL" pada tanggal ${formattedExistingDate}.`);
+          debouncedInvalidate(); // Invalidate dashboard queries and history
+          lastOptimisticIdRef.current = null; // Clear the optimistic ref as the operation was successful
+          return; // Exit after handling duplicate
+        }
         throw new Error(`Gagal menyisipkan resi ke tbl_resi: ${insertError.message}`);
       }
       console.log("Successfully inserted into tbl_resi.");
@@ -231,8 +283,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
               return (oldData || []).filter(item => item.optimisticId !== lastOptimisticIdRef.current);
           });
           console.log(`Reverted optimistic update for ID: ${lastOptimisticIdRef.current} due to error.`);
-      } else {
-          console.log(`Skipping optimistic revert as no optimistic data was found or ID was null.`);
       }
       lastOptimisticIdRef.current = null; // Clear the ref after attempting revert
     } finally {

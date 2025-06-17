@@ -24,6 +24,7 @@ const InputPage = () => {
   const {
     allResiForExpedition, // Destructure the new data
     isLoadingAllResiForExpedition,
+    allExpedisiDataUnfiltered, // NEW: Get allExpedisiDataUnfiltered
     currentCount: getCountForSelectedKarung,
     lastKarung,
     highestKarung,
@@ -43,6 +44,7 @@ const InputPage = () => {
     selectedKarung, 
     formattedDate,
     allResiForExpedition, // Pass the data here
+    allExpedisiDataUnfiltered, // NEW: Pass allExpedisiDataUnfiltered here
   });
 
   const currentCount = getCountForSelectedKarung(selectedKarung);

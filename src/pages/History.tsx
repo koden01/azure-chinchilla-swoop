@@ -186,9 +186,10 @@ const HistoryPage = () => {
   const confirmDeleteResi = async () => {
     if (!resiToDelete) return;
 
-    // Find the item to get its creation date
+    // Find the item to get its creation date and Keterangan (expedition)
     const itemToDelete = historyData?.find(item => item.Resi === resiToDelete);
-    const dateOfDeletedResi = itemToDelete ? new Date(itemToDelete.created) : undefined; // Pass undefined if not found
+    const dateOfDeletedResi = itemToDelete ? new Date(itemToDelete.created) : undefined;
+    const expeditionOfDeletedResi = itemToDelete?.Keterangan || undefined; // Get expedition name
 
     console.log(`Attempting to delete resi: ${resiToDelete}`);
     const { error } = await supabase
@@ -213,9 +214,8 @@ const HistoryPage = () => {
         refetchType: "all",
       });
 
-      // Invalidate dashboard queries for the date of the deleted resi
-      // If dateOfDeletedResi is undefined, invalidateDashboardQueries will use new Date() as fallback
-      invalidateDashboardQueries(queryClient, dateOfDeletedResi); 
+      // Invalidate dashboard queries and karungSummary/lastKarung for the date and expedition of the deleted resi
+      invalidateDashboardQueries(queryClient, dateOfDeletedResi, expeditionOfDeletedResi); 
     }
     setIsDeleteDialogOpen(false);
     setResiToDelete(null);

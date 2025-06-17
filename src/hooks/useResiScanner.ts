@@ -162,9 +162,9 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
         debouncedInvalidate(); // Invalidate dashboard queries in the background
       } else {
         // Handle errors: revert optimistic update if necessary, show error toast
-        if (result.type === "duplicate") {
+        if (result.type === "duplicate" || result.type === "previouslyScanned") { // NEW: Treat previouslyScanned as a duplicate rejection
           showError(result.message);
-          beepDouble.play(); // Mainkan beep-double untuk duplikat
+          beepDouble.play(); // Mainkan beep-double untuk duplikat atau sudah discan sebelumnya
         } else {
           showError(result.message || "Terjadi kesalahan saat memproses resi. Silakan coba lagi.");
           beepFailure.play(); // Mainkan beep-failure untuk kesalahan lainnya

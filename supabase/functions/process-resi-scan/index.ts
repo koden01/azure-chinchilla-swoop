@@ -89,8 +89,9 @@ serve(async (req) => {
 
       if (validationResult.status === 'DUPLICATE_RESI') {
         responseType = "duplicate";
+      } else if (validationResult.status === 'PREVIOUSLY_SCANNED') { // NEW: Handle previously scanned as a rejection
+        responseType = "previouslyScanned";
       } else if (validationResult.status === 'NOT_FOUND_EXPEDISI') {
-        // Could be 404 or 400 depending on desired strictness
         responseStatus = 400;
       } else if (validationResult.status === 'MISMATCH_EXPEDISI') {
         responseStatus = 400;
@@ -100,34 +101,6 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: responseStatus,
       });
-    }
-
-    // If validationResult.status is 'OK', proceed with insertion
-    // NEW: Check for previous day scans (any date)
-    let previousScanWarning = null;
-    const checkPreviousScanStartTime = Date.now();
-    const { data: previousResiScan, error: previousScanError } = await supabaseClient
-      .from("tbl_resi")
-      .select("created, nokarung")
-      .eq("Resi", resiNumber)
-      .maybeSingle(); // Use maybeSingle to handle no record found gracefully
-    console.log(`[${new Date().toISOString()}] Edge Function: Previous scan check took ${Date.now() - checkPreviousScanStartTime}ms.`);
-
-    if (previousScanError) {
-      console.warn(`[${new Date().toISOString()}] Edge Function: Warning - Error checking for previous resi scan:`, previousScanError);
-      // Do not block the current scan, just log the warning
-    } else if (previousResiScan) {
-      const previousScanDate = new Date(previousResiScan.created);
-      const currentScanDate = new Date(formattedDate); // formattedDate is already 'yyyy-MM-dd'
-
-      // Compare dates without time component
-      if (previousScanDate.toDateString() !== currentScanDate.toDateString()) {
-        previousScanWarning = {
-          message: `Resi ini sudah pernah discan pada tanggal ${format(previousScanDate, 'dd/MM/yyyy')} di karung ${previousResiScan.nokarung || '-'}`,
-          type: "previouslyScanned"
-        };
-        console.log(`[${new Date().toISOString()}] Edge Function: Previous scan detected: ${previousScanWarning.message}`);
-      }
     }
 
     const insertStartTime = Date.now();
@@ -158,7 +131,7 @@ serve(async (req) => {
       success: true, 
       message: `Resi ${resiNumber} berhasil discan.`, 
       actual_couriername: validationResult.actual_couriername,
-      warning: previousScanWarning // Include warning if any
+      // warning: previousScanWarning // Warning is now handled as a rejection by RPC
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,

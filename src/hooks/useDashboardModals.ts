@@ -198,18 +198,10 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
 
   const handleConfirmResi = async (resiNumber: string) => {
     try {
-      const { error: expUpdateError } = await supabase
-        .from("tbl_expedisi")
-        .update({ flag: "YES" })
-        .eq("resino", resiNumber);
-
-      if (expUpdateError) {
-        throw new Error(`Gagal mengkonfirmasi resi ${resiNumber} di tbl_expedisi: ${expUpdateError.message}`);
-      }
-
+      // Fetch the 'created' timestamp from tbl_expedisi first
       const { data: expedisiData, error: expFetchError } = await supabase
         .from("tbl_expedisi")
-        .select("couriername")
+        .select("couriername, created") // Select 'created' column
         .eq("resino", resiNumber)
         .single();
 
@@ -218,6 +210,16 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       }
 
       const courierName = expedisiData.couriername;
+      const expedisiCreatedTimestamp = expedisiData.created; // Get the created timestamp
+
+      const { error: expUpdateError } = await supabase
+        .from("tbl_expedisi")
+        .update({ flag: "YES" })
+        .eq("resino", resiNumber);
+
+      if (expUpdateError) {
+        throw new Error(`Gagal mengkonfirmasi resi ${resiNumber} di tbl_expedisi: ${expUpdateError.message}`);
+      }
 
       const { data: existingResi, error: checkResiError } = await supabase
         .from("tbl_resi")
@@ -229,13 +231,11 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         throw checkResiError;
       }
 
-      const currentTimestamp = new Date().toISOString();
-
       if (existingResi) {
         const { error: updateResiError } = await supabase
           .from("tbl_resi")
           .update({
-            created: currentTimestamp,
+            created: expedisiCreatedTimestamp, // Use created from tbl_expedisi
             Keterangan: courierName,
             nokarung: "0",
           })
@@ -248,7 +248,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
           .from("tbl_resi")
           .insert({
             Resi: resiNumber,
-            created: currentTimestamp,
+            created: expedisiCreatedTimestamp, // Use created from tbl_expedisi
             Keterangan: courierName,
             nokarung: "0",
           });

@@ -29,11 +29,10 @@ interface UseResiScannerProps {
   selectedKarung: string;
   formattedDate: string;
   allResiForExpedition: ResiExpedisiData[] | undefined; // This is still used for optimistic updates
-  allResiDataComprehensive: ResiExpedisiData[] | undefined; // NEW: Comprehensive list
   allExpedisiDataUnfiltered: ExpedisiData[] | undefined; // Prop for all expedisi data
 }
 
-export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allResiForExpedition, allResiDataComprehensive, allExpedisiDataUnfiltered }: UseResiScannerProps) => {
+export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allResiForExpedition, allExpedisiDataUnfiltered }: UseResiScannerProps) => {
   const [resiNumber, setResiNumber] = React.useState<string>("");
   const [isProcessing, setIsProcessing] = React.useState<boolean>(false);
   const resiInputRef = React.useRef<HTMLInputElement>(null);
@@ -46,8 +45,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
     invalidateDashboardQueries(queryClient, new Date(), expedition);
     // NEW: Invalidate historyData for the current day to ensure immediate update
     queryClient.invalidateQueries({ queryKey: ["historyData", formattedDate, formattedDate] });
-    // Invalidate the comprehensive resi data to ensure it's up-to-date for future scans
-    queryClient.invalidateQueries({ queryKey: ["allResiDataComprehensive"] });
   }, 150);
 
   const keepFocus = () => {
@@ -92,7 +89,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
     try {
       let actualCourierName: string | null = null;
       let validationMessage: string | null = null;
-      let validationStatus: "OK" | "DUPLICATE_RESI" | "PREVIOUSLY_SCANNED" | "NOT_FOUND_EXPEDISI" | "MISMATCH_EXPEDISI" = "OK";
+      let validationStatus: "OK" | "NOT_FOUND_EXPEDISI" | "MISMATCH_EXPEDISI" = "OK";
 
       // 1. Check tbl_expedisi for the resi number
       const expedisiRecord = allExpedisiDataUnfiltered?.find(
@@ -128,32 +125,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
         return; // Exit early if initial validation fails
       }
 
-      // 2. Check tbl_resi for any scan of this resi using the comprehensive list
-      const existingResiScan = allResiDataComprehensive?.find(
-        (item) => item.Resi.toLowerCase() === currentResi.toLowerCase()
-      );
-
-      if (existingResiScan) {
-        const existingScanDate = new Date(existingResiScan.created);
-        const currentScanDate = new Date(); // Use current date for comparison
-
-        if (format(existingScanDate, "yyyy-MM-dd") === format(currentScanDate, "yyyy-MM-dd")) {
-          validationStatus = 'DUPLICATE_RESI';
-          validationMessage = `Resi DOUBLE! Resi ini sudah discan di karung ${existingResiScan.nokarung} pada tanggal ${format(existingScanDate, 'dd/MM/yyyy')} dengan keterangan ${existingResiScan.Keterangan}.`;
-        } else {
-          validationStatus = 'PREVIOUSLY_SCANNED';
-          validationMessage = `Resi ini sudah pernah discan pada tanggal ${format(existingScanDate, 'dd/MM/yyyy')} di karung ${existingResiScan.nokarung} dengan keterangan ${existingResiScan.Keterangan}. Tidak dapat discan ulang.`;
-        }
-      }
-
-      if (validationStatus !== 'OK') {
-        showError(validationMessage || "Validasi gagal.");
-        beepDouble.play(); // Play double beep for duplicates/previously scanned
-        setIsProcessing(false);
-        keepFocus();
-        return; // Exit early if duplicate/previously scanned
-      }
-
       // --- Optimistic UI Update (only if all client-side validations pass) ---
       const newResiEntry: ResiExpedisiData = {
         Resi: currentResi,
@@ -168,13 +139,8 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
       queryClient.setQueryData(queryKey, (oldData: ResiExpedisiData[] | undefined) => {
         return [...(oldData || []), newResiEntry]; // Ensure oldData is an array
       });
-      // Also optimistically update the comprehensive list
-      queryClient.setQueryData(["allResiDataComprehensive"], (oldData: ResiExpedisiData[] | undefined) => {
-        return [...(oldData || []), newResiEntry];
-      });
-
       lastOptimisticIdRef.current = currentOptimisticId;
-      console.log("Optimistically updated caches with ID:", currentOptimisticId);
+      console.log("Optimistically updated allResiForExpedition cache with ID:", currentOptimisticId);
       // --- End Optimistic UI Update ---
 
       // Re-enable input immediately after optimistic update
@@ -182,8 +148,8 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
       keepFocus(); // Keep focus on the input
 
       // --- Direct Supabase Insert/Update (only if all client-side validations pass) ---
-      // 1. Insert into tbl_resi
-      const { error: insertError } = await supabase
+      // 1. Insert into tbl_resi with onConflict to avoid unique constraint error
+      const { data: insertedData, error: insertError } = await supabase
         .from("tbl_resi")
         .insert({
           Resi: currentResi,
@@ -191,12 +157,55 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
           created: new Date().toISOString(),
           Keterangan: actualCourierName,
           schedule: "ontime",
-        });
+        })
+        .select() // Select the inserted row to check if it was actually inserted
+        .onConflict("Resi") // Specify the unique constraint column
+        .ignore(); // Ignore the insert if conflict occurs
 
       if (insertError) {
-        // If there's any other database error (not a duplicate key, as that's handled client-side now)
         throw new Error(`Gagal menyisipkan resi ke tbl_resi: ${insertError.message}`);
       }
+
+      if (!insertedData || insertedData.length === 0) {
+        // This means the insert was ignored due to a duplicate key
+        console.log("Insert ignored due to duplicate Resi. Fetching existing record for detailed error.");
+        beepDouble.play();
+
+        // Fetch the existing record to get its details
+        const { data: existingResiDetails, error: fetchExistingError } = await supabase
+          .from("tbl_resi")
+          .select("Resi, nokarung, created, Keterangan")
+          .eq("Resi", currentResi)
+          .single();
+
+        if (fetchExistingError || !existingResiDetails) {
+          console.error("Error fetching existing resi details after conflict:", fetchExistingError);
+          showError(`Resi ${currentResi} sudah ada, tetapi gagal mengambil detailnya.`);
+          return;
+        }
+
+        const existingScanDate = new Date(existingResiDetails.created);
+        const currentScanDate = new Date();
+
+        let duplicateMessage = "";
+        if (format(existingScanDate, "yyyy-MM-dd") === format(currentScanDate, "yyyy-MM-dd")) {
+          duplicateMessage = `Resi DOUBLE! Resi ini sudah discan di karung ${existingResiDetails.nokarung} pada tanggal ${format(existingScanDate, 'dd/MM/yyyy')} dengan keterangan ${existingResiDetails.Keterangan}.`;
+        } else {
+          duplicateMessage = `Resi ini sudah pernah discan pada tanggal ${format(existingScanDate, 'dd/MM/yyyy')} di karung ${existingResiDetails.nokarung} dengan keterangan ${existingResiDetails.Keterangan}. Tidak dapat discan ulang.`;
+        }
+        showError(duplicateMessage);
+
+        // Revert optimistic update for this specific case
+        if (lastOptimisticIdRef.current) {
+          queryClient.setQueryData(queryKey, (oldData: ResiExpedisiData[] | undefined) => {
+              return (oldData || []).filter(item => item.optimisticId !== lastOptimisticIdRef.current);
+          });
+          console.log(`Reverted optimistic update for ID: ${lastOptimisticIdRef.current} due to duplicate.`);
+        }
+        lastOptimisticIdRef.current = null; // Clear the ref
+        return; // Exit as it was a duplicate
+      }
+      
       console.log("Successfully inserted into tbl_resi.");
 
       // 2. Update tbl_expedisi flag to 'YES'
@@ -236,9 +245,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
       if (lastOptimisticIdRef.current) {
           queryClient.setQueryData(queryKey, (oldData: ResiExpedisiData[] | undefined) => {
               return (oldData || []).filter(item => item.optimisticId !== lastOptimisticIdRef.current);
-          });
-          queryClient.setQueryData(["allResiDataComprehensive"], (oldData: ResiExpedisiData[] | undefined) => {
-            return (oldData || []).filter(item => item.optimisticId !== lastOptimisticIdRef.current);
           });
           console.log(`Reverted optimistic update for ID: ${lastOptimisticIdRef.current} due to error.`);
       }

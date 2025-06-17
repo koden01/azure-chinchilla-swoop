@@ -91,20 +91,6 @@ export const useResiInputData = (expedition: string) => {
     enabled: !!expedition,
   });
 
-  // NEW: Query to fetch ALL tbl_resi data (unfiltered by date or expedition) for comprehensive duplicate checking
-  const { data: allResiDataComprehensive, isLoading: isLoadingAllResiDataComprehensive } = useQuery<ResiExpedisiData[]>({
-    queryKey: ["allResiDataComprehensive"],
-    queryFn: async () => {
-      console.log("Fetching allResiDataComprehensive (paginated) for global duplicate checking.");
-      const data = await fetchAllDataPaginated("tbl_resi", undefined, undefined, undefined); // No date or expedition filter
-      console.log("All Resi Data (comprehensive, paginated) for global duplicate checking:", data.length, "items");
-      return data;
-    },
-    enabled: true, // Always enabled to get all mappings
-    staleTime: 1000 * 60 * 5, // Keep this data fresh for 5 minutes, it's critical for validation
-    gcTime: 1000 * 60 * 60, // Garbage collect after 1 hour
-  });
-
   // NEW: Fetch ALL tbl_expedisi data (unfiltered by date) to build a comprehensive resi-to-courier map for local validation
   const { data: allExpedisiDataUnfiltered, isLoading: isLoadingAllExpedisiUnfiltered } = useQuery<ExpedisiData[]>({
     queryKey: ["allExpedisiDataUnfiltered"], // No date in key, fetch all
@@ -213,8 +199,7 @@ export const useResiInputData = (expedition: string) => {
 
   return {
     allResiForExpedition, // Now returned
-    isLoadingAllResiForExpedition: isLoadingAllResiForExpedition || isLoadingLastKarung || isLoadingKarungSummary || isLoadingAllExpedisiUnfiltered || isLoadingAllResiDataComprehensive, // Combine loading states
-    allResiDataComprehensive, // NEW: Return comprehensive resi data
+    isLoadingAllResiForExpedition: isLoadingAllResiForExpedition || isLoadingLastKarung || isLoadingKarungSummary || isLoadingAllExpedisiUnfiltered, // Combine loading states
     allExpedisiDataUnfiltered, // NEW: Return all expedisi data
     currentCount,
     lastKarung,

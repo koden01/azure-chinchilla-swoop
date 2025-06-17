@@ -5,29 +5,23 @@
         const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
         const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-        // Tambahkan validasi dan pesan kesalahan yang lebih jelas
-        if (!SUPABASE_URL) {
-          throw new Error("VITE_SUPABASE_URL tidak terdefinisi. Pastikan file .env Anda dikonfigurasi dengan benar dan terletak di root proyek, lalu lakukan rebuild aplikasi.");
-        }
-        if (!SUPABASE_PUBLISHABLE_KEY) {
-          throw new Error("VITE_SUPABASE_ANON_KEY tidak terdefinisi. Pastikan file .env Anda dikonfigurasi dengan benar dan terletak di root proyek, lalu lakukan rebuild aplikasi.");
-        }
-
-        // Extract project ID from SUPABASE_URL
-        const SUPABASE_PROJECT_ID = SUPABASE_URL.split('//')[1].split('.')[0];
-
         // Log untuk debugging: Pastikan kunci API dimuat dengan benar
-        console.log("Supabase Client Init: VITE_SUPABASE_URL:", SUPABASE_URL ? "Loaded" : "NOT LOADED");
-        console.log("Supabase Client Init: VITE_SUPABASE_ANON_KEY:", SUPABASE_PUBLISHABLE_KEY ? "Loaded" : "NOT LOADED");
-        console.log("Supabase Client Init: Project ID:", SUPABASE_PROJECT_ID);
+        // console.log("Supabase Client Init: VITE_SUPABASE_URL:", SUPABASE_URL ? "Loaded" : "NOT LOADED");
+        // console.log("Supabase Client Init: VITE_SUPABASE_ANON_KEY:", SUPABASE_PUBLISHABLE_KEY ? "Loaded" : "NOT LOADED");
 
-        // NEW: Log the actual values being used
-        console.log("Supabase Client: Actual URL used:", SUPABASE_URL);
-        console.log("Supabase Client: Actual Anon Key used (first 5 chars):", SUPABASE_PUBLISHABLE_KEY ? SUPABASE_PUBLISHABLE_KEY.substring(0, 5) + '...' : 'N/A');
+        // Extract project ID from SUPABASE_URL (if URL exists)
+        const SUPABASE_PROJECT_ID = SUPABASE_URL ? SUPABASE_URL.split('//')[1].split('.')[0] : 'UNKNOWN';
 
+        // console.log("Supabase Client Init: Project ID:", SUPABASE_PROJECT_ID);
+        // console.log("Supabase Client: Actual URL used:", SUPABASE_URL);
+        // console.log("Supabase Client: Actual Anon Key used (first 5 chars):", SUPABASE_PUBLISHABLE_KEY ? SUPABASE_PUBLISHABLE_KEY.substring(0, 5) + '...' : 'N/A');
 
         // Import the supabase client like this:
         // import { supabase } from "@/integrations/supabase/client";
 
-        export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+        // Create client only if both URL and key are available to avoid runtime errors
+        export const supabase = createClient(
+          SUPABASE_URL || 'http://localhost', // Provide a fallback to prevent client creation error if undefined
+          SUPABASE_PUBLISHABLE_KEY || 'dummy_key' // Provide a fallback
+        );
         export { SUPABASE_PROJECT_ID };

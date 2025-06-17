@@ -186,6 +186,10 @@ const HistoryPage = () => {
   const confirmDeleteResi = async () => {
     if (!resiToDelete) return;
 
+    // Find the item to get its creation date
+    const itemToDelete = historyData?.find(item => item.Resi === resiToDelete);
+    const dateOfDeletedResi = itemToDelete ? new Date(itemToDelete.created) : undefined; // Pass undefined if not found
+
     console.log(`Attempting to delete resi: ${resiToDelete}`);
     const { error } = await supabase
       .from("tbl_resi")
@@ -199,15 +203,18 @@ const HistoryPage = () => {
       showSuccess(`Resi ${resiToDelete} berhasil dihapus.`);
       console.log(`Successfully deleted resi: ${resiToDelete}`);
 
+      // Invalidate history data for the current date range
       queryClient.invalidateQueries({ queryKey: ["historyData", formattedStartDate, formattedEndDate] });
 
-      const todayFormatted = format(new Date(), "yyyy-MM-dd");
+      // Invalidate allResiForExpedition (used by Input page)
       queryClient.invalidateQueries({
         queryKey: ["allResiForExpedition"],
         refetchType: "all",
       });
 
-      invalidateDashboardQueries(queryClient, new Date());
+      // Invalidate dashboard queries for the date of the deleted resi
+      // If dateOfDeletedResi is undefined, invalidateDashboardQueries will use new Date() as fallback
+      invalidateDashboardQueries(queryClient, dateOfDeletedResi); 
     }
     setIsDeleteDialogOpen(false);
     setResiToDelete(null);

@@ -1,5 +1,5 @@
 import React from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, SUPABASE_PROJECT_ID } from "@/integrations/supabase/client";
 import { showSuccess, showError, dismissToast } from "@/utils/toast";
 import { beepSuccess, beepFailure, beepDouble } from "@/utils/audio";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -80,21 +80,12 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
 
     setIsProcessing(true);
     console.log("Starting handleScanResi for:", currentResi, "at:", new Date().toISOString());
+    console.log("Supabase Project ID in useResiScanner:", SUPABASE_PROJECT_ID); // Log Supabase Project ID
 
     const queryKey = ["allResiForExpedition", expedition, formattedDate];
     const currentOptimisticId = Date.now().toString() + Math.random().toString(36).substring(2, 9);
 
-    // Declare and initialize currentResiData here to ensure it's always defined
-    let currentResiData: ResiExpedisiData[] = []; 
-
     try {
-      // Store current data for potential rollback
-      const cachedData = queryClient.getQueryData<ResiExpedisiData[]>(queryKey);
-      if (cachedData) {
-        currentResiData = cachedData;
-      }
-      console.log("Cached data for optimistic update:", currentResiData);
-
       // --- Client-side Validation Logic (Moved from RPC) ---
       let actualCourierName: string | null = null;
       let validationMessage: string | null = null;
@@ -225,7 +216,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
 
       let errorMessage = "Terjadi kesalahan yang tidak diketahui. Silakan coba lagi.";
       if (error instanceof TypeError && error.message === "Failed to fetch") {
-        errorMessage = "Gagal terhubung ke server. Periksa koneksi internet Anda atau coba lagi nanti.";
+        errorMessage = "Gagal terhubung ke server. Periksa koneksi internet Anda atau coba lagi nanti. Pastikan variabel lingkungan Supabase Anda sudah benar."; // Enhanced message
       } else if (error.message) {
         errorMessage = `Terjadi kesalahan: ${error.message}`;
       } else if (error.code) { // Supabase error codes
@@ -235,9 +226,8 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
       beepFailure.play();
 
       // Revert optimistic update on error
-      if (lastOptimisticIdRef.current) { // Only check this ref
+      if (lastOptimisticIdRef.current) {
           queryClient.setQueryData(queryKey, (oldData: ResiExpedisiData[] | undefined) => {
-              // If oldData is undefined, return an empty array, otherwise filter
               return (oldData || []).filter(item => item.optimisticId !== lastOptimisticIdRef.current);
           });
           console.log(`Reverted optimistic update for ID: ${lastOptimisticIdRef.current} due to error.`);

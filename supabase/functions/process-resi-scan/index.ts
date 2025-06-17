@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { format } from 'https://esm.sh/date-fns@3.6.0'; // Import format from date-fns
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -101,8 +102,35 @@ serve(async (req) => {
       });
     }
 
-    const insertStartTime = Date.now();
     // If validationResult.status is 'OK', proceed with insertion
+    // NEW: Check for previous day scans (any date)
+    let previousScanWarning = null;
+    const checkPreviousScanStartTime = Date.now();
+    const { data: previousResiScan, error: previousScanError } = await supabaseClient
+      .from("tbl_resi")
+      .select("created, nokarung")
+      .eq("Resi", resiNumber)
+      .maybeSingle(); // Use maybeSingle to handle no record found gracefully
+    console.log(`[${new Date().toISOString()}] Edge Function: Previous scan check took ${Date.now() - checkPreviousScanStartTime}ms.`);
+
+    if (previousScanError) {
+      console.warn(`[${new Date().toISOString()}] Edge Function: Warning - Error checking for previous resi scan:`, previousScanError);
+      // Do not block the current scan, just log the warning
+    } else if (previousResiScan) {
+      const previousScanDate = new Date(previousResiScan.created);
+      const currentScanDate = new Date(formattedDate); // formattedDate is already 'yyyy-MM-dd'
+
+      // Compare dates without time component
+      if (previousScanDate.toDateString() !== currentScanDate.toDateString()) {
+        previousScanWarning = {
+          message: `Resi ini sudah pernah discan pada tanggal ${format(previousScanDate, 'dd/MM/yyyy')} di karung ${previousResiScan.nokarung || '-'}`,
+          type: "previouslyScanned"
+        };
+        console.log(`[${new Date().toISOString()}] Edge Function: Previous scan detected: ${previousScanWarning.message}`);
+      }
+    }
+
+    const insertStartTime = Date.now();
     const insertPayload: any = {
       Resi: resiNumber,
       nokarung: selectedKarung,
@@ -126,7 +154,12 @@ serve(async (req) => {
     }
 
     console.log(`[${new Date().toISOString()}] Edge Function: Successfully processed resi ${resiNumber}. Total time: ${Date.now() - startTime}ms.`);
-    return new Response(JSON.stringify({ success: true, message: `Resi ${resiNumber} berhasil discan.`, actual_couriername: validationResult.actual_couriername }), {
+    return new Response(JSON.stringify({ 
+      success: true, 
+      message: `Resi ${resiNumber} berhasil discan.`, 
+      actual_couriername: validationResult.actual_couriername,
+      warning: previousScanWarning // Include warning if any
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });

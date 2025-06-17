@@ -5,19 +5,11 @@
         const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
         const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-        // Log untuk debugging: Pastikan kunci API dimuat dengan benar
-        // console.log("Supabase Client Init: VITE_SUPABASE_URL:", SUPABASE_URL ? "Loaded" : "NOT LOADED");
-        // console.log("Supabase Client Init: VITE_SUPABASE_ANON_KEY:", SUPABASE_PUBLISHABLE_KEY ? "Loaded" : "NOT LOADED");
-
         // Extract project ID from SUPABASE_URL (if URL exists)
-        const SUPABASE_PROJECT_ID = SUPABASE_URL ? SUPABASE_URL.split('//')[1].split('.')[0] : 'UNKNOWN';
-
-        // console.log("Supabase Client Init: Project ID:", SUPABASE_PROJECT_ID);
-        // console.log("Supabase Client: Actual URL used:", SUPABASE_URL);
-        // console.log("Supabase Client: Actual Anon Key used (first 5 chars):", SUPABASE_PUBLISHABLE_KEY ? SUPABASE_PUBLISHABLE_KEY.substring(0, 5) + '...' : 'N/A');
-
-        // Import the supabase client like this:
-        // import { supabase } from "@/integrations/supabase/client";
+        // Make this extraction safer to prevent errors if SUPABASE_URL is not a valid string
+        const SUPABASE_PROJECT_ID = (SUPABASE_URL && typeof SUPABASE_URL === 'string' && SUPABASE_URL.includes('//')) 
+          ? SUPABASE_URL.split('//')[1].split('.')[0] 
+          : 'UNKNOWN';
 
         // Create client only if both URL and key are available to avoid runtime errors
         export const supabase = createClient(

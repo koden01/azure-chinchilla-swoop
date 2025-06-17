@@ -42,7 +42,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
   const lastOptimisticIdRef = React.useRef<string | null>(null);
 
   const debouncedInvalidate = useDebounce(() => {
-    console.log("Debounced invalidation triggered!");
     invalidateDashboardQueries(queryClient, new Date(), expedition);
     // NEW: Invalidate historyData for the current day to ensure immediate update
     queryClient.invalidateQueries({ queryKey: ["historyData", formattedDate, formattedDate] });
@@ -82,7 +81,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
     }
 
     setIsProcessing(true);
-    console.log("Starting handleScanResi for:", currentResi, "at:", new Date().toISOString());
 
     const queryKey = ["allResiForExpedition", expedition, formattedDate]; // Still used for optimistic update
 

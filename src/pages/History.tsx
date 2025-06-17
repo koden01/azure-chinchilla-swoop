@@ -206,8 +206,9 @@ const HistoryPage = () => {
       // Invalidate history data for the current date range
       queryClient.invalidateQueries({ queryKey: ["historyData", formattedStartDate, formattedEndDate] });
 
-      // Invalidate allResiForExpedition (used by Input page)
-      queryClient.invalidateQueries({
+      // Reset and refetch allResiForExpedition (used by Input page)
+      // This is more aggressive and ensures the cache is cleared and refetched
+      queryClient.resetQueries({
         queryKey: ["allResiForExpedition"],
         refetchType: "all",
       });

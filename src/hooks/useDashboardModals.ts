@@ -18,14 +18,14 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
   const [modalTitle, setModalTitle] = React.useState("");
   const [modalData, setModalData] = React.useState<any[]>([]);
   const [modalType, setModalType] = React.useState<
-    "belumKirim" | "followUp" | "expeditionDetail" | null
+    "belumKirim" | "followUp" | "expeditionDetail" | "transaksiHariIni" | null // Added "transaksiHariIni"
   >(null);
   const [selectedCourier, setSelectedCourier] = React.useState<string | null>(null);
 
   const openResiModal = (
     title: string,
     data: any[],
-    type: "belumKirim" | "followUp" | "expeditionDetail",
+    type: "belumKirim" | "followUp" | "expeditionDetail" | "transaksiHariIni", // Updated type
     courier: string | null = null
   ) => {
     setModalTitle(title);
@@ -33,6 +33,33 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
     setModalType(type);
     setSelectedCourier(courier);
     setIsModalOpen(true);
+  };
+
+  const handleOpenTransaksiHariIniModal = async () => {
+    if (!date) {
+      showError("Mohon pilih tanggal terlebih dahulu.");
+      return;
+    }
+    const startOfSelectedDate = startOfDay(date);
+    const endOfSelectedDate = endOfDay(date);
+    const startString = format(startOfSelectedDate, "yyyy-MM-dd HH:mm:ss");
+    const endString = format(endOfSelectedDate, "yyyy-MM-dd HH:mm:ss");
+
+    console.log(`Fetching data for 'Transaksi Hari Ini' modal for date range: ${startString} to ${endString}`);
+
+    const { data, error } = await supabase
+      .from("tbl_expedisi")
+      .select("resino, orderno, chanelsales, couriername, created, flag, datetrans, cekfu")
+      .gte("created", startString)
+      .lt("created", endString);
+      
+    if (error) {
+      showError("Gagal memuat data transaksi hari ini.");
+      console.error("Error fetching Transaksi Hari Ini data:", error);
+      return;
+    }
+    console.log("Data for 'Transaksi Hari Ini' modal:", data);
+    openResiModal("Transaksi Hari Ini", data || [], "transaksiHariIni"); // Changed type to "transaksiHariIni"
   };
 
   const handleOpenBelumKirimModal = async () => {
@@ -295,6 +322,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
     modalType,
     selectedCourier,
     openResiModal,
+    handleOpenTransaksiHariIniModal,
     handleOpenBelumKirimModal,
     handleOpenFollowUpFlagNoModal,
     handleOpenScanFollowupModal,

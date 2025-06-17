@@ -38,7 +38,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
   const resiInputRef = React.useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
-  const lastOptimisticIdRef = React.useRef<string | null>(null); // Perbaikan di sini
+  const lastOptimisticIdRef = React.useRef<string | null>(null);
 
   const debouncedInvalidate = useDebounce(() => {
     console.log("Debounced invalidation triggered!");
@@ -89,7 +89,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
 
     try {
       // Store current data for potential rollback
-      currentResiData = queryClient.getQueryData<ResiExpedisiData[]>(queryKey); // Assign here
+      currentResiData = queryClient.getQueryData<ResiExpedisiData[]>(queryKey);
 
       // --- Client-side Validation Logic (Moved from RPC) ---
       let actualCourierName: string | null = null;
@@ -219,9 +219,18 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
       debouncedInvalidate(); // Invalidate dashboard queries and history in the background
 
     } catch (error: any) {
-      showError(`Terjadi kesalahan: ${error.message || "Silakan coba lagi."}`);
+      console.error("Error during resi input:", error); // Log the full error object
+
+      let errorMessage = "Terjadi kesalahan yang tidak diketahui. Silakan coba lagi.";
+      if (error instanceof TypeError && error.message === "Failed to fetch") {
+        errorMessage = "Gagal terhubung ke server. Periksa koneksi internet Anda atau coba lagi nanti.";
+      } else if (error.message) {
+        errorMessage = `Terjadi kesalahan: ${error.message}`;
+      } else if (error.code) { // Supabase error codes
+        errorMessage = `Terjadi kesalahan Supabase (${error.code}): ${error.message || error.details}`;
+      }
+      showError(errorMessage);
       beepFailure.play();
-      console.error("Error during resi input:", error);
 
       // Revert optimistic update on error
       if (currentResiData && lastOptimisticIdRef.current) {

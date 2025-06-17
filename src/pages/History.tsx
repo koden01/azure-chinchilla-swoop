@@ -204,18 +204,17 @@ const HistoryPage = () => {
       showSuccess(`Resi ${resiToDelete} berhasil dihapus.`);
       console.log(`Successfully deleted resi: ${resiToDelete}`);
 
-      // Invalidate history data for the current date range
-      queryClient.invalidateQueries({ queryKey: ["historyData", formattedStartDate, formattedEndDate] });
+      // Force refetch history data for the current date range
+      await queryClient.refetchQueries({ queryKey: ["historyData", formattedStartDate, formattedEndDate] });
 
-      // Reset and refetch allResiForExpedition (used by Input page)
-      // This is more aggressive and ensures the cache is cleared and refetched
-      queryClient.resetQueries({
+      // Force refetch allResiForExpedition (used by Input page)
+      await queryClient.refetchQueries({
         queryKey: ["allResiForExpedition"],
-        refetchType: "all",
+        exact: false, // Ensure it refetches all variations of this query key
       });
 
-      // NEW: Invalidate the comprehensive resi data cache
-      queryClient.invalidateQueries({ queryKey: ["allResiDataComprehensive"] });
+      // NEW: Force refetch the comprehensive resi data cache
+      await queryClient.refetchQueries({ queryKey: ["allResiDataComprehensive"] });
 
       // Invalidate dashboard queries and karungSummary/lastKarung for the date and expedition of the deleted resi
       invalidateDashboardQueries(queryClient, dateOfDeletedResi, expeditionOfDeletedResi); 

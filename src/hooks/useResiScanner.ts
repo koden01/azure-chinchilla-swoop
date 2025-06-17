@@ -1,43 +1,48 @@
 import React from "react";
-import { supabase, SUPABASE_PROJECT_ID } from "@/integrations/supabase/client"; // Import SUPABASE_PROJECT_ID
+import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, showError, dismissToast } from "@/utils/toast";
 import { beepSuccess, beepFailure, beepDouble } from "@/utils/audio";
 import { useDebounce } from "@/hooks/useDebounce";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
 import { useQueryClient } from "@tanstack/react-query";
-import { format } from "date-fns"; // Import format for current timestamp
+import { format, startOfDay, endOfDay } from "date-fns";
 
 // Define the type for ResiExpedisiData to match useResiInputData
 interface ResiExpedisiData {
   Resi: string;
   nokarung: string | null;
   created: string;
-  Keterangan: string | null; // Changed to Keterangan to match tbl_resi
+  Keterangan: string | null;
   schedule: string | null;
-  // Add an optional optimisticId to distinguish optimistic entries
-  optimisticId?: string; 
+  optimisticId?: string;
+}
+
+// Define type for tbl_expedisi data
+interface ExpedisiData {
+  resino: string;
+  couriername: string | null;
+  created: string;
 }
 
 interface UseResiScannerProps {
   expedition: string;
   selectedKarung: string;
   formattedDate: string;
-  allResiForExpedition: ResiExpedisiData[] | undefined; // New prop for local validation
+  allResiForExpedition: ResiExpedisiData[] | undefined;
+  allExpedisiDataUnfiltered: ExpedisiData[] | undefined; // Prop for all expedisi data
 }
 
-export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allResiForExpedition }: UseResiScannerProps) => {
+export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allResiForExpedition, allExpedisiDataUnfiltered }: UseResiScannerProps) => {
   const [resiNumber, setResiNumber] = React.useState<string>("");
   const [isProcessing, setIsProcessing] = React.useState<boolean>(false);
   const resiInputRef = React.useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
-  // Ref to store the optimistic ID of the last added entry (only for success case where couriername might be updated)
   const lastOptimisticIdRef = React.useRef<string | null>(null);
 
-  // Debounced invalidate function
   const debouncedInvalidate = useDebounce(() => {
     console.log("Debounced invalidation triggered!");
-    invalidateDashboardQueries(queryClient, new Date(), expedition); // Pass expedition here
+    invalidateDashboardQueries(queryClient, new Date(), expedition);
   }, 150);
 
   const keepFocus = () => {
@@ -59,12 +64,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
       beepFailure.play();
       return false;
     }
-    // NEW: Validate Supabase Anon Key before making the request
-    if (!import.meta.env.VITE_SUPABASE_ANON_KEY) {
-      showError("Kesalahan konfigurasi: Kunci API Supabase (VITE_SUPABASE_ANON_KEY) tidak ditemukan. Mohon periksa file .env Anda.");
-      beepFailure.play();
-      return false;
-    }
     return true;
   };
 
@@ -77,129 +76,163 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
       return;
     }
 
-    // --- NEW: Local IndexedDB Duplicate Check ---
-    const isLocallyDuplicate = allResiForExpedition?.some(
-      (item) => item.Resi.toLowerCase() === currentResi.toLowerCase() &&
-                 format(new Date(item.created), "yyyy-MM-dd") === formattedDate
-    );
-
-    if (isLocallyDuplicate) {
-      showError(`Resi duplikat! Resi ${currentResi} sudah discan hari ini (dari cache lokal).`);
-      beepDouble.play();
-      setResiNumber(""); // Clear input
-      setIsProcessing(false); // Stop processing indicator
-      keepFocus();
-      return; // Stop further processing
-    }
-    // --- END NEW: Local IndexedDB Duplicate Check ---
-
-    setIsProcessing(true); // Start processing indicator
+    setIsProcessing(true);
     console.log("Starting handleScanResi for:", currentResi, "at:", new Date().toISOString());
 
     const queryKey = ["allResiForExpedition", expedition, formattedDate];
-    const currentOptimisticId = Date.now().toString() + Math.random().toString(36).substring(2, 9); // Generate unique ID for THIS scan attempt
+    const currentOptimisticId = Date.now().toString() + Math.random().toString(36).substring(2, 9);
+
+    // Store current data for potential rollback
+    const currentResiData = queryClient.getQueryData<ResiExpedisiData[]>(queryKey);
 
     try {
-      // --- Optimistic UI Update for InputPage ---
-      const currentResiData = queryClient.getQueryData<ResiExpedisiData[]>(queryKey);
+      // --- Client-side Validation Logic (Moved from RPC) ---
+      let actualCourierName: string | null = null;
+      let validationMessage: string | null = null;
+      let validationStatus: "OK" | "DUPLICATE_RESI" | "PREVIOUSLY_SCANNED" | "NOT_FOUND_EXPEDISI" | "MISMATCH_EXPEDISI" = "OK";
+
+      // 1. Check tbl_expedisi for the resi number
+      const expedisiRecord = allExpedisiDataUnfiltered?.find(
+        (exp) => exp.resino?.trim().toLowerCase() === currentResi.toLowerCase()
+      );
+
+      if (expedition === 'ID') {
+        if (!expedisiRecord) {
+          actualCourierName = 'ID_REKOMENDASI';
+        } else if (expedisiRecord.couriername?.trim().toUpperCase() !== 'ID') {
+          validationStatus = 'MISMATCH_EXPEDISI';
+          validationMessage = `Resi ini bukan untuk ekspedisi ID, melainkan untuk ${expedisiRecord.couriername}.`;
+        } else {
+          actualCourierName = 'ID';
+        }
+      } else { // For non-ID expeditions
+        if (!expedisiRecord) {
+          validationStatus = 'NOT_FOUND_EXPEDISI';
+          validationMessage = 'Resi tidak ditemukan dalam database ekspedisi.';
+        } else if (expedisiRecord.couriername?.trim().toUpperCase() !== expedition.toUpperCase()) {
+          validationStatus = 'MISMATCH_EXPEDISI';
+          validationMessage = `Resi ini bukan milik ekspedisi ${expedition}. Ini milik ${expedisiRecord.couriername}.`;
+        } else {
+          actualCourierName = expedisiRecord.couriername;
+        }
+      }
+
+      if (validationStatus !== 'OK') {
+        showError(validationMessage || "Validasi gagal.");
+        beepFailure.play();
+        setIsProcessing(false);
+        keepFocus();
+        return;
+      }
+
+      // 2. Check tbl_resi for any scan of this resi, regardless of date range (PREVIOUSLY_SCANNED)
+      const existingResiScan = allResiForExpedition?.find(
+        (item) => item.Resi.toLowerCase() === currentResi.toLowerCase()
+      );
+
+      if (existingResiScan) {
+        const existingScanDate = new Date(existingResiScan.created);
+        const currentScanDate = new Date(formattedDate);
+
+        // Check if the existing scan date is OUTSIDE the current scan date range (i.e., different day)
+        if (format(existingScanDate, "yyyy-MM-dd") !== format(currentScanDate, "yyyy-MM-dd")) {
+          validationStatus = 'PREVIOUSLY_SCANNED';
+          validationMessage = `Resi ini sudah pernah discan pada tanggal ${format(existingScanDate, 'dd/MM/yyyy')} di karung ${existingResiScan.nokarung}. Tidak dapat discan ulang.`;
+        } else {
+          // If it's the same day, it's a DUPLICATE_RESI
+          validationStatus = 'DUPLICATE_RESI';
+          validationMessage = `Resi duplikat! Resi ini sudah discan di karung ${existingResiScan.nokarung} pada tanggal ${format(existingScanDate, 'dd/MM/yyyy')}.`;
+        }
+      }
+
+      if (validationStatus !== 'OK') {
+        showError(validationMessage || "Validasi gagal.");
+        beepDouble.play(); // Play double beep for duplicates/previously scanned
+        setIsProcessing(false);
+        keepFocus();
+        return;
+      }
+      // --- End Client-side Validation Logic ---
+
+      // --- Optimistic UI Update ---
+      const newResiEntry: ResiExpedisiData = {
+        Resi: currentResi,
+        nokarung: selectedKarung,
+        created: new Date().toISOString(),
+        Keterangan: actualCourierName, // Use validated courier name
+        schedule: "ontime", // Optimistic schedule
+        optimisticId: currentOptimisticId,
+      };
 
       if (currentResiData) {
-        const newResiEntry: ResiExpedisiData = {
-          Resi: currentResi,
-          nokarung: selectedKarung,
-          created: new Date().toISOString(),
-          Keterangan: expedition, // Use expedition as initial optimistic Keterangan
-          schedule: "ontime", // Optimistic schedule
-          optimisticId: currentOptimisticId, // Add unique optimistic ID
-        };
         queryClient.setQueryData(queryKey, [...currentResiData, newResiEntry]);
-        lastOptimisticIdRef.current = currentOptimisticId; // Store the ID of this optimistic entry
-        console.log("Optimistically updated allResiForExpedition cache with ID:", currentOptimisticId);
       } else {
-        // If data not in cache, force refetch for this specific query
-        queryClient.invalidateQueries({ queryKey: queryKey });
-        console.log("allResiForExpedition cache not found, invalidating for refetch.");
+        queryClient.setQueryData(queryKey, [newResiEntry]); // Initialize if empty
       }
+      lastOptimisticIdRef.current = currentOptimisticId;
+      console.log("Optimistically updated allResiForExpedition cache with ID:", currentOptimisticId);
       // --- End Optimistic UI Update ---
 
       // Re-enable input immediately after optimistic update
       setIsProcessing(false); // Allow user to type next resi
       keepFocus(); // Keep focus on the input
 
-      const edgeFunctionUrl = `https://${SUPABASE_PROJECT_ID}.supabase.co/functions/v1/process-resi-scan`;
+      // --- Direct Supabase Insert/Update ---
+      // 1. Insert into tbl_resi
+      const { error: insertError } = await supabase
+        .from("tbl_resi")
+        .insert({
+          Resi: currentResi,
+          nokarung: selectedKarung,
+          created: new Date().toISOString(),
+          Keterangan: actualCourierName,
+          schedule: "ontime",
+        });
 
-      const response = await fetch(edgeFunctionUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({
-          resiNumber: currentResi,
-          expedition,
-          selectedKarung,
-          formattedDate,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (response.ok && result.success) {
-        showSuccess(result.message); // Show success toast from backend message
-        beepSuccess.play(); // Play success sound
-
-        // If optimistic update was done, update the Keterangan if it changed (e.g., ID_REKOMENDASI)
-        if (lastOptimisticIdRef.current === currentOptimisticId && result.actual_couriername && result.actual_couriername !== expedition) {
-            queryClient.setQueryData(queryKey, (oldData: ResiExpedisiData[] | undefined) => {
-                if (!oldData) return undefined;
-                return oldData.map(item => item.optimisticId === currentOptimisticId ? { ...item, Keterangan: result.actual_couriername } : item);
-            });
-            console.log(`Updated optimistic entry Keterangan to ${result.actual_couriername} for ID: ${currentOptimisticId}`);
-        }
-        // Clear the optimistic ref as the operation was successful
-        lastOptimisticIdRef.current = null;
-        
-        debouncedInvalidate(); // Invalidate dashboard queries in the background
-      } else {
-        // Handle errors: revert optimistic update if necessary, show error toast
-        if (result.type === "duplicate" || result.type === "previouslyScanned") { // NEW: Treat previouslyScanned as a duplicate rejection
-          showError(result.message);
-          beepDouble.play(); // Mainkan beep-double untuk duplikat atau sudah discan sebelumnya
-        } else {
-          showError(result.message || "Terjadi kesalahan saat memproses resi. Silakan coba lagi.");
-          beepFailure.play(); // Mainkan beep-failure untuk kesalahan lainnya
-        }
-
-        // Revert optimistic update if the actual operation failed
-        if (currentResiData && currentOptimisticId) { // Ensure we had data to optimistically update and an ID was generated
-            queryClient.setQueryData(queryKey, (oldData: ResiExpedisiData[] | undefined) => {
-                if (!oldData) return undefined;
-                // Filter out only the specific optimistic entry using its unique ID
-                return oldData.filter(item => item.optimisticId !== currentOptimisticId);
-            });
-            console.log(`Reverted optimistic update for ID: ${currentOptimisticId} due to backend error.`);
-        } else {
-            console.log(`Skipping optimistic revert for ID: ${currentOptimisticId} as no optimistic data was found or ID was null.`);
-        }
-        console.error("Error during resi input via Edge Function:", result.message);
+      if (insertError) {
+        throw new Error(`Gagal menyisipkan resi ke tbl_resi: ${insertError.message}`);
       }
-    } catch (error: any) {
-      showError(`Terjadi kesalahan jaringan: ${error.message || "Silakan periksa koneksi internet Anda."}`);
-      beepFailure.play();
-      console.error("Error during resi input via Edge Function:", error);
+      console.log("Successfully inserted into tbl_resi.");
 
-      // Revert optimistic update on network error
-      if (currentResiData && currentOptimisticId) { // Ensure we had data to optimistically update and an ID was generated
+      // 2. Update tbl_expedisi flag to 'YES'
+      const { error: updateExpedisiError } = await supabase
+        .from("tbl_expedisi")
+        .update({ flag: "YES" })
+        .eq("resino", currentResi);
+
+      if (updateExpedisiError) {
+        throw new Error(`Gagal memperbarui flag di tbl_expedisi: ${updateExpedisiError.message}`);
+      }
+      console.log("Successfully updated tbl_expedisi flag.");
+
+      showSuccess(`Resi ${currentResi} berhasil discan.`);
+      beepSuccess.play();
+
+      // Clear the optimistic ref as the operation was successful
+      lastOptimisticIdRef.current = null;
+      
+      debouncedInvalidate(); // Invalidate dashboard queries in the background
+
+    } catch (error: any) {
+      showError(`Terjadi kesalahan: ${error.message || "Silakan coba lagi."}`);
+      beepFailure.play();
+      console.error("Error during resi input:", error);
+
+      // Revert optimistic update on error
+      if (currentResiData && lastOptimisticIdRef.current) {
           queryClient.setQueryData(queryKey, (oldData: ResiExpedisiData[] | undefined) => {
               if (!oldData) return undefined;
-              return oldData.filter(item => item.optimisticId !== currentOptimisticId);
+              return oldData.filter(item => item.optimisticId !== lastOptimisticIdRef.current);
           });
-          console.log(`Reverted optimistic update for ID: ${currentOptimisticId} due to network error.`);
+          console.log(`Reverted optimistic update for ID: ${lastOptimisticIdRef.current} due to error.`);
       } else {
-          console.log(`Skipping optimistic revert for ID: ${currentOptimisticId} as no optimistic data was found or ID was null.`);
+          console.log(`Skipping optimistic revert as no optimistic data was found or ID was null.`);
       }
+      lastOptimisticIdRef.current = null; // Clear the ref after attempting revert
     } finally {
       console.log("Finished handleScanResi for:", currentResi, "at:", new Date().toISOString());
+      setIsProcessing(false);
+      keepFocus();
     }
   };
 

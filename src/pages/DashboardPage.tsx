@@ -56,7 +56,7 @@ const DashboardPage: React.FC = () => {
     modalData,
     modalType,
     selectedCourier,
-    handleOpenTransaksiHariIniModal, // NEW: Import the new handler
+    handleOpenTransaksiHariIniModal,
     handleOpenBelumKirimModal,
     handleOpenFollowUpFlagNoModal,
     handleOpenScanFollowupModal,
@@ -142,7 +142,7 @@ const DashboardPage: React.FC = () => {
             gradientFrom="from-green-400"
             gradientTo="to-blue-500"
             icon="package"
-            onClick={handleOpenTransaksiHariIniModal} {/* Added onClick handler */}
+            onClick={handleOpenTransaksiHariIniModal}
           />
           <SummaryCard
             title="Total Scan"

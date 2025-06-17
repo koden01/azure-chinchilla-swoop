@@ -153,8 +153,7 @@ const InputPage = () => {
                 onChange={(e) => setResiNumber(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
-                    // handleScanResi(); // <--- Panggilan ini dikomentari sementara
-                    console.log("handleScanResi dikomentari untuk debugging.");
+                    handleScanResi(); // <--- Panggilan ini diaktifkan kembali
                   }
                 }}
                 ref={resiInputRef}
@@ -163,7 +162,7 @@ const InputPage = () => {
                   isProcessing && "opacity-70 cursor-not-allowed"
                 )}
                 disabled={!expedition || !selectedKarung || isProcessing}
-                inputMode="none"
+                // inputMode="none" // <--- Atribut ini dihapus
               />
               {isProcessing && (
                 <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-6 w-6 animate-spin text-gray-500" />

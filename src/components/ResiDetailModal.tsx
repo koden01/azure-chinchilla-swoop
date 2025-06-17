@@ -115,9 +115,9 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
 
   const getTableHeaders = React.useCallback(() => {
     if (modalType === "belumKirim" || modalType === "expeditionDetail") {
-      return ["No. Resi", "No Order", "Marketplace", "Tanggal Pembelian", "Kurir", "CEKFU", "Aksi"];
+      return ["No. Resi", "No Order", "Marketplace", "Tanggal Pembelian", "Kurir", "Followup", "Aksi"];
     } else if (modalType === "followUp") {
-      return ["No. Resi", "Tanggal Resi", "Tanggal Expedisi", "Kurir", "CEKFU", "Aksi"];
+      return ["No. Resi", "Tanggal Resi", "Tanggal Expedisi", "Kurir", "Followup", "Aksi"];
     }
     return [];
   }, [modalType]);

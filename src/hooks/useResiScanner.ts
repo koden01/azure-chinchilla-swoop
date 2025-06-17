@@ -28,11 +28,12 @@ interface UseResiScannerProps {
   expedition: string;
   selectedKarung: string;
   formattedDate: string;
-  allResiForExpedition: ResiExpedisiData[] | undefined;
+  allResiForExpedition: ResiExpedisiData[] | undefined; // This is still used for optimistic updates
+  allResiDataComprehensive: ResiExpedisiData[] | undefined; // NEW: Comprehensive list
   allExpedisiDataUnfiltered: ExpedisiData[] | undefined; // Prop for all expedisi data
 }
 
-export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allResiForExpedition, allExpedisiDataUnfiltered }: UseResiScannerProps) => {
+export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allResiForExpedition, allResiDataComprehensive, allExpedisiDataUnfiltered }: UseResiScannerProps) => {
   const [resiNumber, setResiNumber] = React.useState<string>("");
   const [isProcessing, setIsProcessing] = React.useState<boolean>(false);
   const resiInputRef = React.useRef<HTMLInputElement>(null);
@@ -45,6 +46,8 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
     invalidateDashboardQueries(queryClient, new Date(), expedition);
     // NEW: Invalidate historyData for the current day to ensure immediate update
     queryClient.invalidateQueries({ queryKey: ["historyData", formattedDate, formattedDate] });
+    // Invalidate the comprehensive resi data to ensure it's up-to-date for future scans
+    queryClient.invalidateQueries({ queryKey: ["allResiDataComprehensive"] });
   }, 150);
 
   const keepFocus = () => {
@@ -82,7 +85,8 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
     console.log("Starting handleScanResi for:", currentResi, "at:", new Date().toISOString());
     console.log("Supabase Project ID in useResiScanner:", SUPABASE_PROJECT_ID); // Log Supabase Project ID
 
-    const queryKey = ["allResiForExpedition", expedition, formattedDate];
+    const queryKey = ["allResiForExpedition", expedition, formattedDate]; // Still used for optimistic update
+
     const currentOptimisticId = Date.now().toString() + Math.random().toString(36).substring(2, 9);
 
     try {
@@ -124,14 +128,14 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
         return; // Exit early if initial validation fails
       }
 
-      // 2. Check tbl_resi for any scan of this resi, regardless of date range
-      const existingResiScan = allResiForExpedition?.find(
+      // 2. Check tbl_resi for any scan of this resi using the comprehensive list
+      const existingResiScan = allResiDataComprehensive?.find(
         (item) => item.Resi.toLowerCase() === currentResi.toLowerCase()
       );
 
       if (existingResiScan) {
         const existingScanDate = new Date(existingResiScan.created);
-        const currentScanDate = new Date(formattedDate);
+        const currentScanDate = new Date(); // Use current date for comparison
 
         if (format(existingScanDate, "yyyy-MM-dd") === format(currentScanDate, "yyyy-MM-dd")) {
           validationStatus = 'DUPLICATE_RESI';
@@ -160,11 +164,17 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
         optimisticId: currentOptimisticId,
       };
 
+      // Update the specific query for the current expedition and date
       queryClient.setQueryData(queryKey, (oldData: ResiExpedisiData[] | undefined) => {
         return [...(oldData || []), newResiEntry]; // Ensure oldData is an array
       });
+      // Also optimistically update the comprehensive list
+      queryClient.setQueryData(["allResiDataComprehensive"], (oldData: ResiExpedisiData[] | undefined) => {
+        return [...(oldData || []), newResiEntry];
+      });
+
       lastOptimisticIdRef.current = currentOptimisticId;
-      console.log("Optimistically updated allResiForExpedition cache with ID:", currentOptimisticId);
+      console.log("Optimistically updated caches with ID:", currentOptimisticId);
       // --- End Optimistic UI Update ---
 
       // Re-enable input immediately after optimistic update
@@ -226,6 +236,9 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
       if (lastOptimisticIdRef.current) {
           queryClient.setQueryData(queryKey, (oldData: ResiExpedisiData[] | undefined) => {
               return (oldData || []).filter(item => item.optimisticId !== lastOptimisticIdRef.current);
+          });
+          queryClient.setQueryData(["allResiDataComprehensive"], (oldData: ResiExpedisiData[] | undefined) => {
+            return (oldData || []).filter(item => item.optimisticId !== lastOptimisticIdRef.current);
           });
           console.log(`Reverted optimistic update for ID: ${lastOptimisticIdRef.current} due to error.`);
       }

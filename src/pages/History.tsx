@@ -3,7 +3,7 @@ import { MadeWithDyad } from "@/components/made-with-dyad";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon, Loader2 } from "lucide-react"; // Import Loader2 for loading state
+import { CalendarIcon, Copy } from "lucide-react"; // Import Copy for the new button
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -38,7 +38,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { showSuccess, showError } from "@/utils/toast";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
-// ExcelJS dan file-saver tidak lagi diimpor di sini, akan diimpor secara dinamis
 
 interface HistoryData {
   Resi: string;
@@ -54,7 +53,6 @@ const HistoryPage = () => {
   const [searchQuery, setSearchQuery] = React.useState<string>("");
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [resiToDelete, setResiToDelete] = React.useState<string | null>(null);
-  const [isExporting, setIsExporting] = React.useState(false); // New state for export loading
 
   const queryClient = useQueryClient();
 
@@ -178,7 +176,7 @@ const HistoryPage = () => {
       }
     }
     return pages;
-  };
+    };
 
   const handleDeleteClick = (resi: string) => {
     setResiToDelete(resi);
@@ -215,51 +213,37 @@ const HistoryPage = () => {
     setResiToDelete(null);
   };
 
-  const handleExportToExcel = async () => {
+  const handleCopyTableData = async () => {
     if (filteredHistoryData.length === 0) {
-      showError("Tidak ada data untuk diekspor.");
+      showError("Tidak ada data untuk disalin.");
       return;
     }
 
-    setIsExporting(true); // Set loading state to true
-    try {
-      // Dynamic import of ExcelJS and file-saver
-      const ExcelJS = (await import('exceljs')).default;
-      const { saveAs } = await import('file-saver');
+    const headers = ["Nomor Resi", "Keterangan", "No Karung", "Schedule", "Tanggal Input"];
+    const headerRow = headers.join('\t');
 
-      const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet("History Resi");
-
-      worksheet.columns = [
-        { header: "Nomor Resi", key: "Resi", width: 20 },
-        { header: "Keterangan", key: "Keterangan", width: 15 },
-        { header: "No Karung", key: "nokarung", width: 15 },
-        { header: "Schedule", key: "schedule", width: 15 },
-        { header: "Tanggal Input", key: "created", width: 25 },
+    const rows = filteredHistoryData.map(item => {
+      return [
+        item.Resi || "",
+        item.Keterangan || "",
+        item.nokarung || "",
+        item.schedule || "",
+        format(new Date(item.created), "dd/MM/yyyy HH:mm"),
       ];
+    });
 
-      filteredHistoryData.forEach(item => {
-        worksheet.addRow({
-          Resi: item.Resi,
-          Keterangan: item.Keterangan || "",
-          nokarung: item.nokarung || "",
-          schedule: item.schedule || "",
-          created: format(new Date(item.created), "dd/MM/yyyy HH:mm"),
-        });
-      });
+    const dataRows = rows.map(row => row.join('\t')).join('\n');
+    const textToCopy = `${headerRow}\n${dataRows}`;
 
-      const buffer = await workbook.xlsx.writeBuffer();
-      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    console.log("Attempting to copy data:", textToCopy);
 
-      const fileName = `History_Resi_${formattedStartDate}_to_${formattedEndDate}.xlsx`;
-      saveAs(blob, fileName);
-
-      showSuccess(`Berhasil mengekspor ${filteredHistoryData.length} data ke ${fileName}`);
-    } catch (error: any) {
-      showError(`Gagal mengekspor data: ${error.message || "Terjadi kesalahan."}`);
-      console.error("Error exporting to Excel:", error);
-    } finally {
-      setIsExporting(false); // Set loading state to false
+    try {
+      await navigator.clipboard.writeText(textToCopy);
+      showSuccess(`Berhasil menyalin ${filteredHistoryData.length} baris data!`);
+      console.log("Data copied successfully!");
+    } catch (err: any) {
+      showError(`Gagal menyalin data tabel: ${err.message || "Unknown error"}`);
+      console.error("Failed to copy table data:", err);
     }
   };
 
@@ -342,18 +326,11 @@ const HistoryPage = () => {
                   />
                 </div>
                 <Button
-                  className="bg-green-600 hover:bg-green-700 text-white whitespace-nowrap"
-                  onClick={handleExportToExcel}
-                  disabled={isExporting || filteredHistoryData.length === 0} // Disable if exporting or no data
+                  className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap"
+                  onClick={handleCopyTableData}
+                  disabled={filteredHistoryData.length === 0}
                 >
-                  {isExporting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Mengekspor...
-                    </>
-                  ) : (
-                    `Export Data (${filteredHistoryData.length} records)`
-                  )}
+                  <Copy className="mr-2 h-4 w-4" /> Copy Table Data ({filteredHistoryData.length} records)
                 </Button>
               </div>
             </div>

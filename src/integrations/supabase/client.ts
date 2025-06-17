@@ -21,6 +21,10 @@ console.log("Supabase Client Init: VITE_SUPABASE_URL:", SUPABASE_URL ? "Loaded" 
 console.log("Supabase Client Init: VITE_SUPABASE_ANON_KEY:", SUPABASE_PUBLISHABLE_KEY ? "Loaded" : "NOT LOADED");
 console.log("Supabase Client Init: Project ID:", SUPABASE_PROJECT_ID);
 
+// NEW: Log the actual values being used
+console.log("Supabase Client: Actual URL used:", SUPABASE_URL);
+console.log("Supabase Client: Actual Anon Key used (first 5 chars):", SUPABASE_PUBLISHABLE_KEY ? SUPABASE_PUBLISHABLE_KEY.substring(0, 5) + '...' : 'N/A');
+
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";

@@ -153,7 +153,8 @@ const InputPage = () => {
                 onChange={(e) => setResiNumber(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
-                    handleScanResi();
+                    // handleScanResi(); // <--- Panggilan ini dikomentari sementara
+                    console.log("handleScanResi dikomentari untuk debugging.");
                   }
                 }}
                 ref={resiInputRef}

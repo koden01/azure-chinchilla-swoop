@@ -3,8 +3,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { persistQueryClient } from '@tanstack/query-persist-client-core'; // Import persistQueryClient
-import { persister } from "@/lib/queryClientPersister"; // Import persister
+import { persistQueryClient } from '@tanstack/query-persist-client-core';
+import { persister } from "@/lib/queryClientPersister";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ExpeditionProvider } from "./context/ExpeditionContext";
 import Layout from "./components/Layout";
@@ -19,7 +19,7 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       gcTime: 1000 * 60 * 60, // Cache garbage collection time: 1 hour
-      staleTime: 1000 * 60 * 5, // Data is considered fresh for 5 minutes
+      staleTime: 1000 * 60 * 1, // Data is considered fresh for 1 minute (changed from 5 minutes)
     },
   },
 });

@@ -17,8 +17,9 @@ if (!SUPABASE_PUBLISHABLE_KEY) {
 const SUPABASE_PROJECT_ID = SUPABASE_URL.split('//')[1].split('.')[0];
 
 // Log untuk debugging: Pastikan kunci API dimuat dengan benar
-console.log("Supabase Client: VITE_SUPABASE_URL loaded:", SUPABASE_URL ? "Yes" : "No");
-console.log("Supabase Client: VITE_SUPABASE_ANON_KEY loaded:", SUPABASE_PUBLISHABLE_KEY ? "Yes" : "No");
+console.log("Supabase Client Init: VITE_SUPABASE_URL:", SUPABASE_URL ? "Loaded" : "NOT LOADED");
+console.log("Supabase Client Init: VITE_SUPABASE_ANON_KEY:", SUPABASE_PUBLISHABLE_KEY ? "Loaded" : "NOT LOADED");
+console.log("Supabase Client Init: Project ID:", SUPABASE_PROJECT_ID);
 
 
 // Import the supabase client like this:

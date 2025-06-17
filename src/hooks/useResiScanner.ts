@@ -84,12 +84,16 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
     const queryKey = ["allResiForExpedition", expedition, formattedDate];
     const currentOptimisticId = Date.now().toString() + Math.random().toString(36).substring(2, 9);
 
-    // Declare currentResiData here so it's accessible in the catch block
-    let currentResiData: ResiExpedisiData[] | undefined;
+    // Declare and initialize currentResiData here to ensure it's always defined
+    let currentResiData: ResiExpedisiData[] = []; 
 
     try {
       // Store current data for potential rollback
-      currentResiData = queryClient.getQueryData<ResiExpedisiData[]>(queryKey);
+      const cachedData = queryClient.getQueryData<ResiExpedisiData[]>(queryKey);
+      if (cachedData) {
+        currentResiData = cachedData;
+      }
+      console.log("Cached data for optimistic update:", currentResiData);
 
       // --- Client-side Validation Logic (Moved from RPC) ---
       let actualCourierName: string | null = null;
@@ -169,11 +173,9 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
         optimisticId: currentOptimisticId,
       };
 
-      if (currentResiData) {
-        queryClient.setQueryData(queryKey, [...currentResiData, newResiEntry]);
-      } else {
-        queryClient.setQueryData(queryKey, [newResiEntry]); // Initialize if empty
-      }
+      queryClient.setQueryData(queryKey, (oldData: ResiExpedisiData[] | undefined) => {
+        return [...(oldData || []), newResiEntry]; // Ensure oldData is an array
+      });
       lastOptimisticIdRef.current = currentOptimisticId;
       console.log("Optimistically updated allResiForExpedition cache with ID:", currentOptimisticId);
       // --- End Optimistic UI Update ---
@@ -233,10 +235,10 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
       beepFailure.play();
 
       // Revert optimistic update on error
-      if (currentResiData && lastOptimisticIdRef.current) {
+      if (lastOptimisticIdRef.current) { // Only check this ref
           queryClient.setQueryData(queryKey, (oldData: ResiExpedisiData[] | undefined) => {
-              if (!oldData) return undefined;
-              return oldData.filter(item => item.optimisticId !== lastOptimisticIdRef.current);
+              // If oldData is undefined, return an empty array, otherwise filter
+              return (oldData || []).filter(item => item.optimisticId !== lastOptimisticIdRef.current);
           });
           console.log(`Reverted optimistic update for ID: ${lastOptimisticIdRef.current} due to error.`);
       } else {

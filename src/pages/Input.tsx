@@ -25,13 +25,14 @@ const InputPage = () => {
     allResiForExpedition,
     isLoadingAllResiForExpedition,
     allExpedisiDataUnfiltered,
+    allResiDataComprehensive, // Pastikan ini diambil dari useResiInputData
     currentCount: getCountForSelectedKarung,
     lastKarung,
     highestKarung,
     karungOptions,
     formattedDate,
     karungSummary,
-    expeditionOptions, // NEW: Get expeditionOptions from the hook
+    expeditionOptions,
   } = useResiInputData(expedition);
 
   const {
@@ -45,6 +46,7 @@ const InputPage = () => {
     selectedKarung, 
     formattedDate,
     allResiForExpedition,
+    allResiDataComprehensive, // Meneruskan allResiDataComprehensive
     allExpedisiDataUnfiltered,
   });
 
@@ -81,7 +83,7 @@ const InputPage = () => {
     currentCount,
     isProcessing,
     karungSummary,
-    expeditionOptions, // Log the new options
+    expeditionOptions,
   });
 
   return (
@@ -120,7 +122,7 @@ const InputPage = () => {
                   <SelectValue placeholder="Pilih Expedisi" />
                 </SelectTrigger>
                 <SelectContent className="max-h-[200px] overflow-y-auto">
-                  {expeditionOptions.map((expName) => ( // Dynamically render SelectItems
+                  {expeditionOptions.map((expName) => (
                     <SelectItem key={expName} value={expName}>{expName}</SelectItem>
                   ))}
                 </SelectContent>

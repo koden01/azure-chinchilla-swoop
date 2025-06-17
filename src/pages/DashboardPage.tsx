@@ -79,23 +79,23 @@ const DashboardPage: React.FC = () => {
   };
 
   // Logic to determine which page numbers to display for expedition pagination
-  const getExpeditionPaginationPages = () => {
+  const getExpeditionPaginationPages = React.useMemo(() => {
     const pages = [];
-    if (totalPages <= 3) {
-      for (let i = 1; i <= totalPages; i++) {
+    if (totalExpeditionPages <= 3) {
+      for (let i = 1; i <= totalExpeditionPages; i++) {
         pages.push(i);
       }
     } else {
       if (expeditionCurrentPage <= 2) {
         pages.push(1, 2, 3);
-      } else if (expeditionCurrentPage >= totalPages - 1) {
-        pages.push(totalPages - 2, totalPages - 1, totalPages);
+      } else if (expeditionCurrentPage >= totalExpeditionPages - 1) {
+        pages.push(totalExpeditionPages - 2, totalExpeditionPages - 1, totalExpeditionPages);
       } else {
         pages.push(expeditionCurrentPage - 1, expeditionCurrentPage, expeditionCurrentPage + 1);
       }
     }
     return pages;
-  };
+  }, [expeditionCurrentPage, totalExpeditionPages]);
 
   console.log("expeditionSummaries in DashboardPage (before map):", expeditionSummaries); // Debug log
 
@@ -201,14 +201,12 @@ const DashboardPage: React.FC = () => {
           {totalExpeditionPages > 1 && (
             <Pagination className="mt-4">
               <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    href="#"
-                    onClick={() => handleExpeditionPageChange(expeditionCurrentPage - 1)}
-                    className={expeditionCurrentPage === 1 ? "pointer-events-none opacity-50" : ""}
-                  />
-                </PaginationItem>
-                {getExpeditionPaginationPages().map((pageNumber) => (
+                <PaginationPrevious
+                  href="#"
+                  onClick={() => handleExpeditionPageChange(expeditionCurrentPage - 1)}
+                  className={expeditionCurrentPage === 1 ? "pointer-events-none opacity-50" : ""}
+                />
+                {getExpeditionPaginationPages.map((pageNumber) => (
                   <PaginationItem key={pageNumber}>
                     <PaginationLink
                       href="#"
@@ -219,13 +217,11 @@ const DashboardPage: React.FC = () => {
                     </PaginationLink>
                   </PaginationItem>
                 ))}
-                <PaginationItem>
-                  <PaginationNext
-                    href="#"
-                    onClick={() => handleExpeditionPageChange(expeditionCurrentPage + 1)}
-                    className={expeditionCurrentPage === totalExpeditionPages ? "pointer-events-none opacity-50" : ""}
-                  />
-                </PaginationItem>
+                <PaginationNext
+                  href="#"
+                  onClick={() => handleExpeditionPageChange(expeditionCurrentPage + 1)}
+                  className={expeditionCurrentPage === totalExpeditionPages ? "pointer-events-none opacity-50" : ""}
+                />
               </PaginationContent>
             </Pagination>
           )}

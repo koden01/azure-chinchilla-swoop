@@ -3,7 +3,7 @@ import { MadeWithDyad } from "@/components/made-with-dyad";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon, Copy } from "lucide-react"; // Import Copy for the new button
+import { CalendarIcon, Copy } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -160,7 +160,7 @@ const HistoryPage = () => {
     setCurrentPage(1);
   }, [searchQuery, startDate, endDate]);
 
-  const getPaginationPages = () => {
+  const getPaginationPages = React.useMemo(() => {
     const pages = [];
     if (totalPages <= 3) {
       for (let i = 1; i <= totalPages; i++) {
@@ -176,7 +176,7 @@ const HistoryPage = () => {
       }
     }
     return pages;
-    };
+    }, [currentPage, totalPages]);
 
   const handleDeleteClick = (resi: string) => {
     setResiToDelete(resi);
@@ -371,12 +371,13 @@ const HistoryPage = () => {
                       <TableCell className="font-medium">{startIndex + index + 1}</TableCell>
                       <TableCell className="w-[25%]">{data.Resi}</TableCell>
                       <TableCell>
-                        <span className="px-2 py-1 rounded-full text-xs font-semibold"
-                          style={{
-                            backgroundColor: data.Keterangan === "DATA" ? "#e0f7fa" : data.Keterangan === "MASUK" ? "#e8f5e9" : "#fff3e0",
-                            color: data.Keterangan === "DATA" ? "#00796b" : data.Keterangan === "MASUK" ? "#2e7d32" : "#e65100",
-                          }}
-                        >
+                        <span className={cn(
+                          "px-2 py-1 rounded-full text-xs font-semibold",
+                          data.Keterangan === "DATA" && "bg-blue-100 text-blue-800",
+                          data.Keterangan === "MASUK" && "bg-green-100 text-green-800",
+                          data.Keterangan === "BATAL" && "bg-orange-100 text-orange-800",
+                          !["DATA", "MASUK", "BATAL"].includes(data.Keterangan || "") && "bg-gray-100 text-gray-800"
+                        )}>
                           {data.Keterangan}
                         </span>
                       </TableCell>
@@ -408,7 +409,7 @@ const HistoryPage = () => {
                     className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
                   />
                 </PaginationItem>
-                {getPaginationPages().map((pageNumber) => (
+                {getPaginationPages.map((pageNumber) => (
                   <PaginationItem key={pageNumber}>
                     <PaginationLink
                       href="#"

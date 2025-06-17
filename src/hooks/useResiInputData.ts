@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
+import { format, startOfDay, endOfDay } from "date-fns";
 import React from "react";
 
 interface KarungSummaryItem {
@@ -8,11 +8,46 @@ interface KarungSummaryItem {
   quantity: number;
 }
 
+// Define the type for ResiExpedisiData to match useResiInputData
+interface ResiExpedisiData {
+  Resi: string;
+  nokarung: string | null;
+  created: string;
+  Keterangan: string | null; // Changed to Keterangan to match tbl_resi
+  schedule: string | null;
+}
+
 export const useResiInputData = (expedition: string) => {
   const today = new Date();
   const formattedDate = format(today, "yyyy-MM-dd");
+  const startOfTodayISO = startOfDay(today).toISOString();
+  const endOfTodayISO = endOfDay(today).toISOString();
 
-  // NEW: Query to fetch lastKarung directly from database using RPC
+  // Query to fetch all resi data for the current expedition and date for local validation
+  const { data: allResiForExpedition, isLoading: isLoadingAllResiForExpedition } = useQuery<ResiExpedisiData[]>({
+    queryKey: ["allResiForExpedition", expedition, formattedDate],
+    queryFn: async () => {
+      if (!expedition) return [];
+
+      console.log(`Fetching allResiForExpedition for ${expedition} on ${formattedDate} (for local validation)`);
+      const { data, error } = await supabase
+        .from("tbl_resi")
+        .select("Resi, nokarung, created, Keterangan, schedule")
+        .eq("Keterangan", expedition) // Filter by Keterangan (expedition name)
+        .gte("created", startOfTodayISO)
+        .lt("created", endOfTodayISO);
+
+      if (error) {
+        console.error("Error fetching all resi for expedition:", error);
+        throw error;
+      }
+      console.log(`Fetched ${data?.length || 0} resi for local validation.`);
+      return data || [];
+    },
+    enabled: !!expedition,
+  });
+
+  // Query to fetch lastKarung directly from database using RPC
   const { data: lastKarungData, isLoading: isLoadingLastKarung } = useQuery<string | null>({
     queryKey: ["lastKarung", expedition, formattedDate],
     queryFn: async () => {
@@ -88,8 +123,8 @@ export const useResiInputData = (expedition: string) => {
   }, [karungSummaryData]);
 
   return {
-    // allResiForExpedition is no longer returned as it's not needed
-    isLoadingAllResiForExpedition: isLoadingLastKarung || isLoadingKarungSummary, // Combine loading states
+    allResiForExpedition, // Now returned
+    isLoadingAllResiForExpedition: isLoadingAllResiForExpedition || isLoadingLastKarung || isLoadingKarungSummary, // Combine loading states
     currentCount,
     lastKarung,
     highestKarung,

@@ -7,23 +7,25 @@ import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns"; // Import format for current timestamp
 
-interface UseResiScannerProps {
-  expedition: string;
-  selectedKarung: string;
-  formattedDate: string;
-}
-
 // Define the type for ResiExpedisiData to match useResiInputData
 interface ResiExpedisiData {
   Resi: string;
   nokarung: string | null;
   created: string;
-  couriername: string | null;
+  Keterangan: string | null; // Changed to Keterangan to match tbl_resi
+  schedule: string | null;
   // Add an optional optimisticId to distinguish optimistic entries
   optimisticId?: string; 
 }
 
-export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: UseResiScannerProps) => {
+interface UseResiScannerProps {
+  expedition: string;
+  selectedKarung: string;
+  formattedDate: string;
+  allResiForExpedition: ResiExpedisiData[] | undefined; // New prop for local validation
+}
+
+export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allResiForExpedition }: UseResiScannerProps) => {
   const [resiNumber, setResiNumber] = React.useState<string>("");
   const [isProcessing, setIsProcessing] = React.useState<boolean>(false);
   const resiInputRef = React.useRef<HTMLInputElement>(null);
@@ -75,6 +77,22 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
       return;
     }
 
+    // --- NEW: Local IndexedDB Duplicate Check ---
+    const isLocallyDuplicate = allResiForExpedition?.some(
+      (item) => item.Resi.toLowerCase() === currentResi.toLowerCase() &&
+                 format(new Date(item.created), "yyyy-MM-dd") === formattedDate
+    );
+
+    if (isLocallyDuplicate) {
+      showError(`Resi duplikat! Resi ${currentResi} sudah discan hari ini (dari cache lokal).`);
+      beepDouble.play();
+      setResiNumber(""); // Clear input
+      setIsProcessing(false); // Stop processing indicator
+      keepFocus();
+      return; // Stop further processing
+    }
+    // --- END NEW: Local IndexedDB Duplicate Check ---
+
     setIsProcessing(true); // Start processing indicator
     console.log("Starting handleScanResi for:", currentResi, "at:", new Date().toISOString());
 
@@ -90,13 +108,13 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
           Resi: currentResi,
           nokarung: selectedKarung,
           created: new Date().toISOString(),
-          couriername: expedition, // Use expedition as initial optimistic couriername
+          Keterangan: expedition, // Use expedition as initial optimistic Keterangan
+          schedule: "ontime", // Optimistic schedule
           optimisticId: currentOptimisticId, // Add unique optimistic ID
         };
         queryClient.setQueryData(queryKey, [...currentResiData, newResiEntry]);
         lastOptimisticIdRef.current = currentOptimisticId; // Store the ID of this optimistic entry
         console.log("Optimistically updated allResiForExpedition cache with ID:", currentOptimisticId);
-        // Removed optimistic success toast here, will show after backend confirmation
       } else {
         // If data not in cache, force refetch for this specific query
         queryClient.invalidateQueries({ queryKey: queryKey });
@@ -130,13 +148,13 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
         showSuccess(result.message); // Show success toast from backend message
         beepSuccess.play(); // Play success sound
 
-        // If optimistic update was done, update the couriername if it changed
+        // If optimistic update was done, update the Keterangan if it changed (e.g., ID_REKOMENDASI)
         if (lastOptimisticIdRef.current === currentOptimisticId && result.actual_couriername && result.actual_couriername !== expedition) {
             queryClient.setQueryData(queryKey, (oldData: ResiExpedisiData[] | undefined) => {
                 if (!oldData) return undefined;
-                return oldData.map(item => item.optimisticId === currentOptimisticId ? { ...item, couriername: result.actual_couriername } : item);
+                return oldData.map(item => item.optimisticId === currentOptimisticId ? { ...item, Keterangan: result.actual_couriername } : item);
             });
-            console.log(`Updated optimistic entry couriername to ${result.actual_couriername} for ID: ${currentOptimisticId}`);
+            console.log(`Updated optimistic entry Keterangan to ${result.actual_couriername} for ID: ${currentOptimisticId}`);
         }
         // Clear the optimistic ref as the operation was successful
         lastOptimisticIdRef.current = null;

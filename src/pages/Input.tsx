@@ -88,21 +88,6 @@ const InputPage = () => {
     setShowAllExpeditionSummary(false); // Reset state when modal closes
   };
 
-  console.log("InputPage State:", {
-    expedition,
-    selectedKarung,
-    isLoadingAllResiForExpedition,
-    allResiForExpeditionCount: allResiForExpedition?.length,
-    currentCount,
-    isProcessing,
-    karungSummary,
-    allExpeditionKarungSummary,
-    expeditionOptions,
-    showAllExpeditionSummary,
-  });
-
-  console.log("InputPage rendered."); // Added this line
-
   return (
     <React.Fragment>
       <div className="flex flex-col items-center justify-center p-4 md:p-6 bg-gray-50 h-[calc(100vh-64px)] mt-16 overflow-hidden">

@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/pagination";
 
 const DashboardPage: React.FC = () => {
+  console.log("DashboardPage rendering...");
   const [date, setDate] = React.useState<Date | undefined>(new Date());
   const queryClient = useQueryClient();
 
@@ -96,6 +97,8 @@ const DashboardPage: React.FC = () => {
     }
     return pages;
   }, [expeditionCurrentPage, totalExpeditionPages]);
+
+  console.log("expeditionSummaries in DashboardPage (before map):", expeditionSummaries); // Debug log
 
   return (
     <>

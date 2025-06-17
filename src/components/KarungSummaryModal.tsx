@@ -18,10 +18,9 @@ import {
 interface KarungSummaryModalProps {
   isOpen: boolean;
   onClose: () => void;
-  expedition?: string; // Make optional
+  expedition: string;
   date: string;
-  summaryData: { karungNumber: string; quantity: number; expeditionName?: string }[]; // Add optional expeditionName
-  showAllExpeditions: boolean; // New prop to indicate if it's showing all
+  summaryData: { karungNumber: string; quantity: number; }[];
 }
 
 const KarungSummaryModal: React.FC<KarungSummaryModalProps> = ({
@@ -30,40 +29,35 @@ const KarungSummaryModal: React.FC<KarungSummaryModalProps> = ({
   expedition,
   date,
   summaryData,
-  showAllExpeditions, // Destructure new prop
 }) => {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>
-            {showAllExpeditions ? "Ringkasan Karung Semua Expedisi" : `Ringkasan Karung ${expedition}`}
-          </DialogTitle>
+          <DialogTitle>Ringkasan Karung</DialogTitle>
           <DialogDescription>
-            Detail karung untuk {showAllExpeditions ? "semua ekspedisi" : `ekspedisi ${expedition}`} pada tanggal {date}.
+            Detail karung untuk ekspedisi {expedition} pada tanggal {date}.
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">
           <Table>
             <TableHeader>
               <TableRow>
-                {showAllExpeditions && <TableHead>Expedisi</TableHead>} {/* Conditionally render */}
                 <TableHead>No Karung</TableHead>
                 <TableHead className="text-right">QTY</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {summaryData.length > 0 ? (
-                summaryData.map((item, index) => (
-                  <TableRow key={`${item.expeditionName || expedition}-${item.karungNumber}-${index}`}>
-                    {showAllExpeditions && <TableCell className="font-medium">{item.expeditionName}</TableCell>} {/* Conditionally render */}
+                summaryData.map((item) => (
+                  <TableRow key={item.karungNumber}>
                     <TableCell className="font-medium">{item.karungNumber}</TableCell>
                     <TableCell className="text-right">{item.quantity}</TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={showAllExpeditions ? 3 : 2} className="text-center">
+                  <TableCell colSpan={2} className="text-center">
                     Tidak ada data karung untuk tanggal ini.
                   </TableCell>
                 </TableRow>

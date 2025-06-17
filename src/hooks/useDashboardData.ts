@@ -27,15 +27,17 @@ export const useDashboardData = (date: Date | undefined) => {
     queryFn: async () => {
       if (!date) return 0;
       const { startString, endString } = getExpedisiDateRange(date);
+      console.log(`Fetching transaksiHariIni for date range: ${startString} to ${endString}`);
       const { count, error } = await supabase
         .from("tbl_expedisi")
         .select("*", { count: "exact" })
         .gte("created", startString)
         .lt("created", endString); // Use lt for end of day to include all seconds up to 23:59:59
       if (error) {
-        console.error("Error fetching Transaksi Hari Ini:", error.message);
+        console.error("Error fetching Transaksi Hari Ini:", error);
         throw error;
       }
+      console.log("Transaksi Hari Ini (Summary Card):", count);
       return count || 0;
     },
     enabled: !!date,
@@ -46,6 +48,7 @@ export const useDashboardData = (date: Date | undefined) => {
     queryKey: ["totalScan", formattedDate],
     queryFn: async () => {
       if (!date) return 0;
+      console.log(`Fetching totalScan for date: ${formattedDate}`);
       const { count, error } = await supabase
         .from("tbl_resi")
         .select("*", { count: "exact" })
@@ -53,9 +56,10 @@ export const useDashboardData = (date: Date | undefined) => {
         .gte("created", startOfDay(date).toISOString()) // Correct for timestamp with time zone
         .lt("created", endOfDay(date).toISOString()); // Correct for timestamp with time zone
       if (error) {
-        console.error("Error fetching Total Scan:", error.message);
+        console.error("Error fetching Total Scan:", error);
         throw error;
       }
+      console.log("Total Scan (Summary Card):", count);
       return count || 0;
     },
     enabled: !!date,
@@ -66,6 +70,7 @@ export const useDashboardData = (date: Date | undefined) => {
     queryKey: ["idRekCount", formattedDate],
     queryFn: async () => {
       if (!date) return 0;
+      console.log(`Fetching idRekCount for date: ${formattedDate}`);
       const { count, error } = await supabase
         .from("tbl_resi")
         .select("*", { count: "exact" })
@@ -73,9 +78,10 @@ export const useDashboardData = (date: Date | undefined) => {
         .gte("created", startOfDay(date).toISOString()) // Correct for timestamp with time zone
         .lt("created", endOfDay(date).toISOString()); // Correct for timestamp with time zone
       if (error) {
-        console.error("Error fetching ID Rekomendasi:", error.message);
+        console.error("Error fetching ID Rekomendasi:", error);
         throw error;
       }
+      console.log("ID Rekomendasi (Summary Card):", count);
       return count || 0;
     },
     enabled: !!date,
@@ -87,6 +93,7 @@ export const useDashboardData = (date: Date | undefined) => {
     queryFn: async () => {
       if (!date) return 0;
       const { startString, endString } = getExpedisiDateRange(date);
+      console.log(`Fetching belumKirim for date range: ${startString} to ${endString}`);
       const { count, error } = await supabase
         .from("tbl_expedisi")
         .select("*", { count: "exact" })
@@ -94,9 +101,10 @@ export const useDashboardData = (date: Date | undefined) => {
         .gte("created", startString)
         .lt("created", endString);
       if (error) {
-        console.error("Error fetching Belum Kirim:", error.message);
+        console.error("Error fetching Belum Kirim:", error);
         throw error;
       }
+      console.log("Belum Kirim (Summary Card):", count);
       return count || 0;
     },
     enabled: !!date,
@@ -108,13 +116,15 @@ export const useDashboardData = (date: Date | undefined) => {
     queryFn: async () => {
       // Always use the actual current date for this specific query
       const actualCurrentFormattedDate = format(new Date(), 'yyyy-MM-dd');
+      console.log(`Fetching followUpFlagNoCount for actual current date: ${actualCurrentFormattedDate}`);
       const { data: countData, error: rpcError } = await supabase.rpc("get_flag_no_except_today_count", {
         p_selected_date: actualCurrentFormattedDate,
       });
       if (rpcError) {
-        console.error("Error fetching Follow Up (Flag NO except today):", rpcError.message);
+        console.error("Error fetching Follow Up (Flag NO except today):", rpcError);
         throw rpcError;
       }
+      console.log("Follow Up (Flag NO except actual today - Summary Card):", countData);
       return countData || 0;
     },
     // This query should always be enabled as it's independent of the dashboard's selected date filter
@@ -126,6 +136,7 @@ export const useDashboardData = (date: Date | undefined) => {
     queryKey: ["scanFollowupLateCount", formattedDate],
     queryFn: async () => {
       if (!date) return 0;
+      console.log(`Fetching scanFollowupLateCount for date: ${formattedDate}`);
       const { count, error } = await supabase
         .from("tbl_resi")
         .select("*", { count: "exact" })
@@ -133,9 +144,10 @@ export const useDashboardData = (date: Date | undefined) => {
         .gte("created", startOfDay(date).toISOString()) // Correct for timestamp with time zone
         .lt("created", endOfDay(date).toISOString()); // Correct for timestamp with time zone
       if (error) {
-        console.error("Error fetching Scan Followup (Late):", error.message);
+        console.error("Error fetching Scan Followup (Late):", error);
         throw error;
       }
+      console.log("Scan Followup (Late - Summary Card):", count);
       return count || 0;
     },
     enabled: !!date,
@@ -146,6 +158,7 @@ export const useDashboardData = (date: Date | undefined) => {
     queryKey: ["batalCount", formattedDate],
     queryFn: async () => {
       if (!date) return 0;
+      console.log(`Fetching batalCount for date: ${formattedDate}`);
       const { count, error } = await supabase
         .from("tbl_resi")
         .select("*", { count: "exact" })
@@ -153,9 +166,10 @@ export const useDashboardData = (date: Date | undefined) => {
         .gte("created", startOfDay(date).toISOString()) // Correct for timestamp with time zone
         .lt("created", endOfDay(date).toISOString()); // Correct for timestamp with time zone
       if (error) {
-        console.error("Error fetching Batal Count:", error.message);
+        console.error("Error fetching Batal Count:", error);
         throw error;
       }
+      console.log("Batal Count (Summary Card):", count);
       return count || 0;
     },
     enabled: !!date,
@@ -166,13 +180,15 @@ export const useDashboardData = (date: Date | undefined) => {
     queryKey: ["followUpData", formattedDate],
     queryFn: async () => {
       if (!date) return [];
+      console.log(`Fetching followUpData for date: ${formattedDate}`);
       const { data, error } = await supabase.rpc("get_scan_follow_up", {
         selected_date: formattedDate,
       });
       if (error) {
-        console.error("Error fetching Follow Up Data (RPC):", error.message);
+        console.error("Error fetching Follow Up Data (RPC):", error);
         throw error;
       }
+      console.log("Follow Up Data (RPC):", data);
       return data || [];
     },
     enabled: !!date,
@@ -195,7 +211,7 @@ export const useDashboardData = (date: Date | undefined) => {
       const { data, error } = await query;
 
       if (error) {
-        console.error(`Error fetching paginated data from ${tableName}:`, error.message);
+        console.error(`Error fetching paginated data from ${tableName}:`, error);
         throw error;
       }
 
@@ -214,7 +230,9 @@ export const useDashboardData = (date: Date | undefined) => {
   const { data: allExpedisiDataUnfiltered, isLoading: isLoadingAllExpedisiUnfiltered } = useQuery<any[]>({
     queryKey: ["allExpedisiDataUnfiltered"], // No date in key, fetch all
     queryFn: async () => {
+      console.log("Fetching allExpedisiDataUnfiltered (paginated).");
       const data = await fetchAllDataPaginated("tbl_expedisi");
+      console.log("All Expedisi Data (unfiltered, paginated):", data.length, "items");
       return data;
     },
     enabled: true, // Always enabled to get all mappings
@@ -226,7 +244,9 @@ export const useDashboardData = (date: Date | undefined) => {
     queryFn: async () => {
       if (!date) return [];
       const { startString, endString } = getExpedisiDateRange(date);
+      console.log(`Fetching expedisiDataForSelectedDate for date range (paginated): ${startString} to ${endString}`);
       const data = await fetchAllDataPaginated("tbl_expedisi", "created", startString, endString);
+      console.log("Expedisi Data for Selected Date (filtered, paginated):", data.length, "items");
       return data;
     },
     enabled: !!date,
@@ -237,7 +257,9 @@ export const useDashboardData = (date: Date | undefined) => {
     queryKey: ["allResiData", formattedDate],
     queryFn: async () => {
       if (!date) return [];
+      console.log(`Fetching allResiData for date (paginated): ${formattedDate}`);
       const data = await fetchAllDataPaginated("tbl_resi", "created", startOfDay(date).toISOString(), endOfDay(date).toISOString());
+      console.log("All Resi Data (filtered by selected date, paginated):", data.length, "items");
       return data;
     },
     enabled: !!date,
@@ -245,10 +267,27 @@ export const useDashboardData = (date: Date | undefined) => {
 
   // Process data to create expedition summaries
   useEffect(() => {
+    console.log("--- useEffect for expeditionSummaries calculation started ---");
+    console.log("Dependencies status:");
+    console.log(`  isLoadingAllExpedisiUnfiltered: ${isLoadingAllExpedisiUnfiltered}`);
+    console.log(`  isLoadingExpedisiDataForSelectedDate: ${isLoadingExpedisiDataForSelectedDate}`);
+    console.log(`  isLoadingAllResi: ${isLoadingAllResi}`);
+    console.log(`  allExpedisiDataUnfiltered: ${allExpedisiDataUnfiltered ? 'Loaded (' + allExpedisiDataUnfiltered.length + ' items)' : 'Not Loaded'}`);
+    console.log(`  expedisiDataForSelectedDate: ${expedisiDataForSelectedDate ? 'Loaded (' + expedisiDataForSelectedDate.length + ' items)' : 'Not Loaded'}`);
+    console.log(`  allResiData: ${allResiData ? 'Loaded (' + allResiData.length + ' items)' : 'Not Loaded'}`);
+    console.log(`  date: ${date ? date.toISOString() : 'null'}`);
+
+
     if (isLoadingAllExpedisiUnfiltered || isLoadingExpedisiDataForSelectedDate || isLoadingAllResi || !allExpedisiDataUnfiltered || !expedisiDataForSelectedDate || !allResiData || !date) {
       setExpeditionSummaries([]);
+      console.log("Expedition summaries: Dependencies not ready or date is null. Setting summaries to empty.");
       return;
     }
+
+    console.log("Starting detailed expedition summaries calculation...");
+    console.log("allExpedisiDataUnfiltered for resiToExpeditionMap (count):", allExpedisiDataUnfiltered.length);
+    console.log("expedisiDataForSelectedDate for totalTransaksi/sisa (count):", expedisiDataForSelectedDate.length);
+    console.log("allResiData for other counts (count, already date-filtered):", allResiData.length);
 
     // Build a comprehensive map from all expedisi data (unfiltered)
     const resiToExpeditionMap = new Map<string, string>();
@@ -259,6 +298,7 @@ export const useDashboardData = (date: Date | undefined) => {
         resiToExpeditionMap.set(normalizedResino, exp.couriername?.trim().toUpperCase() || ""); // Normalize couriername here too
       }
     });
+    console.log("resiToExpeditionMap (comprehensive, size):", resiToExpeditionMap.size);
 
     const summaries: { [key: string]: any } = {};
 
@@ -277,21 +317,33 @@ export const useDashboardData = (date: Date | undefined) => {
         totalScanFollowUp: 0, 
       };
     });
+    console.log("Initial summaries structure (keys):", Object.keys(summaries));
+
+    // --- START: Debugging for discrepancy ---
+    const uncountedExpedisiRecords: any[] = [];
+    // --- END: Debugging for discrepancy ---
 
     // Process expedisiDataForSelectedDate for totalTransaksi and sisa
     // This data is already filtered by date from Supabase using 'created::date'
     expedisiDataForSelectedDate.forEach(exp => {
       const normalizedCourierName = exp.couriername?.trim().toUpperCase(); // Normalize here
+
+      console.log(`  Processing expedisiDataForSelectedDate record: Resi=${exp.resino}, Courier (raw)=${exp.couriername} (Normalized: ${normalizedCourierName}), Created (raw): ${exp.created}`);
       
       if (normalizedCourierName && summaries[normalizedCourierName]) {
         summaries[normalizedCourierName].totalTransaksi++;
         if (exp.flag === "NO") {
           summaries[normalizedCourierName].sisa++;
         }
+        console.log(`    -> Matched courier for ${normalizedCourierName}. Current totalTransaksi: ${summaries[normalizedCourierName].totalTransaksi}, sisa: ${summaries[normalizedCourierName].sisa}`);
       } else {
-        // console.warn(`expedisiDataForSelectedDate: Normalized Courier name '${normalizedCourierName}' not found in summaries or is null/empty for resino: ${exp.resino}. This record will not be counted in expedition summaries.`); // Removed
+        console.warn(`    -> expedisiDataForSelectedDate: Normalized Courier name '${normalizedCourierName}' not found in summaries or is null/empty for resino: ${exp.resino}. This record will not be counted in expedition summaries.`);
+        uncountedExpedisiRecords.push(exp); // Add to uncounted list
       }
     });
+    console.log("Summaries after processing expedisiDataForSelectedDate:", summaries);
+    console.log("Uncounted expedisi records (due to missing/unrecognized couriername):", uncountedExpedisiRecords);
+
 
     // Process tbl_resi data (already filtered by selected date)
     allResiData.forEach(resi => {
@@ -309,30 +361,36 @@ export const useDashboardData = (date: Date | undefined) => {
         const normalizedKeterangan = resi.Keterangan?.trim().toUpperCase();
         if (normalizedKeterangan === "ID" || normalizedKeterangan === "ID_REKOMENDASI") {
           targetCourierName = "ID";
+          console.log(`Attributing Resi ${resi.Resi} with Keterangan '${resi.Keterangan}' to ID expedition for summary (not found in tbl_expedisi map).`);
         } else if (normalizedKeterangan && ["JNE", "SPX", "INSTAN", "SICEPAT"].includes(normalizedKeterangan)) {
           targetCourierName = normalizedKeterangan;
+          console.log(`Attributing Resi ${resi.Resi} with Keterangan '${resi.Keterangan}' to ${targetCourierName} expedition for summary (not found in tbl_expedisi map).`);
         }
       }
 
       if (targetCourierName && summaries[targetCourierName]) {
+        console.log(`Processing Resi: ${resi.Resi}, Target Courier: ${targetCourierName}, Schedule: ${resi.schedule}, Keterangan: ${resi.Keterangan}, Nokarung: ${resi.nokarung}`); 
+        
         if (resi.schedule === "ontime") {
           summaries[targetCourierName].totalScan++;
         }
         // Count ID Rekomendasi based on Keterangan
         if (resi.Keterangan === "ID_REKOMENDASI") { // Keterangan itself is "ID_REKOMENDASI", no need to normalize here
           summaries[targetCourierName].idRekomendasi++;
+          console.log(`Incremented ID Rekomendasi for ${targetCourierName}. Current: ${summaries[targetCourierName].idRekomendasi}`); 
         }
         if (resi.schedule === "batal") { 
           summaries[targetCourierName].totalBatal++;
         }
         if (resi.schedule === "late") { 
           summaries[targetCourierName].totalScanFollowUp++;
+          console.log(`Incremented Scan Follow Up for ${targetCourierName}. Current: ${summaries[targetCourierName].totalScanFollowUp}`); 
         }
         if (resi.nokarung) {
           summaries[targetCourierName].jumlahKarung.add(resi.nokarung);
         }
       } else {
-        // console.warn(`Resi ${resi.Resi} has no matching courier in summaries or targetCourierName is null/undefined. Keterangan: ${resi.Keterangan}`); // Removed
+        console.warn(`Resi ${resi.Resi} has no matching courier in summaries or targetCourierName is null/undefined. Keterangan: ${resi.Keterangan}`);
       }
     });
 
@@ -343,11 +401,17 @@ export const useDashboardData = (date: Date | undefined) => {
     }));
 
     setExpeditionSummaries(finalSummaries);
+    console.log("Final Expedition Summaries:", finalSummaries);
+    console.log("--- useEffect for expeditionSummaries calculation finished ---");
   }, [date, allExpedisiDataUnfiltered, expedisiDataForSelectedDate, allResiData, isLoadingAllExpedisiUnfiltered, isLoadingExpedisiDataForSelectedDate, isLoadingAllResi]);
 
   // Real-time subscription for dashboard data
   useEffect(() => {
+    console.log("Setting up Supabase Realtime subscription for Dashboard data...");
+
     const handleRealtimeEvent = (payload: any) => {
+      console.log("Realtime event received for Dashboard:", payload);
+      // Invalidate all relevant dashboard queries to trigger a refetch
       invalidateDashboardQueries(queryClient, date);
     };
 
@@ -362,10 +426,13 @@ export const useDashboardData = (date: Date | undefined) => {
       .subscribe();
 
     return () => {
+      console.log("Unsubscribing Supabase Realtime channels for Dashboard data.");
       supabase.removeChannel(resiChannel);
       supabase.removeChannel(expedisiChannel);
     };
   }, [queryClient, date]); // Re-subscribe if date changes
+
+  console.log("useDashboardData returning expeditionSummaries:", expeditionSummaries); // Debug log
 
   return {
     transaksiHariIni,

@@ -18,25 +18,22 @@ import { Button } from "@/components/ui/button";
 
 const InputPage = () => {
   const { expedition, setExpedition } = useExpedition();
-  const [selectedKarung, setSelectedKarung] = React.useState<string>("1"); // Default to "1"
+  const [selectedKarung, setSelectedKarung] = React.useState<string>("");
   const [isKarungSummaryModalOpen, setIsKarungSummaryModalOpen] = React.useState(false);
-  const [showAllExpeditionSummary, setShowAllExpeditionSummary] = React.useState(false); // NEW state
 
   const {
     allResiForExpedition,
     isLoadingAllResiForExpedition,
     allExpedisiDataUnfiltered,
-    allResiDataComprehensive,
+    allResiDataComprehensive, // Pastikan ini diambil dari useResiInputData
     currentCount: getCountForSelectedKarung,
     lastKarung,
     highestKarung,
     karungOptions,
     formattedDate,
     karungSummary,
-    allExpeditionKarungSummary, // NEW: Get all expedition summary
-    isLoadingAllKarungSummaries, // NEW: Loading state for all summaries
     expeditionOptions,
-  } = useResiInputData(expedition, showAllExpeditionSummary); // Pass new state to hook
+  } = useResiInputData(expedition);
 
   const {
     resiNumber,
@@ -49,7 +46,7 @@ const InputPage = () => {
     selectedKarung, 
     formattedDate,
     allResiForExpedition,
-    allResiDataComprehensive,
+    allResiDataComprehensive, // Meneruskan allResiDataComprehensive
     allExpedisiDataUnfiltered,
   });
 
@@ -63,7 +60,7 @@ const InputPage = () => {
         setSelectedKarung("1");
       }
     } else {
-      setSelectedKarung("1"); // Ensure a default is set even if no expedition
+      setSelectedKarung("");
     }
   }, [expedition, highestKarung]);
 
@@ -78,15 +75,16 @@ const InputPage = () => {
     }
   }, [expedition, selectedKarung, isProcessing]);
 
-  const handleOpenKarungSummaryModal = (showAll: boolean) => {
-    setShowAllExpeditionSummary(showAll);
-    setIsKarungSummaryModalOpen(true);
-  };
-
-  const handleCloseKarungSummaryModal = () => {
-    setIsKarungSummaryModalOpen(false);
-    setShowAllExpeditionSummary(false); // Reset state when modal closes
-  };
+  console.log("InputPage State:", {
+    expedition,
+    selectedKarung,
+    isLoadingAllResiForExpedition,
+    allResiForExpeditionCount: allResiForExpedition?.length,
+    currentCount,
+    isProcessing,
+    karungSummary,
+    expeditionOptions,
+  });
 
   return (
     <React.Fragment>
@@ -102,20 +100,17 @@ const InputPage = () => {
           </div>
           <div
             className="text-xl cursor-pointer hover:underline"
-            onClick={() => handleOpenKarungSummaryModal(false)} // Open for specific expedition
+            onClick={() => {
+              if (expedition) {
+                setIsKarungSummaryModalOpen(true);
+              }
+            }}
           >
             {expedition ? `${expedition} - Karung ${selectedKarung || '?'}` : "Pilih Expedisi"}
           </div>
           <p className="text-sm opacity-80">
             No Karung (Last: {isLoadingAllResiForExpedition ? "..." : lastKarung}, Highest: {isLoadingAllResiForExpedition ? "..." : highestKarung})
           </p>
-          <Button
-            onClick={() => handleOpenKarungSummaryModal(true)} // Open for all expeditions
-            className="mt-4 bg-white text-blue-600 hover:bg-gray-100 hover:text-blue-700"
-            disabled={isLoadingAllKarungSummaries}
-          >
-            {isLoadingAllKarungSummaries ? "Memuat Ringkasan Semua Expedisi..." : "Lihat Ringkasan Semua Expedisi"}
-          </Button>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
             <div>
@@ -182,11 +177,10 @@ const InputPage = () => {
 
       <KarungSummaryModal
         isOpen={isKarungSummaryModalOpen}
-        onClose={handleCloseKarungSummaryModal}
-        expedition={showAllExpeditionSummary ? undefined : expedition} {/* Pass expedition only if not showing all */}
+        onClose={() => setIsKarungSummaryModalOpen(false)}
+        expedition={expedition}
         date={formattedDate}
-        summaryData={showAllExpeditionSummary ? allExpeditionKarungSummary : karungSummary}
-        showAllExpeditions={showAllExpeditionSummary} {/* NEW prop */}
+        summaryData={karungSummary}
       />
     </React.Fragment>
   );

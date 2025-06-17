@@ -59,6 +59,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       const { data, error } = await query;
 
       if (error) {
+        console.error(`Error fetching paginated data from ${tableName}:`, error);
         throw error;
       }
 
@@ -79,6 +80,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     queryFn: async () => {
       if (!expedition) return [];
 
+      console.log(`Fetching allResiForExpedition for ${expedition} on ${formattedDate} (for local validation)`);
       const { data, error } = await supabase
         .from("tbl_resi")
         .select("Resi, nokarung, created, Keterangan, schedule")
@@ -87,8 +89,10 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
         .lt("created", endOfTodayISO);
 
       if (error) {
+        console.error("Error fetching all resi for expedition:", error);
         throw error;
       }
+      console.log(`Fetched ${data?.length || 0} resi for local validation.`);
       return data || [];
     },
     enabled: !!expedition,
@@ -98,7 +102,9 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
   const { data: allResiDataComprehensive, isLoading: isLoadingAllResiDataComprehensive } = useQuery<ResiExpedisiData[]>({
     queryKey: ["allResiDataComprehensive"],
     queryFn: async () => {
+      console.log("Fetching allResiDataComprehensive (paginated) for global duplicate checking.");
       const data = await fetchAllDataPaginated("tbl_resi", undefined, undefined, undefined); // No date or expedition filter
+      console.log("All Resi Data (comprehensive, paginated) for global duplicate checking:", data.length, "items");
       return data;
     },
     enabled: true, // Always enabled to get all mappings
@@ -110,7 +116,9 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
   const { data: allExpedisiDataUnfiltered, isLoading: isLoadingAllExpedisiUnfiltered } = useQuery<ExpedisiData[]>({
     queryKey: ["allExpedisiDataUnfiltered"], // No date in key, fetch all
     queryFn: async () => {
+      console.log("Fetching allExpedisiDataUnfiltered (paginated) for local validation.");
       const data = await fetchAllDataPaginated("tbl_expedisi");
+      console.log("All Expedisi Data (unfiltered, paginated) for local validation:", data.length, "items");
       return data;
     },
     enabled: true, // Always enabled to get all mappings
@@ -128,6 +136,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       });
 
       if (error) {
+        console.error("Error fetching last karung:", error);
         throw error;
       }
       return data || null;
@@ -147,6 +156,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       });
 
       if (error) {
+        console.error("Error fetching karung summary:", error);
         throw error;
       }
       return data || [];
@@ -158,11 +168,13 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
   const { data: allKarungSummariesData, isLoading: isLoadingAllKarungSummaries } = useQuery<AllKarungSummaryItem[]>({
     queryKey: ["allKarungSummaries", formattedDate],
     queryFn: async () => {
+      console.log(`Fetching allKarungSummaries for date: ${formattedDate}`);
       const { data, error } = await supabase.rpc("get_all_karung_summaries_for_date", {
         p_selected_date: formattedDate,
       });
 
       if (error) {
+        console.error("Error fetching all karung summaries:", error);
         throw error;
       }
       return data || [];
@@ -228,6 +240,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     });
 
     const sortedNames = Array.from(uniqueNames).sort((a, b) => a.localeCompare(b));
+    console.log("Generated expedition options:", sortedNames);
     return sortedNames;
   }, [allExpedisiDataUnfiltered]);
 

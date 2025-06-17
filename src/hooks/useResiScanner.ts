@@ -1,5 +1,5 @@
 import React from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, SUPABASE_PROJECT_ID } from "@/integrations/supabase/client";
 import { showSuccess, showError, dismissToast } from "@/utils/toast";
 import { beepSuccess, beepFailure, beepDouble, beepCancel } from "@/utils/audio";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -42,6 +42,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
   const lastOptimisticIdRef = React.useRef<string | null>(null);
 
   const debouncedInvalidate = useDebounce(() => {
+    console.log("Debounced invalidation triggered!");
     invalidateDashboardQueries(queryClient, new Date(), expedition);
     // NEW: Invalidate historyData for the current day to ensure immediate update
     queryClient.invalidateQueries({ queryKey: ["historyData", formattedDate, formattedDate] });
@@ -81,6 +82,8 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
     }
 
     setIsProcessing(true);
+    console.log("Starting handleScanResi for:", currentResi, "at:", new Date().toISOString());
+    console.log("Supabase Project ID in useResiScanner:", SUPABASE_PROJECT_ID); // Log Supabase Project ID
 
     const queryKey = ["allResiForExpedition", expedition, formattedDate]; // Still used for optimistic update
 
@@ -92,7 +95,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
       let validationStatus: "OK" | "DUPLICATE_RESI" | "MISMATCH_EXPEDISI" | "NOT_FOUND_EXPEDISI" = "OK";
 
       // 1. Global Resi Duplicate Check (from allResiDataComprehensive)
-      const existingResiScan = (allResiDataComprehensive ?? []).find(
+      const existingResiScan = allResiDataComprehensive?.find(
         (item) => item.Resi.toLowerCase() === currentResi.toLowerCase()
       );
 
@@ -111,7 +114,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
       }
 
       // 2. Check tbl_expedisi for the resi number and expedition match
-      const expedisiRecord = (allExpedisiDataUnfiltered ?? []).find(
+      const expedisiRecord = allExpedisiDataUnfiltered?.find(
         (exp) => exp.resino?.trim().toLowerCase() === currentResi.toLowerCase()
       );
 
@@ -191,7 +194,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
       if (!insertedData || insertedData.length === 0) {
         // This case should ideally not be hit often if client-side validation is good,
         // but it's a fallback for true race conditions.
-        console.warn("Supabase insert was ignored due to duplicate Resi (race condition). Client-side validation should have caught this this.");
+        console.warn("Supabase insert was ignored due to duplicate Resi (race condition). Client-side validation should have caught this.");
         // No need to show error here, as client-side already showed it.
         // Just ensure optimistic update is reverted if it somehow wasn't already.
         if (lastOptimisticIdRef.current) {

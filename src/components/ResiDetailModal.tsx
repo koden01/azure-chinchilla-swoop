@@ -35,7 +35,7 @@ interface ResiDetailModalProps {
   onClose: () => void;
   title: string;
   data: any[];
-  modalType: "belumKirim" | "followUp" | "expeditionDetail" | null;
+  modalType: "belumKirim" | "followUp" | "expeditionDetail" | "transaksiHariIni" | null;
   selectedCourier?: string | null;
   onBatalResi: (resiNumber: string) => Promise<void>;
   onConfirmResi: (resiNumber: string) => Promise<void>;
@@ -66,7 +66,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
   const sortedAndFilteredData = React.useMemo(() => {
     const lowerCaseSearchTerm = searchTerm.toLowerCase();
     let tempFilteredData = data.filter((item) => {
-      if (modalType === "belumKirim" || modalType === "expeditionDetail") {
+      if (modalType === "belumKirim" || modalType === "expeditionDetail" || modalType === "transaksiHariIni") {
         return (
           item.resino?.toLowerCase().includes(lowerCaseSearchTerm) ||
           item.orderno?.toLowerCase().includes(lowerCaseSearchTerm) ||
@@ -85,7 +85,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
       return false;
     });
 
-    if (modalType === "belumKirim" || modalType === "expeditionDetail") {
+    if (modalType === "belumKirim" || modalType === "expeditionDetail" || modalType === "transaksiHariIni") {
       tempFilteredData.sort((a, b) => {
         const dateA = a.datetrans ? new Date(a.datetrans).getTime() : 0;
         const dateB = b.datetrans ? new Date(b.datetrans).getTime() : 0;
@@ -114,7 +114,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
   };
 
   const getTableHeaders = React.useCallback(() => {
-    if (modalType === "belumKirim" || modalType === "expeditionDetail") {
+    if (modalType === "belumKirim" || modalType === "expeditionDetail" || modalType === "transaksiHariIni") {
       return ["No. Resi", "No Order", "Marketplace", "Tanggal Pembelian", "Kurir", "Followup", "Aksi"];
     } else if (modalType === "followUp") {
       return ["No. Resi", "Tanggal Resi", "Tanggal Expedisi", "Kurir", "Followup", "Aksi"];
@@ -123,7 +123,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
   }, [modalType]);
 
   const renderTableRows = React.useCallback(() => {
-    if (modalType === "belumKirim" || modalType === "expeditionDetail") {
+    if (modalType === "belumKirim" || modalType === "expeditionDetail" || modalType === "transaksiHariIni") {
       return currentData.map((item, index) => (
         <TableRow key={item.resino || index}>
           <TableCell>{item.resino}</TableCell>
@@ -141,7 +141,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
             <Button variant="destructive" size="sm" onClick={() => onBatalResi(item.resino)}>
               Batal
             </Button>
-            {(modalType === "expeditionDetail" || modalType === "belumKirim") && (
+            {(modalType === "expeditionDetail" || modalType === "belumKirim" || modalType === "transaksiHariIni") && (
               <Button className="bg-green-600 hover:bg-green-700 text-white" size="sm" onClick={() => onConfirmResi(item.resino)}>
                 Konfirmasi
               </Button>
@@ -187,7 +187,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
     const headerRow = headers.slice(0, -1).join('\t');
 
     const rows = sortedAndFilteredData.map(item => {
-      if (modalType === "belumKirim" || modalType === "expeditionDetail") {
+      if (modalType === "belumKirim" || modalType === "expeditionDetail" || modalType === "transaksiHariIni") {
         return [
           item.resino || "",
           item.orderno || "",

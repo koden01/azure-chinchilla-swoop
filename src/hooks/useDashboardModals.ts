@@ -18,14 +18,14 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
   const [modalTitle, setModalTitle] = React.useState("");
   const [modalData, setModalData] = React.useState<any[]>([]);
   const [modalType, setModalType] = React.useState<
-    "belumKirim" | "followUp" | "expeditionDetail" | "transaksiHariIni" | null // Added "transaksiHariIni"
+    "belumKirim" | "followUp" | "expeditionDetail" | "transaksiHariIni" | null
   >(null);
   const [selectedCourier, setSelectedCourier] = React.useState<string | null>(null);
 
   const openResiModal = (
     title: string,
     data: any[],
-    type: "belumKirim" | "followUp" | "expeditionDetail" | "transaksiHariIni", // Updated type
+    type: "belumKirim" | "followUp" | "expeditionDetail" | "transaksiHariIni",
     courier: string | null = null
   ) => {
     setModalTitle(title);
@@ -59,7 +59,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       return;
     }
     console.log("Data for 'Transaksi Hari Ini' modal:", data);
-    openResiModal("Transaksi Hari Ini", data || [], "transaksiHariIni"); // Changed type to "transaksiHariIni"
+    openResiModal("Transaksi Hari Ini", data || [], "transaksiHariIni");
   };
 
   const handleOpenBelumKirimModal = async () => {

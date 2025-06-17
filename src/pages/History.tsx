@@ -214,6 +214,9 @@ const HistoryPage = () => {
         refetchType: "all",
       });
 
+      // NEW: Invalidate the comprehensive resi data cache
+      queryClient.invalidateQueries({ queryKey: ["allResiDataComprehensive"] });
+
       // Invalidate dashboard queries and karungSummary/lastKarung for the date and expedition of the deleted resi
       invalidateDashboardQueries(queryClient, dateOfDeletedResi, expeditionOfDeletedResi); 
     }

@@ -34,7 +34,7 @@ export async function adjustResiCount(
     throw new Error(`Error fetching current count: ${countError.message}`);
   }
 
-  console.log(`Current count for ${expedition} Karung ${karungNumber} on ${format(date, 'yyyy-MM-dd')}: ${currentCount}`);
+  // console.log(`Current count for ${expedition} Karung ${karungNumber} on ${format(date, 'yyyy-MM-dd')}: ${currentCount}`); // Removed
 
   if (currentCount === null) {
     throw new Error("Could not retrieve current count.");
@@ -43,7 +43,7 @@ export async function adjustResiCount(
   if (currentCount < targetCount) {
     // Sisipkan catatan baru
     const numToInsert = targetCount - currentCount;
-    console.log(`Inserting ${numToInsert} records...`);
+    // console.log(`Inserting ${numToInsert} records...`); // Removed
     const recordsToInsert = Array.from({ length: numToInsert }).map((_, i) => ({
       Resi: `${expedition}_DUMMY_${karungNumber}_${Date.now()}_${i}`, // Resi dummy unik
       nokarung: karungNumber,
@@ -59,13 +59,13 @@ export async function adjustResiCount(
     if (insertError) {
       throw new Error(`Error inserting records: ${insertError.message}`);
     }
-    console.log(`Successfully inserted ${numToInsert} records.`);
+    // console.log(`Successfully inserted ${numToInsert} records.`); // Removed
     return `Berhasil mengatur jumlah menjadi ${targetCount} dengan menyisipkan ${numToInsert} resi.`;
 
   } else if (currentCount > targetCount) {
     // Hapus catatan
     const numToDelete = currentCount - targetCount;
-    console.log(`Deleting ${numToDelete} records...`);
+    // console.log(`Deleting ${numToDelete} records...`); // Removed
 
     // Ambil catatan untuk dihapus (misalnya, yang terbaru)
     const { data: recordsToDelete, error: fetchError } = await supabase
@@ -92,14 +92,14 @@ export async function adjustResiCount(
       if (deleteError) {
         throw new Error(`Error deleting records: ${deleteError.message}`);
       }
-      console.log(`Successfully deleted ${numToDelete} records.`);
+      // console.log(`Successfully deleted ${numToDelete} records.`); // Removed
       return `Berhasil mengatur jumlah menjadi ${targetCount} dengan menghapus ${numToDelete} resi.`;
     } else {
-      console.log("No records found to delete.");
+      // console.log("No records found to delete."); // Removed
       return `Jumlah sudah ${currentCount}, tidak ada perubahan yang diperlukan.`;
     }
   } else {
-    console.log("Count is already 54. No changes needed.");
+    // console.log("Count is already 54. No changes needed."); // Removed
     return `Jumlah sudah ${targetCount}. Tidak ada perubahan yang diperlukan.`;
   }
 }

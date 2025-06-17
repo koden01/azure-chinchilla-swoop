@@ -38,7 +38,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
   const resiInputRef = React.useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
-  const lastOptimisticIdRef = React.useRef<string | null>(lastOptimisticIdRef);
+  const lastOptimisticIdRef = React.useRef<string | null>(null); // Perbaikan di sini
 
   const debouncedInvalidate = useDebounce(() => {
     console.log("Debounced invalidation triggered!");
@@ -116,7 +116,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
           validationMessage = 'Resi tidak ditemukan dalam database ekspedisi.';
         } else if (expedisiRecord.couriername?.trim().toUpperCase() !== expedition.toUpperCase()) {
           validationStatus = 'MISMATCH_EXPEDISI';
-          validationMessage = `Resi ini bukan milik ekspedisi ${expedition}. Ini milik ${expedisiRecord.couriername}.`;
+          validationMessage = `Resi ini bukan milik ekspedisi ${expedisiRecord.couriername}.`;
         } else {
           actualCourierName = expedisiRecord.couriername;
         }

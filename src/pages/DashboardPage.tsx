@@ -56,6 +56,7 @@ const DashboardPage: React.FC = () => {
     modalData,
     modalType,
     selectedCourier,
+    handleOpenTransaksiHariIniModal, // NEW: Import the new handler
     handleOpenBelumKirimModal,
     handleOpenFollowUpFlagNoModal,
     handleOpenScanFollowupModal,
@@ -101,7 +102,7 @@ const DashboardPage: React.FC = () => {
 
   return (
     <>
-      <div className="p-6 space-y-6 bg-gray-50 min-h-[calc(100vh-64px)]">
+      <div className="p-6 space-y-6 bg-gray-50 min-h-[calc(100vh-64px)] mt-16"> {/* Added mt-16 to account for fixed navbar */}
         {/* Filter Tanggal Section */}
         <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-6 rounded-lg shadow-md">
           <h2 className="text-white text-xl font-semibold mb-4 flex items-center">
@@ -141,6 +142,7 @@ const DashboardPage: React.FC = () => {
             gradientFrom="from-green-400"
             gradientTo="to-blue-500"
             icon="package"
+            onClick={handleOpenTransaksiHariIniModal} {/* Added onClick handler */}
           />
           <SummaryCard
             title="Total Scan"
@@ -159,8 +161,8 @@ const DashboardPage: React.FC = () => {
             gradientFrom="from-orange-500"
             gradientTo="to-red-500"
             icon="warning"
-            onClick={handleOpenFollowUpFlagNoModal} // Mengubah ini agar memanggil handleOpenFollowUpFlagNoModal
-            onSisaClick={handleOpenScanFollowupModal} // Ini tetap sama
+            onClick={handleOpenFollowUpFlagNoModal}
+            onSisaClick={handleOpenScanFollowupModal}
           />
           <SummaryCard
             title="Batal"

@@ -84,8 +84,8 @@ const InputPage = () => {
 
   return (
     <React.Fragment>
-      <div className="p-4 md:p-6 space-y-6 bg-gray-50 min-h-[calc(100vh-64px)]">
-        <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-6 md:p-8 rounded-lg shadow-md text-white text-center space-y-4">
+      <div className="flex flex-col items-center justify-center p-4 md:p-6 bg-gray-50 min-h-[calc(100vh-64px)]">
+        <div className="w-full max-w-2xl bg-gradient-to-r from-blue-500 to-purple-600 p-6 md:p-8 rounded-lg shadow-md text-white text-center space-y-4">
           <h2 className="text-2xl font-semibold">Input Data Resi</h2>
           <div className="text-6xl font-bold">
             {!expedition
@@ -117,7 +117,7 @@ const InputPage = () => {
                 <SelectTrigger id="expedition-select" className="w-full bg-white text-gray-800 h-12 text-center justify-center">
                   <SelectValue placeholder="Pilih Expedisi" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-[200px] overflow-y-auto"> {/* Added max-h and overflow-y */}
                   <SelectItem value="JNE">JNE</SelectItem>
                   <SelectItem value="SPX">SPX</SelectItem>
                   <SelectItem value="INSTAN">INSTAN</SelectItem>
@@ -134,7 +134,7 @@ const InputPage = () => {
                 <SelectTrigger id="no-karung-select" className="w-full bg-white text-gray-800 h-12 text-center justify-center">
                   <SelectValue placeholder="Pilih No Karung" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-[200px] overflow-y-auto"> {/* Added max-h and overflow-y */}
                   {karungOptions.map((num) => (
                     <SelectItem key={num} value={num}>{num}</SelectItem>
                   ))}

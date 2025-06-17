@@ -184,9 +184,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
           created: new Date().toISOString(),
           Keterangan: actualCourierName,
           schedule: "ontime",
-        })
-        .onConflict("Resi") // Specify the unique constraint column
-        .ignore() // Ignore the insert if conflict occurs
+        }, { onConflict: "Resi", ignoreDuplicates: true }) // Corrected: Use onConflict option directly
         .select(); // Select the inserted row to check if it was actually inserted
 
       if (insertError) {

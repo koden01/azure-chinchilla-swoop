@@ -82,10 +82,13 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
     const queryKey = ["allResiForExpedition", expedition, formattedDate];
     const currentOptimisticId = Date.now().toString() + Math.random().toString(36).substring(2, 9);
 
-    // Store current data for potential rollback
-    const currentResiData = queryClient.getQueryData<ResiExpedisiData[]>(queryKey);
+    // Declare currentResiData here so it's accessible in the catch block
+    let currentResiData: ResiExpedisiData[] | undefined;
 
     try {
+      // Store current data for potential rollback
+      currentResiData = queryClient.getQueryData<ResiExpedisiData[]>(queryKey); // Assign here
+
       // --- Client-side Validation Logic (Moved from RPC) ---
       let actualCourierName: string | null = null;
       let validationMessage: string | null = null;

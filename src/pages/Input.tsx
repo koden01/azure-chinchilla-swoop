@@ -22,9 +22,9 @@ const InputPage = () => {
   const [isKarungSummaryModalOpen, setIsKarungSummaryModalOpen] = React.useState(false);
 
   const {
-    allResiForExpedition, // Destructure the new data
+    allResiForExpedition,
     isLoadingAllResiForExpedition,
-    allExpedisiDataUnfiltered, // NEW: Get allExpedisiDataUnfiltered
+    allExpedisiDataUnfiltered,
     currentCount: getCountForSelectedKarung,
     lastKarung,
     highestKarung,
@@ -43,8 +43,8 @@ const InputPage = () => {
     expedition, 
     selectedKarung, 
     formattedDate,
-    allResiForExpedition, // Pass the data here
-    allExpedisiDataUnfiltered, // NEW: Pass allExpedisiDataUnfiltered here
+    allResiForExpedition,
+    allExpedisiDataUnfiltered,
   });
 
   const currentCount = getCountForSelectedKarung(selectedKarung);

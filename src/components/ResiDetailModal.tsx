@@ -28,6 +28,7 @@ import {
 import { format } from "date-fns";
 import { Copy } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
+import { cn } from "@/lib/utils";
 
 interface ResiDetailModalProps {
   isOpen: boolean;
@@ -112,16 +113,16 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
     }
   };
 
-  const getTableHeaders = () => {
+  const getTableHeaders = React.useCallback(() => {
     if (modalType === "belumKirim" || modalType === "expeditionDetail") {
       return ["No. Resi", "No Order", "Marketplace", "Tanggal Pembelian", "Kurir", "CEKFU", "Aksi"];
     } else if (modalType === "followUp") {
       return ["No. Resi", "Tanggal Resi", "Tanggal Expedisi", "Kurir", "CEKFU", "Aksi"];
     }
     return [];
-  };
+  }, [modalType]);
 
-  const renderTableRows = () => {
+  const renderTableRows = React.useCallback(() => {
     if (modalType === "belumKirim" || modalType === "expeditionDetail") {
       return currentData.map((item, index) => (
         <TableRow key={item.resino || index}>
@@ -173,7 +174,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
       ));
     }
     return null;
-  };
+  }, [currentData, modalType, onBatalResi, onConfirmResi, onCekfuToggle]);
 
   const handleCopyTableData = async () => {
     if (sortedAndFilteredData.length === 0) {
@@ -222,7 +223,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
     }
   };
 
-  const getPaginationPages = () => {
+  const getPaginationPages = React.useMemo(() => {
     const pages = [];
     if (totalPages <= 3) {
       for (let i = 1; i <= totalPages; i++) {
@@ -238,7 +239,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
       }
     }
     return pages;
-  };
+  }, [currentPage, totalPages]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -295,7 +296,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
                   className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
                 />
               </PaginationItem>
-              {getPaginationPages().map((pageNumber) => (
+              {getPaginationPages.map((pageNumber) => (
                 <PaginationItem key={pageNumber}>
                   <PaginationLink
                     href="#"

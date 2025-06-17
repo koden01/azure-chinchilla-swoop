@@ -185,9 +185,9 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
           Keterangan: actualCourierName,
           schedule: "ontime",
         })
-        .select() // Select the inserted row to check if it was actually inserted
         .onConflict("Resi") // Specify the unique constraint column
-        .ignore(); // Ignore the insert if conflict occurs
+        .ignore() // Ignore the insert if conflict occurs
+        .select(); // Select the inserted row to check if it was actually inserted
 
       if (insertError) {
         throw new Error(`Gagal menyisipkan resi ke tbl_resi: ${insertError.message}`);

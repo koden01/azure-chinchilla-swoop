@@ -29,7 +29,14 @@ interface ExpedisiData {
   cekfu: boolean | null;
 }
 
-export const useResiInputData = (expedition: string) => {
+// NEW: Type for all karung summaries
+interface AllKarungSummaryItem {
+  expedition_name: string;
+  karung_number: string;
+  quantity: number;
+}
+
+export const useResiInputData = (expedition: string, showAllExpeditionSummary: boolean) => {
   const today = new Date();
   const formattedDate = format(today, "yyyy-MM-dd");
   const startOfTodayISO = startOfDay(today).toISOString();
@@ -134,10 +141,10 @@ export const useResiInputData = (expedition: string) => {
       }
       return data || null;
     },
-    enabled: !!expedition,
+    enabled: !!expedition && !showAllExpeditionSummary, // Only enabled if not showing all summaries
   });
 
-  // NEW: Query to fetch karung summary directly from database using RPC
+  // Query to fetch karung summary directly from database using RPC (for specific expedition)
   const { data: karungSummaryData, isLoading: isLoadingKarungSummary } = useQuery<KarungSummaryItem[]>({
     queryKey: ["karungSummary", expedition, formattedDate],
     queryFn: async () => {
@@ -154,7 +161,25 @@ export const useResiInputData = (expedition: string) => {
       }
       return data || [];
     },
-    enabled: !!expedition,
+    enabled: !!expedition && !showAllExpeditionSummary, // Only enabled if not showing all summaries
+  });
+
+  // NEW: Query to fetch ALL karung summaries directly from database using new RPC
+  const { data: allKarungSummariesData, isLoading: isLoadingAllKarungSummaries } = useQuery<AllKarungSummaryItem[]>({
+    queryKey: ["allKarungSummaries", formattedDate],
+    queryFn: async () => {
+      console.log(`Fetching allKarungSummaries for date: ${formattedDate}`);
+      const { data, error } = await supabase.rpc("get_all_karung_summaries_for_date", {
+        p_selected_date: formattedDate,
+      });
+
+      if (error) {
+        console.error("Error fetching all karung summaries:", error);
+        throw error;
+      }
+      return data || [];
+    },
+    enabled: showAllExpeditionSummary, // Only enabled when explicitly requested
   });
 
   // Derive currentCount from karungSummaryData
@@ -192,6 +217,15 @@ export const useResiInputData = (expedition: string) => {
     })) : [];
   }, [karungSummaryData]);
 
+  // NEW: Mapped allKarungSummariesData to match existing structure for modal
+  const allExpeditionKarungSummary = React.useMemo(() => {
+    return allKarungSummariesData ? allKarungSummariesData.map(item => ({
+      expeditionName: item.expedition_name,
+      karungNumber: item.karung_number,
+      quantity: item.quantity,
+    })) : [];
+  }, [allKarungSummariesData]);
+
   // NEW: Derive unique expedition options from allExpedisiDataUnfiltered
   const expeditionOptions = React.useMemo(() => {
     const uniqueNames = new Set<string>();
@@ -213,7 +247,7 @@ export const useResiInputData = (expedition: string) => {
 
   return {
     allResiForExpedition, // Now returned
-    isLoadingAllResiForExpedition: isLoadingAllResiForExpedition || isLoadingLastKarung || isLoadingKarungSummary || isLoadingAllExpedisiUnfiltered || isLoadingAllResiDataComprehensive, // Combine loading states
+    isLoadingAllResiForExpedition: isLoadingAllResiForExpedition || isLoadingLastKarung || isLoadingKarungSummary || isLoadingAllExpedisiUnfiltered || isLoadingAllResiDataComprehensive || isLoadingAllKarungSummaries, // Combine loading states
     allResiDataComprehensive, // NEW: Return comprehensive resi data
     allExpedisiDataUnfiltered, // NEW: Return all expedisi data
     currentCount,
@@ -222,7 +256,9 @@ export const useResiInputData = (expedition: string) => {
     karungOptions,
     formattedDate,
     karungSummary,
+    allExpeditionKarungSummary, // NEW: Return all expedition karung summary
     isLoadingKarungSummary,
+    isLoadingAllKarungSummaries, // NEW: Loading state for all summaries
     expeditionOptions, // NEW: Return expedition options
   };
 };

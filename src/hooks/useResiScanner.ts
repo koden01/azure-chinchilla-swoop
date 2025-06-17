@@ -38,11 +38,13 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
   const resiInputRef = React.useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
-  const lastOptimisticIdRef = React.useRef<string | null>(null);
+  const lastOptimisticIdRef = React.useRef<string | null>(lastOptimisticIdRef);
 
   const debouncedInvalidate = useDebounce(() => {
     console.log("Debounced invalidation triggered!");
     invalidateDashboardQueries(queryClient, new Date(), expedition);
+    // NEW: Invalidate historyData for the current day to ensure immediate update
+    queryClient.invalidateQueries({ queryKey: ["historyData", formattedDate, formattedDate] });
   }, 150);
 
   const keepFocus = () => {
@@ -214,7 +216,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
       // Clear the optimistic ref as the operation was successful
       lastOptimisticIdRef.current = null;
       
-      debouncedInvalidate(); // Invalidate dashboard queries in the background
+      debouncedInvalidate(); // Invalidate dashboard queries and history in the background
 
     } catch (error: any) {
       showError(`Terjadi kesalahan: ${error.message || "Silakan coba lagi."}`);

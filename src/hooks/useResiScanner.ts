@@ -86,7 +86,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
     const currentOptimisticId = Date.now().toString() + Math.random().toString(36).substring(2, 9);
 
     try {
-      // --- Client-side Validation Logic (Moved from RPC) ---
       let actualCourierName: string | null = null;
       let validationMessage: string | null = null;
       let validationStatus: "OK" | "DUPLICATE_RESI" | "PREVIOUSLY_SCANNED" | "NOT_FOUND_EXPEDISI" | "MISMATCH_EXPEDISI" = "OK";
@@ -101,7 +100,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
           actualCourierName = 'ID_REKOMENDASI';
         } else if (expedisiRecord.couriername?.trim().toUpperCase() !== 'ID') {
           validationStatus = 'MISMATCH_EXPEDISI';
-          validationMessage = `Resi ini bukan untuk ekspedisi ID, melainkan untuk ${expedisiRecord.couriername}.`;
+          validationMessage = `Resi ini bukan milik ekspedisi ${expedition}, melainkan milik ekspedisi ${expedisiRecord.couriername}.`;
         } else {
           actualCourierName = 'ID';
         }
@@ -111,7 +110,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
           validationMessage = 'Resi tidak ditemukan dalam database ekspedisi.';
         } else if (expedisiRecord.couriername?.trim().toUpperCase() !== expedition.toUpperCase()) {
           validationStatus = 'MISMATCH_EXPEDISI';
-          validationMessage = `Resi ini bukan milik ekspedisi ${expedisiRecord.couriername}.`;
+          validationMessage = `Resi ini bukan milik ekspedisi ${expedition}, melainkan milik ekspedisi ${expedisiRecord.couriername}.`;
         } else {
           actualCourierName = expedisiRecord.couriername;
         }
@@ -122,10 +121,10 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
         beepFailure.play();
         setIsProcessing(false);
         keepFocus();
-        return;
+        return; // Exit early if initial validation fails
       }
 
-      // 2. Check tbl_resi for any scan of this resi, regardless of date range (PREVIOUSLY_SCANNED)
+      // 2. Check tbl_resi for any scan of this resi, regardless of date range
       const existingResiScan = allResiForExpedition?.find(
         (item) => item.Resi.toLowerCase() === currentResi.toLowerCase()
       );
@@ -134,14 +133,12 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
         const existingScanDate = new Date(existingResiScan.created);
         const currentScanDate = new Date(formattedDate);
 
-        // Check if the existing scan date is OUTSIDE the current scan date range (i.e., different day)
-        if (format(existingScanDate, "yyyy-MM-dd") !== format(currentScanDate, "yyyy-MM-dd")) {
-          validationStatus = 'PREVIOUSLY_SCANNED';
-          validationMessage = `Resi ini sudah pernah discan pada tanggal ${format(existingScanDate, 'dd/MM/yyyy')} di karung ${existingResiScan.nokarung}. Tidak dapat discan ulang.`;
-        } else {
-          // If it's the same day, it's a DUPLICATE_RESI
+        if (format(existingScanDate, "yyyy-MM-dd") === format(currentScanDate, "yyyy-MM-dd")) {
           validationStatus = 'DUPLICATE_RESI';
-          validationMessage = `Resi duplikat! Resi ini sudah discan di karung ${existingResiScan.nokarung} pada tanggal ${format(existingScanDate, 'dd/MM/yyyy')}.`;
+          validationMessage = `Resi DOUBLE! Resi ini sudah discan di karung ${existingResiScan.nokarung} pada tanggal ${format(existingScanDate, 'dd/MM/yyyy')} dengan keterangan ${existingResiScan.Keterangan}.`;
+        } else {
+          validationStatus = 'PREVIOUSLY_SCANNED';
+          validationMessage = `Resi ini sudah pernah discan pada tanggal ${format(existingScanDate, 'dd/MM/yyyy')} di karung ${existingResiScan.nokarung} dengan keterangan ${existingResiScan.Keterangan}. Tidak dapat discan ulang.`;
         }
       }
 
@@ -150,11 +147,10 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
         beepDouble.play(); // Play double beep for duplicates/previously scanned
         setIsProcessing(false);
         keepFocus();
-        return;
+        return; // Exit early if duplicate/previously scanned
       }
-      // --- End Client-side Validation Logic ---
 
-      // --- Optimistic UI Update ---
+      // --- Optimistic UI Update (only if all client-side validations pass) ---
       const newResiEntry: ResiExpedisiData = {
         Resi: currentResi,
         nokarung: selectedKarung,
@@ -175,7 +171,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
       setIsProcessing(false); // Allow user to type next resi
       keepFocus(); // Keep focus on the input
 
-      // --- Direct Supabase Insert/Update ---
+      // --- Direct Supabase Insert/Update (only if all client-side validations pass) ---
       // 1. Insert into tbl_resi
       const { error: insertError } = await supabase
         .from("tbl_resi")
@@ -188,58 +184,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
         });
 
       if (insertError) {
-        // Handle specific duplicate key error
-        if (insertError.code === '23505') { // PostgreSQL unique_violation error code
-          console.warn(`Duplicate key error for Resi ${currentResi}. Attempting to update to 'BATAL'.`);
-          beepCancel.play(); // Play beep-cancel sound for duplicate/batal
-
-          // Fetch the existing record to get its creation date
-          const { data: existingResiData, error: fetchExistingError } = await supabase
-            .from("tbl_resi")
-            .select("created")
-            .eq("Resi", currentResi)
-            .single();
-
-          if (fetchExistingError || !existingResiData) {
-            console.error("Failed to fetch existing resi data for duplicate:", fetchExistingError);
-            showError(`Resi "${currentResi}" sudah ada, tetapi gagal mengambil detailnya untuk pembatalan.`);
-            // Revert optimistic update on error
-            if (lastOptimisticIdRef.current) {
-                queryClient.setQueryData(queryKey, (oldData: ResiExpedisiData[] | undefined) => {
-                    return (oldData || []).filter(item => item.optimisticId !== lastOptimisticIdRef.current);
-                });
-            }
-            lastOptimisticIdRef.current = null;
-            return; // Exit early
-          }
-
-          const existingCreatedDate = new Date(existingResiData.created);
-          const formattedExistingDate = format(existingCreatedDate, "dd/MM/yyyy");
-
-          // Update the existing record to 'batal'
-          const { error: updateError } = await supabase
-            .from("tbl_resi")
-            .update({ schedule: "batal", Keterangan: "BATAL" })
-            .eq("Resi", currentResi);
-
-          if (updateError) {
-            console.error("Failed to update existing resi to BATAL:", updateError);
-            showError(`Resi "${currentResi}" sudah ada, tetapi gagal mengubah statusnya menjadi "BATAL".`);
-            // Revert optimistic update on error
-            if (lastOptimisticIdRef.current) {
-                queryClient.setQueryData(queryKey, (oldData: ResiExpedisiData[] | undefined) => {
-                    return (oldData || []).filter(item => item.optimisticId !== lastOptimisticIdRef.current);
-                });
-            }
-            lastOptimisticIdRef.current = null;
-            return; // Exit early
-          }
-
-          showSuccess(`Resi "${currentResi}" sudah ada dan diubah menjadi "BATAL" pada tanggal ${formattedExistingDate}.`);
-          debouncedInvalidate(); // Invalidate dashboard queries and history
-          lastOptimisticIdRef.current = null; // Clear the optimistic ref as the operation was successful
-          return; // Exit after handling duplicate
-        }
+        // If there's any other database error (not a duplicate key, as that's handled client-side now)
         throw new Error(`Gagal menyisipkan resi ke tbl_resi: ${insertError.message}`);
       }
       console.log("Successfully inserted into tbl_resi.");

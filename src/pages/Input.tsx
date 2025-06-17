@@ -31,6 +31,7 @@ const InputPage = () => {
     karungOptions,
     formattedDate,
     karungSummary,
+    expeditionOptions, // NEW: Get expeditionOptions from the hook
   } = useResiInputData(expedition);
 
   const {
@@ -80,6 +81,7 @@ const InputPage = () => {
     currentCount,
     isProcessing,
     karungSummary,
+    expeditionOptions, // Log the new options
   });
 
   return (
@@ -117,12 +119,10 @@ const InputPage = () => {
                 <SelectTrigger id="expedition-select" className="w-full bg-white text-gray-800 h-12 text-center justify-center">
                   <SelectValue placeholder="Pilih Expedisi" />
                 </SelectTrigger>
-                <SelectContent className="max-h-[200px] overflow-y-auto"> {/* Added max-h and overflow-y */}
-                  <SelectItem value="JNE">JNE</SelectItem>
-                  <SelectItem value="SPX">SPX</SelectItem>
-                  <SelectItem value="INSTAN">INSTAN</SelectItem>
-                  <SelectItem value="ID">ID</SelectItem>
-                  <SelectItem value="SICEPAT">SICEPAT</SelectItem>
+                <SelectContent className="max-h-[200px] overflow-y-auto">
+                  {expeditionOptions.map((expName) => ( // Dynamically render SelectItems
+                    <SelectItem key={expName} value={expName}>{expName}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -134,7 +134,7 @@ const InputPage = () => {
                 <SelectTrigger id="no-karung-select" className="w-full bg-white text-gray-800 h-12 text-center justify-center">
                   <SelectValue placeholder="Pilih No Karung" />
                 </SelectTrigger>
-                <SelectContent className="max-h-[200px] overflow-y-auto"> {/* Added max-h and overflow-y */}
+                <SelectContent className="max-h-[200px] overflow-y-auto">
                   {karungOptions.map((num) => (
                     <SelectItem key={num} value={num}>{num}</SelectItem>
                   ))}

@@ -178,6 +178,25 @@ export const useResiInputData = (expedition: string) => {
     })) : [];
   }, [karungSummaryData]);
 
+  // NEW: Derive unique expedition options from allExpedisiDataUnfiltered
+  const expeditionOptions = React.useMemo(() => {
+    const uniqueNames = new Set<string>();
+    // Add hardcoded 'ID' first, as it has special handling
+    uniqueNames.add("ID"); 
+
+    allExpedisiDataUnfiltered?.forEach(exp => {
+      const name = exp.couriername?.trim().toUpperCase();
+      if (name) {
+        uniqueNames.add(name);
+      }
+    });
+
+    const sortedNames = Array.from(uniqueNames).sort((a, b) => a.localeCompare(b));
+    console.log("Generated expedition options:", sortedNames);
+    return sortedNames;
+  }, [allExpedisiDataUnfiltered]);
+
+
   return {
     allResiForExpedition, // Now returned
     isLoadingAllResiForExpedition: isLoadingAllResiForExpedition || isLoadingLastKarung || isLoadingKarungSummary || isLoadingAllExpedisiUnfiltered, // Combine loading states
@@ -189,5 +208,6 @@ export const useResiInputData = (expedition: string) => {
     formattedDate,
     karungSummary,
     isLoadingKarungSummary,
+    expeditionOptions, // NEW: Return expedition options
   };
 };

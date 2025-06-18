@@ -1,7 +1,7 @@
 import React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, startOfDay, endOfDay } from "date-fns";
+import { format } from "date-fns"; // Menghapus startOfDay, endOfDay
 import { showSuccess, showError } from "@/utils/toast";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
 
@@ -23,7 +23,7 @@ interface ModalDataItem {
 interface UseDashboardModalsProps {
   date: Date | undefined;
   formattedDate: string;
-  allExpedisiData: any[] | undefined; // This is still any[] as it's the raw unfiltered data
+  allExpedisiData: Map<string, any> | undefined; // Mengubah tipe menjadi Map
 }
 
 export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: UseDashboardModalsProps) => {
@@ -177,7 +177,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         console.warn(`Resi ${resiNumber} not found in tbl_expedisi. Proceeding with tbl_resi update/insert for 'batal'.`);
       }
 
-      const courierNameFromExpedisi = expedisiData?.couriername || "UNKNOWN"; // Default if not found
+      const courierName = expedisiData?.couriername || "UNKNOWN"; // Default if not found
       const createdTimestampFromExpedisi = expedisiData?.created || new Date().toISOString(); // Default to now if not found
 
       const { data: existingResi, error: checkError } = await supabase

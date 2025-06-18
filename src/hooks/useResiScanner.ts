@@ -205,7 +205,9 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
           created: new Date().toISOString(),
           Keterangan: actualCourierName,
           schedule: "ontime",
-        }, { ignoreDuplicates: true }); // Corrected: Use ignoreDuplicates for single object insert
+        })
+        .onConflict('Resi') // Specify the unique column for conflict resolution
+        .ignore(); // Ignore the insert if a conflict occurs
 
       if (insertError) {
         // If the error is not a duplicate key error, then throw it

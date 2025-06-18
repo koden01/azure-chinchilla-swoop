@@ -146,7 +146,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
   const renderTableRows = React.useCallback(() => {
     if (modalType === "belumKirim" || modalType === "expeditionDetail" || modalType === "transaksiHariIni") {
       return currentData.map((item, index) => (
-        <TableRow key={item.resino || `exp-row-${index}`}> {/* Use resino for key */}
+        <TableRow key={item.resino || `exp-row-${index}`}>
           <TableCell>{item.resino}</TableCell>
           <TableCell>{item.orderno || "-"}</TableCell>
           <TableCell>{item.chanelsales || "-"}</TableCell>
@@ -172,7 +172,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
       ));
     } else if (modalType === "followUp") {
       return currentData.map((item, index) => (
-        <TableRow key={item.Resi || `fu-row-${index}`}> {/* Use Resi for key */}
+        <TableRow key={item.Resi || `fu-row-${index}`}>
           <TableCell>{item.Resi}</TableCell>
           <TableCell>{item.created_resi ? format(new Date(item.created_resi), "dd/MM/yyyy HH:mm") : "-"}</TableCell>
           <TableCell>{item.created_expedisi ? format(new Date(item.created_expedisi), "dd/MM/yyyy HH:mm") : "-"}</TableCell>

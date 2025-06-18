@@ -178,6 +178,7 @@ export const useDashboardData = (date: Date | undefined) => {
   });
 
   // Function to fetch all data from a table with pagination
+  // This function is now only used for allExpedisiDataUnfiltered and allResiData
   const fetchAllDataPaginated = async (tableName: string, dateFilterColumn?: string, selectedDate?: Date) => {
     let allRecords: any[] = [];
     let offset = 0;
@@ -234,15 +235,21 @@ export const useDashboardData = (date: Date | undefined) => {
     enabled: true, // Always enabled to get all mappings
   });
 
-  // NEW: Fetch tbl_expedisi data specifically for the selected date (paginated)
+  // NEW: Fetch tbl_expedisi data specifically for the selected date using RPC
   const { data: expedisiDataForSelectedDate, isLoading: isLoadingExpedisiDataForSelectedDate } = useQuery<any[]>({
     queryKey: ["expedisiDataForSelectedDate", formattedDate],
     queryFn: async () => {
       if (!date) return [];
-      console.log(`Fetching expedisiDataForSelectedDate for date (paginated): ${formattedDate}`);
-      const data = await fetchAllDataPaginated("tbl_expedisi", "created", date); // Use the new date filtering logic
-      console.log("Expedisi Data for Selected Date (filtered, paginated):", data.length, "items");
-      return data;
+      console.log(`RPC Call: get_transaksi_hari_ini_records for date: ${formattedDate}`);
+      const { data, error } = await supabase.rpc("get_transaksi_hari_ini_records", {
+        p_selected_date: formattedDate,
+      });
+      if (error) {
+        console.error("Error fetching expedisiDataForSelectedDate via RPC:", error);
+        throw error;
+      }
+      console.log("Expedisi Data for Selected Date (from RPC):", data.length, "items.");
+      return data || [];
     },
     enabled: !!date,
   });

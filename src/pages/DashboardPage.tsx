@@ -5,7 +5,7 @@ import ExpeditionDetailCard from "@/components/ExpeditionDetailCard";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon, CalendarDays, Package } from "lucide-react";
+import { CalendarIcon, CalendarDays, Package, Loader2 } from "lucide-react"; // Import Loader2
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
@@ -25,6 +25,9 @@ const DashboardPage: React.FC = () => {
   console.log("DashboardPage rendering...");
   const [date, setDate] = React.useState<Date | undefined>(new Date());
   const queryClient = useQueryClient();
+
+  // Inisialisasi useTransition
+  const [isPending, startTransition] = React.useTransition();
 
   // State for expedition detail pagination
   const [expeditionCurrentPage, setExpeditionCurrentPage] = React.useState(1);
@@ -119,16 +122,23 @@ const DashboardPage: React.FC = () => {
                   "w-full md:w-[280px] justify-start text-left font-normal bg-white text-gray-800 hover:bg-gray-100",
                   !date && "text-muted-foreground"
                 )}
+                disabled={isPending} // Disable button while pending
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
                 {date ? format(date, "dd/MM/yyyy") : <span>Pilih tanggal</span>}
+                {isPending && <Loader2 className="ml-2 h-4 w-4 animate-spin" />} {/* Show spinner */}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0">
               <Calendar
                 mode="single"
                 selected={date}
-                onSelect={setDate}
+                onSelect={(newDate) => {
+                  // Gunakan startTransition untuk pembaruan state yang mungkin memakan waktu
+                  startTransition(() => {
+                    setDate(newDate);
+                  });
+                }}
                 initialFocus
               />
             </PopoverContent>

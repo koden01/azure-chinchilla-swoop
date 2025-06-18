@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/pagination";
 
 const DashboardPage: React.FC = () => {
-  console.log("DashboardPage rendering...");
+  console.log("DashboardPage rendering..."); // Added this line to force re-evaluation
   const [date, setDate] = React.useState<Date | undefined>(new Date());
   const queryClient = useQueryClient();
 

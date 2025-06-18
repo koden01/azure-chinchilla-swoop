@@ -30,11 +30,26 @@ import { Copy } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
 import { cn } from "@/lib/utils";
 
+// Define a common interface for items displayed in the modal
+interface ModalDataItem {
+  Resi?: string; // Used for 'followUp' modal type (from tbl_resi or RPC)
+  resino?: string; // Used for 'belumKirim', 'expeditionDetail', 'transaksiHariIni' (from tbl_expedisi)
+  orderno?: string | null;
+  chanelsales?: string | null;
+  couriername?: string | null;
+  created?: string; // For tbl_resi
+  datetrans?: string | null; // For tbl_expedisi
+  flag?: string | null;
+  cekfu?: boolean | null;
+  created_resi?: string; // For followUp RPC
+  created_expedisi?: string; // For followUp RPC
+}
+
 interface ResiDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
-  data: any[];
+  data: ModalDataItem[]; // Use the new interface here
   modalType: "belumKirim" | "followUp" | "expeditionDetail" | "transaksiHariIni" | null;
   selectedCourier?: string | null;
   onBatalResi: (resiNumber: string) => Promise<void>;
@@ -48,7 +63,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
   isOpen,
   onClose,
   title,
-  data,
+  data, // This is modalData from useDashboardModals
   modalType,
   selectedCourier,
   onBatalResi,
@@ -58,17 +73,23 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
+  // Log when the data prop changes
   useEffect(() => {
-    setCurrentPage(1);
-    setSearchTerm("");
-  }, [isOpen, data, modalType]);
+    console.log("ResiDetailModal: data prop changed. New length:", data.length);
+    setCurrentPage(1); // Reset page when data changes
+    setSearchTerm(""); // Reset search term when data changes
+  }, [data, isOpen, modalType]); // Added data to dependency array
 
   const sortedAndFilteredData = React.useMemo(() => {
+    console.log("ResiDetailModal: Recalculating sortedAndFilteredData. Initial data length:", data.length);
     const lowerCaseSearchTerm = searchTerm.toLowerCase();
     let tempFilteredData = data.filter((item) => {
+      // Use item.resino for tbl_expedisi based modals, item.Resi for tbl_resi based modals
+      const resiIdentifier = modalType === "followUp" ? item.Resi : item.resino;
+      
       if (modalType === "belumKirim" || modalType === "expeditionDetail" || modalType === "transaksiHariIni") {
         return (
-          item.resino?.toLowerCase().includes(lowerCaseSearchTerm) ||
+          resiIdentifier?.toLowerCase().includes(lowerCaseSearchTerm) ||
           item.orderno?.toLowerCase().includes(lowerCaseSearchTerm) ||
           item.chanelsales?.toLowerCase().includes(lowerCaseSearchTerm) ||
           item.couriername?.toLowerCase().includes(lowerCaseSearchTerm) ||
@@ -76,7 +97,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
         );
       } else if (modalType === "followUp") {
         return (
-          item.Resi?.toLowerCase().includes(lowerCaseSearchTerm) ||
+          resiIdentifier?.toLowerCase().includes(lowerCaseSearchTerm) ||
           item.couriername?.toLowerCase().includes(lowerCaseSearchTerm) ||
           (item.created_resi ? format(new Date(item.created_resi), "dd/MM/yyyy HH:mm").toLowerCase().includes(lowerCaseSearchTerm) : false) ||
           (item.created_expedisi ? format(new Date(item.created_expedisi), "dd/MM/yyyy HH:mm").toLowerCase().includes(lowerCaseSearchTerm) : false)
@@ -98,9 +119,9 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
         return dateA - dateB;
       });
     }
-
+    console.log("ResiDetailModal: Filtered data length after search/sort:", tempFilteredData.length);
     return tempFilteredData;
-  }, [searchTerm, data, modalType]);
+  }, [searchTerm, data, modalType]); // Added data to dependency array
 
   const totalPages = Math.ceil(sortedAndFilteredData.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -125,7 +146,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
   const renderTableRows = React.useCallback(() => {
     if (modalType === "belumKirim" || modalType === "expeditionDetail" || modalType === "transaksiHariIni") {
       return currentData.map((item, index) => (
-        <TableRow key={item.resino || index}>
+        <TableRow key={item.resino || `exp-row-${index}`}> {/* Use resino for key */}
           <TableCell>{item.resino}</TableCell>
           <TableCell>{item.orderno || "-"}</TableCell>
           <TableCell>{item.chanelsales || "-"}</TableCell>
@@ -134,15 +155,15 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
           <TableCell>
             <Checkbox
               checked={item.cekfu || false}
-              onCheckedChange={() => onCekfuToggle(item.resino, item.cekfu || false)}
+              onCheckedChange={() => item.resino && onCekfuToggle(item.resino, item.cekfu || false)}
             />
           </TableCell>
           <TableCell className="flex space-x-2">
-            <Button variant="destructive" size="sm" onClick={() => onBatalResi(item.resino)}>
+            <Button variant="destructive" size="sm" onClick={() => item.resino && onBatalResi(item.resino)}>
               Batal
             </Button>
             {(modalType === "expeditionDetail" || modalType === "belumKirim" || modalType === "transaksiHariIni") && (
-              <Button className="bg-green-600 hover:bg-green-700 text-white" size="sm" onClick={() => onConfirmResi(item.resino)}>
+              <Button className="bg-green-600 hover:bg-green-700 text-white" size="sm" onClick={() => item.resino && onConfirmResi(item.resino)}>
                 Konfirmasi
               </Button>
             )}
@@ -151,7 +172,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
       ));
     } else if (modalType === "followUp") {
       return currentData.map((item, index) => (
-        <TableRow key={item.Resi || index}>
+        <TableRow key={item.Resi || `fu-row-${index}`}> {/* Use Resi for key */}
           <TableCell>{item.Resi}</TableCell>
           <TableCell>{item.created_resi ? format(new Date(item.created_resi), "dd/MM/yyyy HH:mm") : "-"}</TableCell>
           <TableCell>{item.created_expedisi ? format(new Date(item.created_expedisi), "dd/MM/yyyy HH:mm") : "-"}</TableCell>
@@ -159,14 +180,14 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
           <TableCell>
             <Checkbox
               checked={item.cekfu || false}
-              onCheckedChange={() => onCekfuToggle(item.Resi, item.cekfu || false)}
+              onCheckedChange={() => item.Resi && onCekfuToggle(item.Resi, item.cekfu || false)}
             />
           </TableCell>
           <TableCell className="flex space-x-2">
-            <Button variant="destructive" size="sm" onClick={() => onBatalResi(item.Resi)}>
+            <Button variant="destructive" size="sm" onClick={() => item.Resi && onBatalResi(item.Resi)}>
               Batal
             </Button>
-            <Button className="bg-green-600 hover:bg-green-700 text-white" size="sm" onClick={() => onConfirmResi(item.Resi)}>
+            <Button className="bg-green-600 hover:bg-green-700 text-white" size="sm" onClick={() => item.Resi && onConfirmResi(item.Resi)}>
               Konfirmasi
             </Button>
           </TableCell>

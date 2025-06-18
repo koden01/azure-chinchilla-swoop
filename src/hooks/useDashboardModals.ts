@@ -5,10 +5,25 @@ import { format, startOfDay, endOfDay } from "date-fns";
 import { showSuccess, showError } from "@/utils/toast";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
 
+// Define a common interface for items displayed in the modal
+interface ModalDataItem {
+  Resi?: string; // Used for 'followUp' modal type (from tbl_resi or RPC)
+  resino?: string; // Used for 'belumKirim', 'expeditionDetail', 'transaksiHariIni' (from tbl_expedisi)
+  orderno?: string | null;
+  chanelsales?: string | null;
+  couriername?: string | null;
+  created?: string; // For tbl_resi
+  datetrans?: string | null; // For tbl_expedisi
+  flag?: string | null;
+  cekfu?: boolean | null;
+  created_resi?: string; // For followUp RPC
+  created_expedisi?: string; // For followUp RPC
+}
+
 interface UseDashboardModalsProps {
   date: Date | undefined;
   formattedDate: string;
-  allExpedisiData: any[] | undefined;
+  allExpedisiData: any[] | undefined; // This is still any[] as it's the raw unfiltered data
 }
 
 export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: UseDashboardModalsProps) => {
@@ -16,7 +31,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
 
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [modalTitle, setModalTitle] = React.useState("");
-  const [modalData, setModalData] = React.useState<any[]>([]);
+  const [modalData, setModalData] = React.useState<ModalDataItem[]>([]); // Use the new interface here
   const [modalType, setModalType] = React.useState<
     "belumKirim" | "followUp" | "expeditionDetail" | "transaksiHariIni" | null
   >(null);
@@ -24,7 +39,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
 
   const openResiModal = (
     title: string,
-    data: any[],
+    data: ModalDataItem[], // Use the new interface here
     type: "belumKirim" | "followUp" | "expeditionDetail" | "transaksiHariIni",
     courier: string | null = null
   ) => {
@@ -33,6 +48,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
     setModalType(type);
     setSelectedCourier(courier);
     setIsModalOpen(true);
+    console.log(`Modal opened: ${title}, Data length: ${data.length}, Type: ${type}`);
   };
 
   const handleOpenTransaksiHariIniModal = async () => {
@@ -169,17 +185,19 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
 
   const handleBatalResi = async (resiNumber: string) => {
     try {
+      console.log(`Attempting to batal resi: ${resiNumber}`);
       const { data: existingResi, error: checkError } = await supabase
         .from("tbl_resi")
         .select("Resi")
         .eq("Resi", resiNumber)
         .single();
 
-      if (checkError && checkError.code !== 'PGRST116') {
+      if (checkError && checkError.code !== 'PGRST116') { // PGRST116 means "no rows found"
         throw checkError;
       }
 
       if (existingResi) {
+        console.log(`Resi ${resiNumber} found in tbl_resi, updating schedule to 'batal'.`);
         const { error: updateError } = await supabase
           .from("tbl_resi")
           .update({ schedule: "batal" })
@@ -188,6 +206,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         if (updateError) throw updateError;
         showSuccess(`Resi ${resiNumber} berhasil dibatalkan.`);
       } else {
+        console.log(`Resi ${resiNumber} not found in tbl_resi, fetching from tbl_expedisi to insert as 'batal'.`);
         const { data: expedisiData, error: expFetchError } = await supabase
           .from("tbl_expedisi")
           .select("resino, created")
@@ -200,6 +219,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
           return;
         }
 
+        console.log(`Inserting resi ${resiNumber} into tbl_resi with schedule 'batal'.`);
         const { error: insertError } = await supabase
           .from("tbl_resi")
           .insert({
@@ -214,8 +234,18 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         showSuccess(`Resi ${resiNumber} berhasil dibatalkan.`);
       }
 
+      // Update modalData state immediately
+      setModalData(prevData => {
+        const newData = prevData.filter(item => {
+          const itemResi = item.Resi || item.resino;
+          return itemResi !== resiNumber;
+        });
+        console.log(`Modal data after batal for ${resiNumber}: ${prevData.length} -> ${newData.length}`);
+        return newData;
+      });
+
+      // Invalidate queries to trigger refetch for dashboard summaries
       invalidateDashboardQueries(queryClient, date);
-      setModalData(prevData => prevData.filter(item => (item.resino || item.Resi) !== resiNumber));
 
     } catch (error: any) {
       showError(`Gagal membatalkan resi ${resiNumber}. ${error.message || "Silakan coba lagi."}`);
@@ -225,7 +255,8 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
 
   const handleConfirmResi = async (resiNumber: string) => {
     try {
-      // Fetch the 'created' timestamp from tbl_expedisi first
+      console.log(`Attempting to confirm resi: ${resiNumber}`);
+      // Fetch the 'created' timestamp and couriername from tbl_expedisi first
       const { data: expedisiData, error: expFetchError } = await supabase
         .from("tbl_expedisi")
         .select("couriername, created") // Select 'created' column
@@ -239,6 +270,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       const courierName = expedisiData.couriername;
       const expedisiCreatedTimestamp = expedisiData.created; // Get the created timestamp
 
+      console.log(`Updating flag to 'YES' for resi ${resiNumber} in tbl_expedisi.`);
       const { error: expUpdateError } = await supabase
         .from("tbl_expedisi")
         .update({ flag: "YES" })
@@ -259,18 +291,21 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       }
 
       if (existingResi) {
+        console.log(`Resi ${resiNumber} found in tbl_resi, updating details.`);
         const { error: updateResiError } = await supabase
           .from("tbl_resi")
           .update({
             created: expedisiCreatedTimestamp, // Use created from tbl_expedisi
             Keterangan: courierName,
             nokarung: "0",
+            schedule: "ontime", // Set schedule to ontime upon confirmation
           })
           .eq("Resi", resiNumber);
 
         if (updateResiError) throw updateResiError;
         showSuccess(`Resi ${resiNumber} berhasil dikonfirmasi.`);
       } else {
+        console.log(`Resi ${resiNumber} not found in tbl_resi, inserting new record.`);
         const { error: insertResiError } = await supabase
           .from("tbl_resi")
           .insert({
@@ -278,14 +313,25 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
             created: expedisiCreatedTimestamp, // Use created from tbl_expedisi
             Keterangan: courierName,
             nokarung: "0",
+            schedule: "ontime", // Set schedule to ontime upon confirmation
           });
 
         if (insertResiError) throw insertResiError;
         showSuccess(`Resi ${resiNumber} berhasil dikonfirmasi.`);
       }
 
+      // Update modalData state immediately
+      setModalData(prevData => {
+        const newData = prevData.filter(item => {
+          const itemResi = item.Resi || item.resino;
+          return itemResi !== resiNumber;
+        });
+        console.log(`Modal data after confirm for ${resiNumber}: ${prevData.length} -> ${newData.length}`);
+        return newData;
+      });
+
+      // Invalidate queries to trigger refetch for dashboard summaries
       invalidateDashboardQueries(queryClient, date);
-      setModalData(prevData => prevData.filter(item => (item.resino || item.Resi) !== resiNumber));
 
     } catch (error: any) {
       showError(`Gagal mengkonfirmasi resi ${resiNumber}. ${error.message || "Silakan coba lagi."}`);
@@ -294,6 +340,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
   };
 
   const handleCekfuToggle = async (resiNumber: string, currentCekfuStatus: boolean) => {
+    console.log(`Toggling CEKFU for resi ${resiNumber} from ${currentCekfuStatus} to ${!currentCekfuStatus}`);
     const { error } = await supabase
       .from("tbl_expedisi")
       .update({ cekfu: !currentCekfuStatus })
@@ -304,14 +351,16 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       console.error("Error updating CEKFU status:", error);
     } else {
       showSuccess(`Status CEKFU resi ${resiNumber} berhasil diperbarui.`);
-      invalidateDashboardQueries(queryClient, date);
+      // Update modalData state immediately for CEKFU toggle
       setModalData(prevData =>
-        prevData.map(item =>
-          (item.resino || item.Resi) === resiNumber
+        prevData.map(item => {
+          const itemResi = item.Resi || item.resino;
+          return itemResi === resiNumber
             ? { ...item, cekfu: !currentCekfuStatus }
-            : item
-        )
+            : item;
+        })
       );
+      invalidateDashboardQueries(queryClient, date);
     }
   };
 

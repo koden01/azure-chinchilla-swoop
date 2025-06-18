@@ -261,7 +261,9 @@ const HistoryPage = () => {
     <React.Fragment>
       <div className="p-6 space-y-6 bg-gray-50 min-h-[calc(100vh-64px)]">
         <div className="bg-gradient-to-r from-green-500 to-blue-600 p-6 rounded-lg shadow-md">
-          <h2 className="text-white text-xl font-semibold mb-4">History Data Input</h2>
+          <h2 className="text-white text-xl font-semibold mb-4 flex items-center">
+            <CalendarDays className="mr-2 h-6 w-6" /> Filter Tanggal
+          </h2>
           <div className="bg-white p-4 rounded-md shadow-sm">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Filter & Search</h3>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
@@ -364,13 +366,9 @@ const HistoryPage = () => {
               </TableHeader>
               <TableBody>
                 {isLoadingHistory ? (
-                  <TableRow><TableCell colSpan={7} className="text-center">
-                      Memuat data...
-                    </TableCell></TableRow>
+                  <TableRow><TableCell colSpan={7} className="text-center">Memuat data...</TableCell></TableRow>
                 ) : currentData.length === 0 ? (
-                  <TableRow><TableCell colSpan={7} className="text-center">
-                      Tidak ada data.
-                    </TableCell></TableRow>
+                  <TableRow><TableCell colSpan={7} className="text-center">Tidak ada data.</TableCell></TableRow>
                 ) : (
                   currentData.map((data, index) => (
                     <TableRow key={data.Resi + index} className="hover:bg-gray-100">

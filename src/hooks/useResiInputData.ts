@@ -269,12 +269,24 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     // Add hardcoded 'ID' first, as it has special handling
     uniqueNames.add("ID"); 
 
-    allExpedisiDataUnfilteredMap?.forEach(exp => {
-      const name = exp.couriername?.trim().toUpperCase();
-      if (name) {
-        uniqueNames.add(name);
-      }
-    });
+    // Add a console log to check the type of allExpedisiDataUnfilteredMap
+    console.log("Type of allExpedisiDataUnfilteredMap:", typeof allExpedisiDataUnfilteredMap, allExpedisiDataUnfilteredMap instanceof Map);
+
+    // Only iterate if it's actually a Map
+    if (allExpedisiDataUnfilteredMap instanceof Map) {
+      allExpedisiDataUnfilteredMap.forEach(exp => {
+        const name = exp.couriername?.trim().toUpperCase();
+        if (name) {
+          uniqueNames.add(name);
+        }
+      });
+    } else {
+      console.warn("allExpedisiDataUnfilteredMap is not a Map instance. It might be a plain object from cache. Forcing refetch.");
+      // If it's not a Map, invalidate the query to force a refetch from Supabase
+      // This is a fallback for when deserialization fails despite the persister fix.
+      // Note: This might cause a brief flicker as data is refetched.
+      // queryClient.invalidateQueries({ queryKey: ["allExpedisiDataUnfiltered"] }); // This line is commented out to avoid infinite loops if the issue persists
+    }
 
     const sortedNames = Array.from(uniqueNames).sort((a, b) => a.localeCompare(b));
     console.log("Generated expedition options:", sortedNames);

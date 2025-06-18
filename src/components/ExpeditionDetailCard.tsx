@@ -28,17 +28,16 @@ const ExpeditionDetailCard: React.FC<ExpeditionDetailCardProps> = ({
   // gradientFrom, // Tidak digunakan untuk styling internal card lagi
   // gradientTo, // Tidak digunakan untuk styling internal card lagi
 }) => {
-  // NEW: Log all props received by this component
-  console.log(`ExpeditionDetailCard for ${name} received props:`, {
-    name,
-    totalTransaksi,
-    totalScan,
-    sisa,
-    jumlahKarung,
-    idRekomendasi,
-    totalBatal,
-    totalScanFollowUp,
-  });
+  // CRITICAL DEBUG LOG: Check exact props received by this card
+  console.log(`--- ExpeditionDetailCard DEBUG for ${name} ---`);
+  console.log(`  totalTransaksi: ${totalTransaksi}`);
+  console.log(`  totalScan: ${totalScan}`);
+  console.log(`  sisa: ${sisa}`);
+  console.log(`  jumlahKarung: ${jumlahKarung}`);
+  console.log(`  idRekomendasi: ${idRekomendasi}`);
+  console.log(`  totalBatal: ${totalBatal}`);
+  console.log(`  totalScanFollowUp: ${totalScanFollowUp}`);
+  console.log(`---------------------------------------------`);
 
   const showIdRekomendasi = name === "ID" && idRekomendasi !== undefined;
 
@@ -62,13 +61,14 @@ const ExpeditionDetailCard: React.FC<ExpeditionDetailCardProps> = ({
             {showIdRekomendasi && <p>ID Rekomendasi:</p>}
           </div>
           <div className="text-right font-medium">
-            <p>{totalTransaksi}</p>
-            <p>{totalScan}</p>
-            <p>{sisa}</p>
-            <p>{jumlahKarung}</p>
-            <p>{totalBatal}</p>
-            <p>{totalScanFollowUp}</p>
-            {showIdRekomendasi && <p>{idRekomendasi}</p>}
+            {/* Temporarily render raw values for debugging */}
+            <p>{totalTransaksi} (Raw)</p>
+            <p>{totalScan} (Raw)</p>
+            <p>{sisa} (Raw)</p>
+            <p>{jumlahKarung} (Raw)</p>
+            <p>{totalBatal} (Raw)</p>
+            <p>{totalScanFollowUp} (Raw)</p>
+            {showIdRekomendasi && <p>{idRekomendasi} (Raw)</p>}
           </div>
         </CardContent>
       </div>

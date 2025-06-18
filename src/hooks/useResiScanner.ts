@@ -195,28 +195,22 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
       setIsProcessing(false); // Allow user to type next resi
       keepFocus(); // Keep focus on the input
 
-      // --- Direct Supabase Insert/Update ---
-      // 1. Insert into tbl_resi with onConflict to avoid unique constraint error
-      const { error: insertError } = await (supabase
+      // --- Direct Supabase Insert/Update using upsert ---
+      const { error: upsertError } = await supabase
         .from("tbl_resi")
-        .insert({
+        .upsert({
           Resi: currentResi,
           nokarung: selectedKarung,
           created: new Date().toISOString(),
           Keterangan: actualCourierName,
           schedule: "ontime",
-        }) as any) // Cast to any to bypass TypeScript error for onConflict
-        .onConflict('Resi') // Specify the unique column for conflict resolution
-        .ignore(); // Ignore the insert if a conflict occurs
+        }, { onConflict: 'Resi' }); // Specify the unique column for conflict resolution
 
-      if (insertError) {
-        // If the error is not a duplicate key error, then throw it
-        // Supabase client's `ignoreDuplicates` handles the conflict silently,
-        // so if we get an error here, it's a different issue.
-        throw new Error(`Gagal menyisipkan resi ke tbl_resi: ${insertError.message}`);
+      if (upsertError) {
+        throw new Error(`Gagal menyisipkan/memperbarui resi ke tbl_resi: ${upsertError.message}`);
       }
       
-      console.log("Successfully inserted into tbl_resi (or ignored duplicate).");
+      console.log("Successfully upserted into tbl_resi.");
 
       // 2. Update tbl_expedisi flag to 'YES'
       const { error: updateExpedisiError } = await supabase

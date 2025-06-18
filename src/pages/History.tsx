@@ -37,6 +37,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { showSuccess, showError } from "@/utils/toast";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
+import { useDebounce } from "@/hooks/useDebounce"; // Import useDebounce
 
 interface HistoryData {
   Resi: string;
@@ -49,7 +50,9 @@ interface HistoryData {
 const HistoryPage = () => {
   const [startDate, setStartDate] = React.useState<Date | undefined>(new Date());
   const [endDate, setEndDate] = React.useState<Date | undefined>(new Date());
-  const [searchQuery, setSearchQuery] = React.useState<string>("");
+  const [rawSearchQuery, setRawSearchQuery] = React.useState<string>(""); // State for raw input
+  const debouncedSearchQuery = useDebounce(rawSearchQuery, 300); // Debounced search query
+
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [resiToDelete, setResiToDelete] = React.useState<string | null>(null);
 
@@ -127,7 +130,7 @@ const HistoryPage = () => {
 
   const filteredHistoryData = React.useMemo(() => {
     if (!historyData) return [];
-    const lowerCaseSearchQuery = searchQuery.toLowerCase();
+    const lowerCaseSearchQuery = debouncedSearchQuery.toLowerCase(); // Use debounced term
     const filtered = historyData.filter(data =>
       data.Resi.toLowerCase().includes(lowerCaseSearchQuery) ||
       (data.Keterangan?.toLowerCase() || "").includes(lowerCaseSearchQuery) ||
@@ -137,7 +140,7 @@ const HistoryPage = () => {
     );
     console.log("HistoryPage: filteredHistoryData", filtered);
     return filtered;
-  }, [historyData, searchQuery]);
+  }, [historyData, debouncedSearchQuery]); // Use debouncedSearchQuery as dependency
 
   const ITEMS_PER_PAGE = 10;
   const [currentPage, setCurrentPage] = React.useState(1);
@@ -157,7 +160,7 @@ const HistoryPage = () => {
 
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, startDate, endDate]);
+  }, [debouncedSearchQuery, startDate, endDate]); // Use debouncedSearchQuery here
 
   const getPaginationPages = React.useMemo(() => {
     const pages = [];
@@ -356,8 +359,8 @@ const HistoryPage = () => {
                   id="search-input"
                   type="text"
                   placeholder="Cari no. resi, keterangan, atau lainnya..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  value={rawSearchQuery} // Bind to rawSearchQuery
+                  onChange={(e) => setRawSearchQuery(e.target.value)} // Update rawSearchQuery
                   className="w-full"
                 />
               </div>
@@ -429,11 +432,13 @@ const HistoryPage = () => {
           {totalPages > 1 && (
             <Pagination className="mt-4">
               <PaginationContent>
-                <PaginationPrevious
-                  href="#"
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
-                />
+                <PaginationItem>
+                  <PaginationPrevious
+                    href="#"
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+                  />
+                </PaginationItem>
                 {getPaginationPages.map((pageNumber) => (
                   <PaginationItem key={pageNumber}>
                     <PaginationLink

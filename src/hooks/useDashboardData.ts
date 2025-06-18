@@ -11,34 +11,21 @@ export const useDashboardData = (date: Date | undefined) => {
   // State to hold expedition summaries
   const [expeditionSummaries, setExpeditionSummaries] = useState<any[]>([]);
 
-  // Helper to format date for timestamp without time zone (tbl_expedisi)
-  const getExpedisiDateRange = (selectedDate: Date) => {
-    const start = startOfDay(selectedDate);
-    const end = endOfDay(selectedDate);
-    // Format to 'YYYY-MM-DD HH:mm:ss' for timestamp without time zone comparison
-    const startString = format(start, "yyyy-MM-dd HH:mm:ss");
-    const endString = format(end, "yyyy-MM-dd HH:mm:ss");
-    return { startString, endString };
-  };
-
-  // Query for Transaksi Hari Ini (tbl_expedisi count for selected date)
+  // Query for Transaksi Hari Ini (tbl_expedisi count for selected date) using RPC
   const { data: transaksiHariIni, isLoading: isLoadingTransaksiHariIni } = useQuery<number>({
     queryKey: ["transaksiHariIni", formattedDate],
     queryFn: async () => {
       if (!date) return 0;
-      const { startString, endString } = getExpedisiDateRange(date);
-      console.log(`Fetching transaksiHariIni for date range: ${startString} to ${endString}`);
-      const { count, error } = await supabase
-        .from("tbl_expedisi")
-        .select("*", { count: "exact" })
-        .gte("created", startString)
-        .lt("created", endString); // Use lt for end of day to include all seconds up to 23:59:59
+      console.log(`Fetching transaksiHariIni count for date: ${formattedDate} using RPC.`);
+      const { data: countData, error } = await supabase.rpc("get_transaksi_hari_ini_count", {
+        p_selected_date: formattedDate,
+      });
       if (error) {
-        console.error("Error fetching Transaksi Hari Ini:", error);
+        console.error("Error fetching Transaksi Hari Ini count:", error);
         throw error;
       }
-      console.log("Transaksi Hari Ini (Summary Card):", count);
-      return count || 0;
+      console.log("Transaksi Hari Ini (Summary Card):", countData);
+      return countData || 0;
     },
     enabled: !!date,
   });
@@ -87,25 +74,21 @@ export const useDashboardData = (date: Date | undefined) => {
     enabled: !!date,
   });
 
-  // Query for Belum Kirim (tbl_expedisi count where flag = 'NO' for selected date)
+  // Query for Belum Kirim (tbl_expedisi count where flag = 'NO' for selected date) using RPC
   const { data: belumKirim, isLoading: isLoadingBelumKirim } = useQuery<number>({
     queryKey: ["belumKirim", formattedDate],
     queryFn: async () => {
       if (!date) return 0;
-      const { startString, endString } = getExpedisiDateRange(date);
-      console.log(`Fetching belumKirim for date range: ${startString} to ${endString}`);
-      const { count, error } = await supabase
-        .from("tbl_expedisi")
-        .select("*", { count: "exact" })
-        .eq("flag", "NO")
-        .gte("created", startString)
-        .lt("created", endString);
+      console.log(`Fetching belumKirim count for date: ${formattedDate} using RPC.`);
+      const { data: countData, error } = await supabase.rpc("get_belum_kirim_count", {
+        p_selected_date: formattedDate,
+      });
       if (error) {
-        console.error("Error fetching Belum Kirim:", error);
+        console.error("Error fetching Belum Kirim count:", error);
         throw error;
       }
-      console.log("Belum Kirim (Summary Card):", count);
-      return count || 0;
+      console.log("Belum Kirim (Summary Card):", countData);
+      return countData || 0;
     },
     enabled: !!date,
   });
@@ -195,7 +178,7 @@ export const useDashboardData = (date: Date | undefined) => {
   });
 
   // Function to fetch all data from a table with pagination
-  const fetchAllDataPaginated = async (tableName: string, dateFilterColumn?: string, startDate?: string, endDate?: string) => {
+  const fetchAllDataPaginated = async (tableName: string, dateFilterColumn?: string, selectedDate?: Date) => {
     let allRecords: any[] = [];
     let offset = 0;
     const limit = 1000; // Fetch 1000 records at a time
@@ -204,8 +187,14 @@ export const useDashboardData = (date: Date | undefined) => {
     while (hasMore) {
       let query = supabase.from(tableName).select("*").range(offset, offset + limit - 1);
 
-      if (dateFilterColumn && startDate && endDate) {
-        query = query.gte(dateFilterColumn, startDate).lt(dateFilterColumn, endDate);
+      if (dateFilterColumn && selectedDate) {
+        if (tableName === "tbl_expedisi" && dateFilterColumn === "created") {
+          // For tbl_expedisi.created (timestamp without time zone), filter by date part
+          query = query.filter("created::date", "eq", format(selectedDate, "yyyy-MM-dd"));
+        } else {
+          // For tbl_resi.created (timestamp with time zone), use ISO strings for range
+          query = query.gte(dateFilterColumn, startOfDay(selectedDate).toISOString()).lt(dateFilterColumn, endOfDay(selectedDate).toISOString());
+        }
       }
 
       const { data, error } = await query;
@@ -243,9 +232,8 @@ export const useDashboardData = (date: Date | undefined) => {
     queryKey: ["expedisiDataForSelectedDate", formattedDate],
     queryFn: async () => {
       if (!date) return [];
-      const { startString, endString } = getExpedisiDateRange(date);
-      console.log(`Fetching expedisiDataForSelectedDate for date range (paginated): ${startString} to ${endString}`);
-      const data = await fetchAllDataPaginated("tbl_expedisi", "created", startString, endString);
+      console.log(`Fetching expedisiDataForSelectedDate for date (paginated): ${formattedDate}`);
+      const data = await fetchAllDataPaginated("tbl_expedisi", "created", date); // Use the new date filtering logic
       console.log("Expedisi Data for Selected Date (filtered, paginated):", data.length, "items");
       return data;
     },
@@ -258,7 +246,7 @@ export const useDashboardData = (date: Date | undefined) => {
     queryFn: async () => {
       if (!date) return [];
       console.log(`Fetching allResiData for date (paginated): ${formattedDate}`);
-      const data = await fetchAllDataPaginated("tbl_resi", "created", startOfDay(date).toISOString(), endOfDay(date).toISOString());
+      const data = await fetchAllDataPaginated("tbl_resi", "created", date); // Use the new date filtering logic
       console.log("All Resi Data (filtered by selected date, paginated):", data.length, "items");
       return data;
     },

@@ -17,12 +17,12 @@ interface ResiExpedisiData {
   optimisticId?: string;
 }
 
-// Define type for tbl_expedisi data
-interface ExpedisiData {
-  resino: string;
-  couriername: string | null;
-  created: string;
-}
+// Menghapus interface ExpedisiData karena tidak lagi digunakan
+// interface ExpedisiData {
+//   resino: string;
+//   couriername: string | null;
+//   created: string;
+// }
 
 interface UseResiScannerProps {
   expedition: string;

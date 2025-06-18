@@ -24,8 +24,8 @@ const InputPage = () => {
   const {
     allResiForExpedition,
     isLoadingAllResiForExpedition,
-    allExpedisiDataUnfiltered,
-    allResiDataComprehensive, // Pastikan ini diambil dari useResiInputData
+    // allExpedisiDataUnfiltered, // REMOVED
+    // allResiDataComprehensive, // REMOVED
     currentCount: getCountForSelectedKarung,
     lastKarung,
     highestKarung,
@@ -45,8 +45,8 @@ const InputPage = () => {
     expedition, 
     selectedKarung, 
     formattedDate,
-    allResiDataComprehensive, // Meneruskan allResiDataComprehensive
-    allExpedisiDataUnfiltered,
+    // allResiDataComprehensive, // REMOVED
+    // allExpedisiDataUnfiltered, // REMOVED
   });
 
   const currentCount = getCountForSelectedKarung(selectedKarung);

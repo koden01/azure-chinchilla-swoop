@@ -28,7 +28,7 @@ import {
 import { format } from "date-fns";
 import { Copy } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
-import { cn } from "@/lib/utils";
+// import { cn } from "@/lib/utils"; // Menghapus import cn karena tidak digunakan
 
 console.log("ResiDetailModal.tsx: Component file loaded.");
 

@@ -155,6 +155,8 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       return expedisiMap;
     },
     enabled: true, // Always enabled to get all mappings
+    staleTime: 0, // Set staleTime to 0 to ensure it always refetches when invalidated
+    gcTime: 1000 * 60 * 60, // Garbage collect after 1 hour
   });
 
   // Query to fetch lastKarung directly from database using RPC

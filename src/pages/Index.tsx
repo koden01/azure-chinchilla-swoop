@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+// import { MadeWithDyad } from "@/components/made-with-dyad"; // Removed
 
 const Index: React.FC = () => {
   return (
@@ -9,6 +10,7 @@ const Index: React.FC = () => {
       <p className="text-lg text-gray-600">
         Silakan navigasi ke halaman Dashboard untuk melihat fitur utama aplikasi.
       </p>
+      {/* <MadeWithDyad /> Removed */}
     </div>
   );
 };

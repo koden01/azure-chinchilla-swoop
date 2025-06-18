@@ -47,7 +47,7 @@ const DashboardPage: React.FC = () => {
     isLoadingBatalCount,
     formattedDate,
     allExpedisiData,
-    expeditionSummaries,
+    expeditionSummaries, // Data ini berasal dari useDashboardData
   } = useDashboardData(date);
 
   const {
@@ -98,7 +98,8 @@ const DashboardPage: React.FC = () => {
     return pages;
   }, [expeditionCurrentPage, totalExpeditionPages]);
 
-  console.log("expeditionSummaries in DashboardPage (before map):", expeditionSummaries); // Debug log
+  console.log("DashboardPage: expeditionSummaries (from hook):", expeditionSummaries); // Debug log
+  console.log("DashboardPage: currentExpeditionSummaries (after pagination):", currentExpeditionSummaries); // Debug log
 
   return (
     <>

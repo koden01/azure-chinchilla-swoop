@@ -180,18 +180,18 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     queryKey: ["uniqueExpeditionNames"],
     queryFn: async () => {
       console.log("Fetching unique expedition names from tbl_expedisi.");
-      // Menggunakan sintaks distinct yang benar
+      // Mengambil semua data couriername dan memprosesnya di klien untuk mendapatkan nilai unik
       const { data, error } = await supabase
         .from("tbl_expedisi")
-        .select("couriername") // Select the column
-        .distinct(); // Apply distinct as a method call
+        .select("couriername"); // Hanya pilih kolom couriername
 
       if (error) {
         console.error("Error fetching unique expedition names:", error);
         throw error;
       }
-      const names = Array.from(new Set(data.map((item: { couriername: string | null }) => item.couriername?.trim().toUpperCase()).filter(Boolean) as string[])); // Perbaikan tipe 'item'
-      names.push("ID"); // Ensure 'ID' is always present
+      // Buat Set dari nama kurir untuk mendapatkan nilai unik
+      const names = Array.from(new Set(data.map((item: { couriername: string | null }) => item.couriername?.trim().toUpperCase()).filter(Boolean) as string[]));
+      names.push("ID"); // Pastikan 'ID' selalu ada
       return names.sort((a, b) => a.localeCompare(b));
     },
     staleTime: 1000 * 60 * 60, // Cache for 1 hour, these don't change often

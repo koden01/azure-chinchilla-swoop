@@ -41,7 +41,7 @@ serve(async (req) => {
       .single();
 
     if (duplicateCheckError && duplicateCheckError.code !== 'PGRST116') { // PGRST116 means "no rows found"
-      console.error("Edge Function: Error checking duplicate resi:", duplicateCheckError);
+      console.error("Edge Function: Error checking duplicate resi:", duplicateCheckError.message, duplicateCheckError.details, duplicateCheckError.hint);
       throw new Error(`Database error during duplicate check: ${duplicateCheckError.message}`);
     }
 
@@ -68,28 +68,35 @@ serve(async (req) => {
       .single();
 
     if (expedisiCheckError && expedisiCheckError.code !== 'PGRST116') {
-      console.error("Edge Function: Error checking expedisi record:", expedisiCheckError);
+      console.error("Edge Function: Error checking expedisi record:", expedisiCheckError.message, expedisiCheckError.details, expedisiCheckError.hint);
       throw new Error(`Database error during expedisi check: ${expedisiCheckError.message}`);
     }
 
     let expedisiCreatedTimestamp: string; // Make it non-nullable, always assign a value
 
-    if (expedisiRecord && expedisiRecord.created) {
-      // Attempt to parse the timestamp from tbl_expedisi.created
-      // Assuming it's in a format like "YYYY-MM-DD HH:MM:SS" (timestamp without time zone)
-      // Append 'Z' to treat it as UTC to avoid local timezone parsing issues
-      const dateCandidate = new Date(expedisiRecord.created + 'Z');
-      if (!isNaN(dateCandidate.getTime())) {
-        expedisiCreatedTimestamp = dateCandidate.toISOString();
-        console.log(`Edge Function: Converted expedisi created timestamp: ${expedisiRecord.created} -> ${expedisiCreatedTimestamp}`);
-      } else {
-        console.warn(`Edge Function: Failed to parse expedisi created timestamp '${expedisiRecord.created}'. Falling back to current time.`);
+    // Log the raw value from tbl_expedisi before processing
+    console.log(`Edge Function: Raw expedisiRecord.created: ${expedisiRecord?.created}`);
+
+    if (expedisiRecord && typeof expedisiRecord.created === 'string' && expedisiRecord.created.trim() !== '') {
+      try {
+        // Attempt to parse the timestamp from tbl_expedisi.created
+        // Append 'Z' to treat it as UTC to avoid local timezone parsing issues
+        const dateCandidate = new Date(expedisiRecord.created + 'Z');
+        if (!isNaN(dateCandidate.getTime())) {
+          expedisiCreatedTimestamp = dateCandidate.toISOString();
+          console.log(`Edge Function: Converted expedisi created timestamp: ${expedisiRecord.created} -> ${expedisiCreatedTimestamp}`);
+        } else {
+          console.warn(`Edge Function: Failed to parse expedisi created timestamp '${expedisiRecord.created}'. Resulted in invalid date. Falling back to current time.`);
+          expedisiCreatedTimestamp = new Date().toISOString();
+        }
+      } catch (e) {
+        console.error(`Edge Function: Error during date conversion for '${expedisiRecord.created}':`, e);
         expedisiCreatedTimestamp = new Date().toISOString();
       }
     } else {
-      // If no expedisi record or created is null, use current time
+      // If no expedisi record, or created is null/not a string/empty, use current time
       expedisiCreatedTimestamp = new Date().toISOString();
-      console.log("Edge Function: No expedisi record or created timestamp, using current time.");
+      console.log("Edge Function: No expedisi record, or created timestamp is invalid/empty. Using current time.");
     }
 
     if (expedition === 'ID') {
@@ -136,7 +143,7 @@ serve(async (req) => {
       }, { onConflict: 'Resi' });
 
     if (upsertError) {
-      console.error("Edge Function: Error upserting tbl_resi:", upsertError);
+      console.error("Edge Function: Error upserting tbl_resi:", upsertError.message, upsertError.details, upsertError.hint);
       throw new Error(`Failed to upsert resi into tbl_resi: ${upsertError.message}`);
     }
     console.log(`Edge Function: Successfully upserted into tbl_resi for ${resiNumber}.`);
@@ -149,7 +156,7 @@ serve(async (req) => {
       .eq("resino", resiNumber);
 
     if (updateExpedisiError) {
-      console.error("Edge Function: Error updating tbl_expedisi flag:", updateExpedisiError);
+      console.error("Edge Function: Error updating tbl_expedisi flag:", updateExpedisiError.message, updateExpedisiError.details, updateExpedisiError.hint);
       throw new Error(`Failed to update flag in tbl_expedisi: ${updateExpedisiError.message}`);
     }
     console.log(`Edge Function: Successfully updated tbl_expedisi flag for ${resiNumber}.`);

@@ -133,7 +133,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       return resiMap;
     },
     enabled: true, // Always enabled to get all mappings
-    staleTime: 0, // Set staleTime to 0 to ensure it always refetches when invalidated
+    staleTime: 5 * 60 * 1000, // Set staleTime to 5 minutes to reduce refetches
     gcTime: 1000 * 60 * 60, // Garbage collect after 1 hour
   });
 
@@ -156,7 +156,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       return expedisiMap;
     },
     enabled: true, // Always enabled to get all mappings
-    staleTime: 0, // Set staleTime to 0 to ensure it always refetches when invalidated
+    staleTime: 5 * 60 * 1000, // Set staleTime to 5 minutes to reduce refetches
     gcTime: 1000 * 60 * 60, // Garbage collect after 1 hour
   });
 

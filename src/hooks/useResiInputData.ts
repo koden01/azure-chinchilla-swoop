@@ -81,12 +81,20 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       if (!expedition) return [];
 
       console.log(`Fetching allResiForExpedition for ${expedition} on ${formattedDate} (for local validation)`);
-      const { data, error } = await supabase
+      
+      let query = supabase
         .from("tbl_resi")
         .select("Resi, nokarung, created, Keterangan, schedule")
-        .eq("Keterangan", expedition) // Filter by Keterangan (expedition name)
         .gte("created", startOfTodayISO)
         .lt("created", endOfTodayISO);
+
+      if (expedition === 'ID') {
+        query = query.in("Keterangan", ['ID', 'ID_REKOMENDASI']);
+      } else {
+        query = query.eq("Keterangan", expedition);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error("Error fetching all resi for expedition:", error);

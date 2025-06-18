@@ -28,7 +28,7 @@ import {
 import { format } from "date-fns";
 import { Copy } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
-import { useDebounce } from "@/hooks/useDebounce"; // Import useDebounce
+import { useDebounce } from "@/hooks/useDebounce"; // Menggunakan useDebounce untuk nilai
 
 console.log("ResiDetailModal.tsx: Component file loaded.");
 
@@ -51,7 +51,7 @@ interface ResiDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
-  data: ModalDataItem[]; // Use the new interface here
+  data: ModalDataItem[]; // This is modalData from useDashboardModals
   modalType: "belumKirim" | "followUp" | "expeditionDetail" | "transaksiHariIni" | null;
   selectedCourier?: string | null;
   onBatalResi: (resiNumber: string) => Promise<void>;
@@ -73,7 +73,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
   onCekfuToggle,
 }) => {
   const [rawSearchTerm, setRawSearchTerm] = useState(""); // State for raw input
-  const debouncedSearchTerm = useDebounce(rawSearchTerm, 300); // Debounced search term
+  const debouncedSearchTerm = useDebounce(rawSearchTerm, 300); // Debounced search term for value
 
   const [currentPage, setCurrentPage] = useState(1);
 

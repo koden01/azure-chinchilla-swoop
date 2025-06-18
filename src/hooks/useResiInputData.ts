@@ -114,52 +114,6 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     enabled: !!expedition,
   });
 
-  // NEW: Query to fetch ALL tbl_resi data (unfiltered by date or expedition) for comprehensive duplicate checking
-  // Data is now stored as a Map for O(1) lookup
-  const { data: allResiDataComprehensiveMap, isLoading: isLoadingAllResiDataComprehensive } = useQuery<Map<string, ResiExpedisiData>>({
-    queryKey: ["allResiDataComprehensive"],
-    queryFn: async () => {
-      console.log("Fetching allResiDataComprehensive (paginated) for global duplicate checking.");
-      const data = await fetchAllDataPaginated("tbl_resi", undefined, undefined, undefined); // No date or expedition filter
-      console.log("All Resi Data (comprehensive, paginated) for global duplicate checking:", data.length, "items");
-      
-      // Convert array to Map for faster lookups
-      const resiMap = new Map<string, ResiExpedisiData>();
-      data.forEach(item => {
-        if (item.Resi) {
-          resiMap.set(item.Resi.toLowerCase(), item);
-        }
-      });
-      return resiMap;
-    },
-    enabled: true, // Always enabled to get all mappings
-    staleTime: 5 * 60 * 1000, // Set staleTime to 5 minutes to reduce refetches
-    gcTime: 1000 * 60 * 60, // Garbage collect after 1 hour
-  });
-
-  // NEW: Fetch ALL tbl_expedisi data (unfiltered by date) to build a comprehensive resi-to-courier map for local validation
-  // Data is now stored as a Map for O(1) lookup
-  const { data: allExpedisiDataUnfilteredMap, isLoading: isLoadingAllExpedisiUnfiltered } = useQuery<Map<string, ExpedisiData>>({
-    queryKey: ["allExpedisiDataUnfiltered"], // No date in key, fetch all
-    queryFn: async () => {
-      console.log("Fetching allExpedisiDataUnfiltered (paginated) for local validation.");
-      const data = await fetchAllDataPaginated("tbl_expedisi");
-      console.log("All Expedisi Data (unfiltered, paginated) for local validation:", data.length, "items");
-
-      // Convert array to Map for faster lookups
-      const expedisiMap = new Map<string, ExpedisiData>();
-      data.forEach(item => {
-        if (item.resino) {
-          expedisiMap.set(item.resino.toLowerCase(), item);
-        }
-      });
-      return expedisiMap;
-    },
-    enabled: true, // Always enabled to get all mappings
-    staleTime: 5 * 60 * 1000, // Set staleTime to 5 minutes to reduce refetches
-    gcTime: 1000 * 60 * 60, // Garbage collect after 1 hour
-  });
-
   // Query to fetch lastKarung directly from database using RPC
   const { data: lastKarungData, isLoading: isLoadingLastKarung } = useQuery<string | null>({
     queryKey: ["lastKarung", expedition, formattedDate],
@@ -220,6 +174,28 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     enabled: showAllExpeditionSummary, // Only enabled when explicitly requested
   });
 
+  // Query to fetch unique expedition names
+  const { data: uniqueExpeditionNames, isLoading: isLoadingUniqueExpeditionNames } = useQuery<string[]>({
+    queryKey: ["uniqueExpeditionNames"],
+    queryFn: async () => {
+      console.log("Fetching unique expedition names from tbl_expedisi.");
+      const { data, error } = await supabase
+        .from("tbl_expedisi")
+        .select("couriername")
+        .distinct("couriername");
+
+      if (error) {
+        console.error("Error fetching unique expedition names:", error);
+        throw error;
+      }
+      const names = Array.from(new Set(data.map(item => item.couriername?.trim().toUpperCase()).filter(Boolean) as string[]));
+      names.push("ID"); // Ensure 'ID' is always present
+      return names.sort((a, b) => a.localeCompare(b));
+    },
+    staleTime: 1000 * 60 * 60, // Cache for 1 hour, these don't change often
+    gcTime: 1000 * 60 * 60 * 24, // Garbage collect after 24 hours
+  });
+
   // Derive currentCount from karungSummaryData
   const currentCount = React.useCallback((selectedKarung: string) => {
     if (!karungSummaryData || !selectedKarung) return 0;
@@ -264,41 +240,13 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     })) : [];
   }, [allKarungSummariesData]);
 
-  // NEW: Derive unique expedition options from allExpedisiDataUnfilteredMap
   const expeditionOptions = React.useMemo(() => {
-    const uniqueNames = new Set<string>();
-    // Add hardcoded 'ID' first, as it has special handling
-    uniqueNames.add("ID"); 
-
-    // Add a console log to check the type of allExpedisiDataUnfilteredMap
-    console.log("Type of allExpedisiDataUnfilteredMap:", typeof allExpedisiDataUnfilteredMap, allExpedisiDataUnfilteredMap instanceof Map);
-
-    // Only iterate if it's actually a Map
-    if (allExpedisiDataUnfilteredMap instanceof Map) {
-      allExpedisiDataUnfilteredMap.forEach(exp => {
-        const name = exp.couriername?.trim().toUpperCase();
-        if (name) {
-          uniqueNames.add(name);
-        }
-      });
-    } else {
-      console.warn("allExpedisiDataUnfilteredMap is not a Map instance. It might be a plain object from cache. Forcing refetch.");
-      // If it's not a Map, invalidate the query to force a refetch from Supabase
-      // This is a fallback for when deserialization fails despite the persister fix.
-      // Note: This might cause a brief flicker as data is refetched.
-      queryClient.invalidateQueries({ queryKey: ["allExpedisiDataUnfiltered"] });
-    }
-
-    const sortedNames = Array.from(uniqueNames).sort((a, b) => a.localeCompare(b));
-    console.log("Generated expedition options:", sortedNames);
-    return sortedNames;
-  }, [allExpedisiDataUnfilteredMap, queryClient]);
+    return uniqueExpeditionNames || [];
+  }, [uniqueExpeditionNames]);
 
   return {
     allResiForExpedition, // Now returned
-    isLoadingAllResiForExpedition: isLoadingAllResiForExpedition || isLoadingLastKarung || isLoadingKarungSummary || isLoadingAllExpedisiUnfiltered || isLoadingAllResiDataComprehensive || isLoadingAllKarungSummaries, // Combine loading states
-    allResiDataComprehensive: allResiDataComprehensiveMap, // NEW: Return comprehensive resi data as Map
-    allExpedisiDataUnfiltered: allExpedisiDataUnfilteredMap, // NEW: Return all expedisi data as Map
+    isLoadingAllResiForExpedition: isLoadingAllResiForExpedition || isLoadingLastKarung || isLoadingKarungSummary || isLoadingAllKarungSummaries || isLoadingUniqueExpeditionNames, // Combine loading states
     currentCount,
     lastKarung,
     highestKarung,

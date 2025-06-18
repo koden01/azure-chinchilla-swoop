@@ -28,6 +28,18 @@ const ExpeditionDetailCard: React.FC<ExpeditionDetailCardProps> = ({
   // gradientFrom, // Tidak digunakan untuk styling internal card lagi
   // gradientTo, // Tidak digunakan untuk styling internal card lagi
 }) => {
+  // NEW: Log all props received by this component
+  console.log(`ExpeditionDetailCard for ${name} received props:`, {
+    name,
+    totalTransaksi,
+    totalScan,
+    sisa,
+    jumlahKarung,
+    idRekomendasi,
+    totalBatal,
+    totalScanFollowUp,
+  });
+
   const showIdRekomendasi = name === "ID" && idRekomendasi !== undefined;
 
   return (

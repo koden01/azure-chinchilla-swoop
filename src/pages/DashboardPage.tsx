@@ -1,16 +1,14 @@
 import React from "react";
 // Dyad Debug: Forcing re-evaluation of DashboardPage.tsx
 console.log("DashboardPage.tsx loaded at:", new Date().toISOString());
-import { MadeWithDyad } from "@/components/made-with-dyad";
 import SummaryCard from "@/components/SummaryCard";
 import ExpeditionDetailCard from "@/components/ExpeditionDetailCard";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon, CalendarDays, Package, Loader2 } from "lucide-react"; // Import Loader2
+import { CalendarIcon, CalendarDays, Package, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-// import { useQueryClient } from "@tanstack/react-query"; // Removed unused import
 import ResiDetailModal from "@/components/ResiDetailModal";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useDashboardModals } from "@/hooks/useDashboardModals";
@@ -24,16 +22,12 @@ import {
 } from "@/components/ui/pagination";
 
 const DashboardPage: React.FC = () => {
-  console.log("DashboardPage rendering..."); // Added this line to force re-evaluation
+  console.log("DashboardPage rendering...");
   const [date, setDate] = React.useState<Date | undefined>(new Date());
-  // const queryClient = useQueryClient(); // Removed unused declaration
-
-  // Inisialisasi useTransition
   const [isPending, startTransition] = React.useTransition();
 
-  // State for expedition detail pagination
   const [expeditionCurrentPage, setExpeditionCurrentPage] = React.useState(1);
-  const EXPEDITIONS_PER_PAGE = 6; // Number of expedition cards per page
+  const EXPEDITIONS_PER_PAGE = 6;
 
   const {
     transaksiHariIni,
@@ -52,7 +46,7 @@ const DashboardPage: React.FC = () => {
     isLoadingBatalCount,
     formattedDate,
     allExpedisiData,
-    expeditionSummaries, // Data ini berasal dari useDashboardData
+    expeditionSummaries,
   } = useDashboardData(date);
 
   const {
@@ -62,7 +56,7 @@ const DashboardPage: React.FC = () => {
     modalType,
     selectedCourier,
     handleOpenTransaksiHariIniModal,
-    handleOpenBelumKirimModal, // Keep this as it's now used
+    handleOpenBelumKirimModal,
     handleOpenFollowUpFlagNoModal,
     handleOpenScanFollowupModal,
     handleOpenExpeditionDetailModal,
@@ -72,7 +66,6 @@ const DashboardPage: React.FC = () => {
     handleCekfuToggle,
   } = useDashboardModals({ date, formattedDate, allExpedisiData });
 
-  // Calculate pagination for expedition details
   const totalExpeditionPages = Math.ceil(expeditionSummaries.length / EXPEDITIONS_PER_PAGE);
   const expeditionStartIndex = (expeditionCurrentPage - 1) * EXPEDITIONS_PER_PAGE;
   const expeditionEndIndex = expeditionStartIndex + EXPEDITIONS_PER_PAGE;
@@ -84,7 +77,6 @@ const DashboardPage: React.FC = () => {
     }
   };
 
-  // Logic to determine which page numbers to display for expedition pagination
   const getExpeditionPaginationPages = React.useMemo(() => {
     const pages = [];
     if (totalExpeditionPages <= 3) {
@@ -103,14 +95,13 @@ const DashboardPage: React.FC = () => {
     return pages;
   }, [expeditionCurrentPage, totalExpeditionPages]);
 
-  console.log("DashboardPage: expeditionSummaries (from hook):", expeditionSummaries); // Debug log
-  console.log("DashboardPage: currentExpeditionSummaries (after pagination):", currentExpeditionSummaries); // Debug log
+  console.log("DashboardPage: expeditionSummaries (from hook):", expeditionSummaries);
+  console.log("DashboardPage: currentExpeditionSummaries (after pagination):", currentExpeditionSummaries);
   console.log("DashboardPage: currentExpeditionSummaries being mapped:", currentExpeditionSummaries);
-
 
   return (
     <>
-      <div className="p-6 space-y-6 bg-gray-50 min-h-[calc(100vh-64px)] mt-16"> {/* Added mt-16 to account for fixed navbar */}
+      <div className="p-6 space-y-6 bg-gray-50 min-h-[calc(100vh-64px)] mt-16">
         {/* Filter Tanggal Section */}
         <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-6 rounded-lg shadow-md">
           <h2 className="text-white text-xl font-semibold mb-4 flex items-center">
@@ -124,11 +115,11 @@ const DashboardPage: React.FC = () => {
                   "w-full md:w-[280px] justify-start text-left font-normal bg-white text-gray-800 hover:bg-gray-100",
                   !date && "text-muted-foreground"
                 )}
-                disabled={isPending} // Disable button while pending
+                disabled={isPending}
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
                 {date ? format(date, "dd/MM/yyyy") : <span>Pilih tanggal</span>}
-                {isPending && <Loader2 className="ml-2 h-4 w-4 animate-spin" />} {/* Show spinner */}
+                {isPending && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0">
@@ -136,7 +127,6 @@ const DashboardPage: React.FC = () => {
                 mode="single"
                 selected={date}
                 onSelect={(newDate) => {
-                  // Gunakan startTransition untuk pembaruan state yang mungkin memakan waktu
                   startTransition(() => {
                     setDate(newDate);
                   });
@@ -246,7 +236,7 @@ const DashboardPage: React.FC = () => {
             </Pagination>
           )}
         </div>
-        <MadeWithDyad />
+        {/* MadeWithDyad dipindahkan ke Layout, jadi tidak perlu di sini */}
 
         <ResiDetailModal
           isOpen={isModalOpen}

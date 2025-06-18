@@ -14,7 +14,7 @@ import { useResiScanner } from "@/hooks/useResiScanner";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import KarungSummaryModal from "@/components/KarungSummaryModal";
-import { Button } from "@/components/ui/button"; 
+// import { Button } from "@/components/ui/button"; // Removed unused import
 
 const InputPage = () => {
   const { expedition, setExpedition } = useExpedition();
@@ -33,7 +33,7 @@ const InputPage = () => {
     formattedDate,
     karungSummary,
     expeditionOptions,
-  } = useResiInputData(expedition);
+  } = useResiInputData(expedition, false); // Added false for showAllExpeditionSummary
 
   const {
     resiNumber,
@@ -45,7 +45,6 @@ const InputPage = () => {
     expedition, 
     selectedKarung, 
     formattedDate,
-    allResiForExpedition,
     allResiDataComprehensive, // Meneruskan allResiDataComprehensive
     allExpedisiDataUnfiltered,
   });

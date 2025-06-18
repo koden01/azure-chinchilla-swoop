@@ -31,8 +31,8 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
+  AlertDialogTitle, // Menambahkan kembali AlertDialogTitle
+  AlertDialogTrigger, // Menambahkan kembali AlertDialogTrigger jika diperlukan, tapi sepertinya tidak langsung digunakan di sini
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -264,87 +264,111 @@ const HistoryPage = () => {
           <h2 className="text-white text-xl font-semibold mb-4 flex items-center">
             <CalendarDays className="mr-2 h-6 w-6" /> Filter Tanggal
           </h2>
-          <div className="bg-white p-4 rounded-md shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Filter & Search</h3>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-              <div>
-                <label htmlFor="start-date-picker" className="block text-sm font-medium text-gray-700 mb-1">
-                  Tanggal Mulai
-                </label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      id="start-date-picker"
-                      variant={"outline"}
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !startDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {startDate ? format(startDate, "dd/MM/yyyy") : <span>Pilih tanggal</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={startDate}
-                      onSelect={setStartDate}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <div>
-                <label htmlFor="end-date-picker" className="block text-sm font-medium text-gray-700 mb-1">
-                  Tanggal Selesai
-                </label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      id="end-date-picker"
-                      variant={"outline"}
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !endDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {endDate ? format(endDate, "dd/MM/yyyy") : <span>Pilih tanggal</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={endDate}
-                      onSelect={setEndDate}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <div className="md:col-span-2 flex items-end space-x-2">
-                <div className="flex-grow">
-                  <label htmlFor="search-input" className="block text-sm font-medium text-gray-700 mb-1">
-                    Cari
-                  </label>
-                  <Input
-                    id="search-input"
-                    type="text"
-                    placeholder="Cari no. resi, keterangan, atau lainnya..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full"
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                id="start-date-picker"
+                variant={"outline"}
+                className={cn(
+                  "w-full justify-start text-left font-normal",
+                  !startDate && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {startDate ? format(startDate, "dd/MM/yyyy") : <span>Pilih tanggal</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <Calendar
+                mode="single"
+                selected={startDate}
+                onSelect={setStartDate}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+
+        <div className="bg-white p-4 rounded-md shadow-sm">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Filter & Search</h3>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+            <div>
+              <label htmlFor="start-date-picker" className="block text-sm font-medium text-gray-700 mb-1">
+                Tanggal Mulai
+              </label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    id="start-date-picker"
+                    variant={"outline"}
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !startDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startDate ? format(startDate, "dd/MM/yyyy") : <span>Pilih tanggal</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={setStartDate}
+                    initialFocus
                   />
-                </div>
-                <Button
-                  className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap"
-                  onClick={handleCopyTableData}
-                  disabled={filteredHistoryData.length === 0}
-                >
-                  <Copy className="mr-2 h-4 w-4" /> Copy Table Data ({filteredHistoryData.length} records)
-                </Button>
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div>
+              <label htmlFor="end-date-picker" className="block text-sm font-medium text-gray-700 mb-1">
+                Tanggal Selesai
+              </label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    id="end-date-picker"
+                    variant={"outline"}
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !endDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {endDate ? format(endDate, "dd/MM/yyyy") : <span>Pilih tanggal</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={endDate}
+                    onSelect={setEndDate}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div className="md:col-span-2 flex items-end space-x-2">
+              <div className="flex-grow">
+                <label htmlFor="search-input" className="block text-sm font-medium text-gray-700 mb-1">
+                  Cari
+                </label>
+                <Input
+                  id="search-input"
+                  type="text"
+                  placeholder="Cari no. resi, keterangan, atau lainnya..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full"
+                />
               </div>
+              <Button
+                className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap"
+                onClick={handleCopyTableData}
+                disabled={filteredHistoryData.length === 0}
+              >
+                <Copy className="mr-2 h-4 w-4" /> Copy Table Data ({filteredHistoryData.length} records)
+              </Button>
             </div>
           </div>
         </div>

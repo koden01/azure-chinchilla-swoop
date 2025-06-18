@@ -31,8 +31,7 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle, // Menambahkan kembali AlertDialogTitle
-  AlertDialogTrigger, // Menambahkan kembali AlertDialogTrigger jika diperlukan, tapi sepertinya tidak langsung digunakan di sini
+  AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";

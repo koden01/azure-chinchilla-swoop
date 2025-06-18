@@ -27,7 +27,7 @@ const DashboardPage: React.FC = () => {
     isLoadingScanFollowupLateCount,
     batalCount,
     isLoadingBatalCount,
-    followUpData, // Keep this if needed for modal data, though modalData is passed directly
+    // followUpData, // Removed unused variable
     isLoadingFollowUp,
     expeditionSummaries,
     formattedDate,

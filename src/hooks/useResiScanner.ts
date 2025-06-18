@@ -1,7 +1,7 @@
 import React from "react";
 import { supabase, SUPABASE_PROJECT_ID } from "@/integrations/supabase/client";
 import { showSuccess, showError, dismissToast } from "@/utils/toast";
-import { beepSuccess, beepFailure, beepDouble } from "@/utils/audio"; // Removed beepCancel
+import { beepSuccess, beepFailure, beepDouble } from "@/utils/audio";
 import { useDebounce } from "@/hooks/useDebounce";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
 import { useQueryClient } from "@tanstack/react-query";
@@ -61,12 +61,20 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
   const validateInput = (resi: string) => {
     if (!resi) {
       showError("Nomor resi tidak boleh kosong.");
-      beepFailure.play();
+      try {
+        beepFailure.play();
+      } catch (e) {
+        console.error("Error playing beepFailure:", e);
+      }
       return false;
     }
     if (!expedition || !selectedKarung) {
       showError("Mohon pilih Expedisi dan No Karung terlebih dahulu.");
-      beepFailure.play();
+      try {
+        beepFailure.play();
+      } catch (e) {
+        console.error("Error playing beepFailure:", e);
+      }
       return false;
     }
     return true;
@@ -107,7 +115,11 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
 
       if (validationStatus !== 'OK') {
         showError(validationMessage || "Validasi gagal.");
-        beepDouble.play();
+        try {
+          beepDouble.play();
+        } catch (e) {
+          console.error("Error playing beepDouble:", e);
+        }
         setIsProcessing(false);
         keepFocus();
         return; // Exit early if duplicate
@@ -141,7 +153,11 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
 
       if (validationStatus !== 'OK') {
         showError(validationMessage || "Validasi gagal.");
-        beepFailure.play();
+        try {
+          beepFailure.play();
+        } catch (e) {
+          console.error("Error playing beepFailure:", e);
+        }
         setIsProcessing(false);
         keepFocus();
         return; // Exit early if expedisi validation fails
@@ -224,7 +240,11 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
       console.log("Successfully updated tbl_expedisi flag.");
 
       showSuccess(`Resi ${currentResi} berhasil discan.`);
-      beepSuccess.play();
+      try {
+        beepSuccess.play();
+      } catch (e) {
+        console.error("Error playing beepSuccess:", e);
+      }
 
       // Clear the optimistic ref as the operation was successful
       lastOptimisticIdRef.current = null;
@@ -243,7 +263,11 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
         errorMessage = `Terjadi kesalahan Supabase (${error.code}): ${error.message || error.details}`;
       }
       showError(errorMessage);
-      beepFailure.play();
+      try {
+        beepFailure.play();
+      } catch (e) {
+        console.error("Error playing beepFailure:", e);
+      }
 
       // Revert optimistic update on error
       if (lastOptimisticIdRef.current) {

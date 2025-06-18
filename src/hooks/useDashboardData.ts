@@ -216,13 +216,20 @@ export const useDashboardData = (date: Date | undefined) => {
   };
 
   // Fetch ALL tbl_expedisi data (unfiltered by date) to build a comprehensive resi-to-courier map
-  const { data: allExpedisiDataUnfiltered, isLoading: isLoadingAllExpedisiUnfiltered } = useQuery<any[]>({
+  const { data: allExpedisiDataUnfiltered, isLoading: isLoadingAllExpedisiUnfiltered } = useQuery<Map<string, any>>({ // Changed type to Map
     queryKey: ["allExpedisiDataUnfiltered"], // No date in key, fetch all
     queryFn: async () => {
       console.log("Fetching allExpedisiDataUnfiltered (paginated).");
       const data = await fetchAllDataPaginated("tbl_expedisi");
       console.log("All Expedisi Data (unfiltered, paginated):", data.length, "items");
-      return data;
+      // Convert array to Map for faster lookups
+      const expedisiMap = new Map<string, any>();
+      data.forEach(item => {
+        if (item.resino) {
+          expedisiMap.set(item.resino.toLowerCase(), item);
+        }
+      });
+      return expedisiMap;
     },
     enabled: true, // Always enabled to get all mappings
   });
@@ -260,7 +267,7 @@ export const useDashboardData = (date: Date | undefined) => {
     console.log(`  isLoadingAllExpedisiUnfiltered: ${isLoadingAllExpedisiUnfiltered}`);
     console.log(`  isLoadingExpedisiDataForSelectedDate: ${isLoadingExpedisiDataForSelectedDate}`);
     console.log(`  isLoadingAllResi: ${isLoadingAllResi}`);
-    console.log(`  allExpedisiDataUnfiltered: ${allExpedisiDataUnfiltered ? 'Loaded (' + allExpedisiDataUnfiltered.length + ' items)' : 'Not Loaded'}`);
+    console.log(`  allExpedisiDataUnfiltered: ${allExpedisiDataUnfiltered ? 'Loaded (' + allExpedisiDataUnfiltered.size + ' items)' : 'Not Loaded'}`); // Changed .length to .size
     console.log(`  expedisiDataForSelectedDate: ${expedisiDataForSelectedDate ? 'Loaded (' + expedisiDataForSelectedDate.length + ' items)' : 'Not Loaded'}`);
     console.log(`  allResiData: ${allResiData ? 'Loaded (' + allResiData.length + ' items)' : 'Not Loaded'}`);
     console.log(`  date: ${date ? date.toISOString() : 'null'}`);
@@ -273,7 +280,7 @@ export const useDashboardData = (date: Date | undefined) => {
     }
 
     console.log("Starting detailed expedition summaries calculation...");
-    console.log("allExpedisiDataUnfiltered for resiToExpeditionMap (count):", allExpedisiDataUnfiltered.length);
+    console.log("allExpedisiDataUnfiltered for resiToExpeditionMap (size):", allExpedisiDataUnfiltered.size); // Changed .length to .size
     console.log("expedisiDataForSelectedDate for totalTransaksi/sisa (count):", expedisiDataForSelectedDate.length);
     console.log("allResiData for other counts (count, already date-filtered):", allResiData.length);
 
@@ -291,7 +298,8 @@ export const useDashboardData = (date: Date | undefined) => {
     const summaries: { [key: string]: any } = {};
 
     // Initialize summaries for all unique courier names from tbl_expedisi (unfiltered)
-    const uniqueCourierNames = new Set(allExpedisiDataUnfiltered.map(e => e.couriername?.trim().toUpperCase()).filter(Boolean));
+    // Corrected: Use Array.from(allExpedisiDataUnfiltered.values()) to iterate over Map values
+    const uniqueCourierNames = new Set(Array.from(allExpedisiDataUnfiltered.values()).map(e => e.couriername?.trim().toUpperCase()).filter(Boolean));
     uniqueCourierNames.add("ID"); // Ensure 'ID' is always initialized
     uniqueCourierNames.forEach(name => {
       summaries[name] = {

@@ -171,7 +171,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         console.warn(`Resi ${resiNumber} not found in allExpedisiData map. Proceeding with tbl_resi update/insert for 'batal' with default values.`);
       }
 
-      const courierNameFromExpedisi = expedisiRecord?.couriername || "UNKNOWN"; // Default if not found
+      // const courierNameFromExpedisi = expedisiRecord?.couriername || "UNKNOWN"; // Default if not found - REMOVED UNUSED VARIABLE
       const createdTimestampFromExpedisi = expedisiRecord?.created || new Date().toISOString(); // Default to now if not found
 
       const { data: existingResi, error: checkError } = await supabase

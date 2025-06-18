@@ -93,21 +93,25 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
 
       console.log(`Fetching allResiForExpedition for ${expedition} on ${formattedDate} (for local validation)`);
       
-      const data = await fetchAllDataPaginated(
-        "tbl_resi",
-        "created", // dateFilterColumn
-        startOfTodayISO,
-        endOfTodayISO,
-        (baseQuery) => { // Custom filter function
-          if (expedition === 'ID') {
-            return baseQuery.in("Keterangan", ['ID', 'ID_REKOMENDASI']);
-          } else {
-            return baseQuery.eq("Keterangan", expedition);
-          }
-        }
-      );
+      let query = supabase
+        .from("tbl_resi")
+        .select("Resi, nokarung, created, Keterangan, schedule")
+        .gte("created", startOfTodayISO)
+        .lt("created", endOfTodayISO);
 
-      console.log(`Fetched ${data?.length || 0} resi for local validation. Data:`, data);
+      if (expedition === 'ID') {
+        query = query.in("Keterangan", ['ID', 'ID_REKOMENDASI']);
+      } else {
+        query = query.eq("Keterangan", expedition);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error("Error fetching all resi for expedition:", error);
+        throw error;
+      }
+      console.log(`Fetched ${data?.length || 0} resi for local validation.`);
       return data || [];
     },
     enabled: !!expedition,
@@ -145,6 +149,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     queryFn: async () => {
       if (!expedition) return null;
 
+      console.log(`RPC Call: get_last_karung_for_expedition_and_date with p_couriername: ${expedition}, p_selected_date: ${formattedDate}`);
       const { data, error } = await supabase.rpc("get_last_karung_for_expedition_and_date", {
         p_couriername: expedition,
         p_selected_date: formattedDate,
@@ -165,6 +170,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     queryFn: async () => {
       if (!expedition) return [];
 
+      console.log(`RPC Call: get_karung_summary_for_expedition_and_date with p_couriername: ${expedition}, p_selected_date: ${formattedDate}`);
       const { data, error } = await supabase.rpc("get_karung_summary_for_expedition_and_date", {
         p_couriername: expedition,
         p_selected_date: formattedDate,

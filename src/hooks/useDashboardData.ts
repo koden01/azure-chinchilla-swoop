@@ -12,7 +12,7 @@ export const useDashboardData = (date: Date | undefined) => {
   const [expeditionSummaries, setExpeditionSummaries] = useState<any[]>([]);
 
   // Query for Transaksi Hari Ini (tbl_expedisi count for selected date) using RPC
-  const { data: transaksiHariIni, isLoading: isLoadingTransaksiHariIni } = useQuery<number>({
+  const { data: transaksiHariIni, isLoading: isLoadingTransaksiHariIni, error: transaksiHariIniError } = useQuery<number>({
     queryKey: ["transaksiHariIni", formattedDate],
     queryFn: async () => {
       if (!date) return 0;
@@ -29,9 +29,11 @@ export const useDashboardData = (date: Date | undefined) => {
     },
     enabled: !!date,
   });
+  console.log("useDashboardData: Transaksi Hari Ini - isLoading:", isLoadingTransaksiHariIni, "data:", transaksiHariIni, "error:", transaksiHariIniError);
+
 
   // Query for Total Scan (tbl_resi count where schedule = 'ontime' for selected date)
-  const { data: totalScan, isLoading: isLoadingTotalScan } = useQuery<number>({
+  const { data: totalScan, isLoading: isLoadingTotalScan, error: totalScanError } = useQuery<number>({
     queryKey: ["totalScan", formattedDate],
     queryFn: async () => {
       if (!date) return 0;
@@ -51,9 +53,11 @@ export const useDashboardData = (date: Date | undefined) => {
     },
     enabled: !!date,
   });
+  console.log("useDashboardData: Total Scan - isLoading:", isLoadingTotalScan, "data:", totalScan, "error:", totalScanError);
+
 
   // Query for ID Rekomendasi (tbl_resi count where Keterangan = 'ID_REKOMENDASI' for selected date)
-  const { data: idRekCount, isLoading: isLoadingIdRekCount } = useQuery<number>({
+  const { data: idRekCount, isLoading: isLoadingIdRekCount, error: idRekCountError } = useQuery<number>({
     queryKey: ["idRekCount", formattedDate],
     queryFn: async () => {
       if (!date) return 0;
@@ -73,9 +77,11 @@ export const useDashboardData = (date: Date | undefined) => {
     },
     enabled: !!date,
   });
+  console.log("useDashboardData: ID Rekomendasi - isLoading:", isLoadingIdRekCount, "data:", idRekCount, "error:", idRekCountError);
+
 
   // Query for Belum Kirim (tbl_expedisi count where flag = 'NO' for selected date) using RPC
-  const { data: belumKirim, isLoading: isLoadingBelumKirim } = useQuery<number>({
+  const { data: belumKirim, isLoading: isLoadingBelumKirim, error: belumKirimError } = useQuery<number>({
     queryKey: ["belumKirim", formattedDate],
     queryFn: async () => {
       if (!date) return 0;
@@ -92,9 +98,11 @@ export const useDashboardData = (date: Date | undefined) => {
     },
     enabled: !!date,
   });
+  console.log("useDashboardData: Belum Kirim - isLoading:", isLoadingBelumKirim, "data:", belumKirim, "error:", belumKirimError);
+
 
   // Query for Follow Up (tbl_expedisi count where flag = 'NO' and created date is NOT actual current date)
-  const { data: followUpFlagNoCount, isLoading: isLoadingFollowUpFlagNoCount } = useQuery<number>({
+  const { data: followUpFlagNoCount, isLoading: isLoadingFollowUpFlagNoCount, error: followUpFlagNoCountError } = useQuery<number>({
     queryKey: ["followUpFlagNoCount", format(new Date(), 'yyyy-MM-dd')], // Query key based on actual current date
     queryFn: async () => {
       // Always use the actual current date for this specific query
@@ -113,9 +121,11 @@ export const useDashboardData = (date: Date | undefined) => {
     // This query should always be enabled as it's independent of the dashboard's selected date filter
     enabled: true,
   });
+  console.log("useDashboardData: Follow Up Flag No Count - isLoading:", isLoadingFollowUpFlagNoCount, "data:", followUpFlagNoCount, "error:", followUpFlagNoCountError);
+
 
   // Query for Scan Followup (tbl_resi count where schedule = 'late' for selected date)
-  const { data: scanFollowupLateCount, isLoading: isLoadingScanFollowupLateCount } = useQuery<number>({
+  const { data: scanFollowupLateCount, isLoading: isLoadingScanFollowupLateCount, error: scanFollowupLateCountError } = useQuery<number>({
     queryKey: ["scanFollowupLateCount", formattedDate],
     queryFn: async () => {
       if (!date) return 0;
@@ -135,9 +145,11 @@ export const useDashboardData = (date: Date | undefined) => {
     },
     enabled: !!date,
   });
+  console.log("useDashboardData: Scan Followup Late Count - isLoading:", isLoadingScanFollowupLateCount, "data:", scanFollowupLateCount, "error:", scanFollowupLateCountError);
+
 
   // Query for Batal (tbl_resi count where schedule = 'batal' for selected date)
-  const { data: batalCount, isLoading: isLoadingBatalCount } = useQuery<number>({
+  const { data: batalCount, isLoading: isLoadingBatalCount, error: batalCountError } = useQuery<number>({
     queryKey: ["batalCount", formattedDate],
     queryFn: async () => {
       if (!date) return 0;
@@ -157,9 +169,11 @@ export const useDashboardData = (date: Date | undefined) => {
     },
     enabled: !!date,
   });
+  console.log("useDashboardData: Batal Count - isLoading:", isLoadingBatalCount, "data:", batalCount, "error:", batalCountError);
+
 
   // Query for Follow Up Data (RPC call)
-  const { data: followUpData, isLoading: isLoadingFollowUp } = useQuery<any[]>({
+  const { data: followUpData, isLoading: isLoadingFollowUp, error: followUpDataError } = useQuery<any[]>({
     queryKey: ["followUpData", formattedDate],
     queryFn: async () => {
       if (!date) return [];
@@ -176,6 +190,8 @@ export const useDashboardData = (date: Date | undefined) => {
     },
     enabled: !!date,
   });
+  console.log("useDashboardData: Follow Up Data - isLoading:", isLoadingFollowUp, "data:", followUpData?.length, "error:", followUpDataError);
+
 
   // Function to fetch all data from a table with pagination
   // This function is now only used for allExpedisiDataUnfiltered and allResiData
@@ -217,7 +233,7 @@ export const useDashboardData = (date: Date | undefined) => {
   };
 
   // Fetch ALL tbl_expedisi data (unfiltered by date) to build a comprehensive resi-to-courier map
-  const { data: allExpedisiDataUnfiltered, isLoading: isLoadingAllExpedisiUnfiltered } = useQuery<Map<string, any>>({ // Changed type to Map
+  const { data: allExpedisiDataUnfiltered, isLoading: isLoadingAllExpedisiUnfiltered, error: allExpedisiDataUnfilteredError } = useQuery<Map<string, any>>({ // Changed type to Map
     queryKey: ["allExpedisiDataUnfiltered"], // No date in key, fetch all
     queryFn: async () => {
       console.log("Fetching allExpedisiDataUnfiltered (paginated).");
@@ -234,9 +250,11 @@ export const useDashboardData = (date: Date | undefined) => {
     },
     enabled: true, // Always enabled to get all mappings
   });
+  console.log("useDashboardData: All Expedisi Data Unfiltered - isLoading:", isLoadingAllExpedisiUnfiltered, "data size:", allExpedisiDataUnfiltered?.size, "error:", allExpedisiDataUnfilteredError);
+
 
   // NEW: Fetch tbl_expedisi data specifically for the selected date using RPC
-  const { data: expedisiDataForSelectedDate, isLoading: isLoadingExpedisiDataForSelectedDate } = useQuery<any[]>({
+  const { data: expedisiDataForSelectedDate, isLoading: isLoadingExpedisiDataForSelectedDate, error: expedisiDataForSelectedDateError } = useQuery<any[]>({
     queryKey: ["expedisiDataForSelectedDate", formattedDate],
     queryFn: async () => {
       if (!date) return [];
@@ -253,9 +271,11 @@ export const useDashboardData = (date: Date | undefined) => {
     },
     enabled: !!date,
   });
+  console.log("useDashboardData: Expedisi Data For Selected Date - isLoading:", isLoadingExpedisiDataForSelectedDate, "data length:", expedisiDataForSelectedDate?.length, "error:", expedisiDataForSelectedDateError);
+
 
   // Fetch tbl_resi data for the selected date range (paginated)
-  const { data: allResiData, isLoading: isLoadingAllResi } = useQuery<any[]>({
+  const { data: allResiData, isLoading: isLoadingAllResi, error: allResiDataError } = useQuery<any[]>({
     queryKey: ["allResiData", formattedDate],
     queryFn: async () => {
       if (!date) return [];
@@ -266,6 +286,8 @@ export const useDashboardData = (date: Date | undefined) => {
     },
     enabled: !!date,
   });
+  console.log("useDashboardData: All Resi Data - isLoading:", isLoadingAllResi, "data length:", allResiData?.length, "error:", allResiDataError);
+
 
   // Process data to create expedition summaries
   useEffect(() => {

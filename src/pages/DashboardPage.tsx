@@ -1,4 +1,6 @@
 import React from "react";
+// Dyad Debug: Forcing re-evaluation of DashboardPage.tsx
+console.log("DashboardPage.tsx loaded at:", new Date().toISOString());
 import { MadeWithDyad } from "@/components/made-with-dyad";
 import SummaryCard from "@/components/SummaryCard";
 import ExpeditionDetailCard from "@/components/ExpeditionDetailCard";

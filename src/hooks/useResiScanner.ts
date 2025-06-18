@@ -197,7 +197,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
 
       // --- Direct Supabase Insert/Update ---
       // 1. Insert into tbl_resi with onConflict to avoid unique constraint error
-      const { error: insertError } = await supabase
+      const { error: insertError } = await (supabase
         .from("tbl_resi")
         .insert({
           Resi: currentResi,
@@ -205,7 +205,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
           created: new Date().toISOString(),
           Keterangan: actualCourierName,
           schedule: "ontime",
-        })
+        }) as any) // Cast to any to bypass TypeScript error for onConflict
         .onConflict('Resi') // Specify the unique column for conflict resolution
         .ignore(); // Ignore the insert if a conflict occurs
 

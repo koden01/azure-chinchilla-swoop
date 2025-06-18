@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, startOfDay, endOfDay } from "date-fns";
 import React from "react";
@@ -84,6 +84,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
   const formattedDate = format(today, "yyyy-MM-dd");
   const startOfTodayISO = startOfDay(today).toISOString();
   const endOfTodayISO = endOfDay(today).toISOString();
+  const queryClient = useQueryClient(); // Get query client instance
 
   // Query to fetch all resi data for the current expedition and date for local validation
   const { data: allResiForExpedition, isLoading: isLoadingAllResiForExpedition } = useQuery<ResiExpedisiData[]>({
@@ -285,14 +286,13 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       // If it's not a Map, invalidate the query to force a refetch from Supabase
       // This is a fallback for when deserialization fails despite the persister fix.
       // Note: This might cause a brief flicker as data is refetched.
-      // queryClient.invalidateQueries({ queryKey: ["allExpedisiDataUnfiltered"] }); // This line is commented out to avoid infinite loops if the issue persists
+      queryClient.invalidateQueries({ queryKey: ["allExpedisiDataUnfiltered"] }); // Re-enabled this line
     }
 
     const sortedNames = Array.from(uniqueNames).sort((a, b) => a.localeCompare(b));
     console.log("Generated expedition options:", sortedNames);
     return sortedNames;
-  }, [allExpedisiDataUnfilteredMap]);
-
+  }, [allExpedisiDataUnfilteredMap, queryClient]); // Added queryClient to dependencies
 
   return {
     allResiForExpedition, // Now returned

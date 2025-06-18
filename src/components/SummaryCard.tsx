@@ -4,7 +4,7 @@ import { Package, Maximize, TriangleAlert, Info, Clock } from "lucide-react";
 
 interface SummaryCardProps {
   title: string;
-  value: number | string;
+  value: number | string | React.ReactNode; // Updated to React.ReactNode
   secondaryTitle?: string;
   secondaryValue?: number | string;
   sisaTitle?: string; // New prop for 'Sisa' title

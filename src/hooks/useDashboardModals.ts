@@ -56,18 +56,11 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       showError("Mohon pilih tanggal terlebih dahulu.");
       return;
     }
-    const startOfSelectedDate = startOfDay(date);
-    const endOfSelectedDate = endOfDay(date);
-    const startString = format(startOfSelectedDate, "yyyy-MM-dd HH:mm:ss");
-    const endString = format(endOfSelectedDate, "yyyy-MM-dd HH:mm:ss");
+    console.log(`Fetching data for 'Transaksi Hari Ini' modal for date: ${formattedDate} using RPC.`);
 
-    console.log(`Fetching data for 'Transaksi Hari Ini' modal for date range: ${startString} to ${endString}`);
-
-    const { data, error } = await supabase
-      .from("tbl_expedisi")
-      .select("resino, orderno, chanelsales, couriername, created, flag, datetrans, cekfu")
-      .gte("created", startString)
-      .lt("created", endString);
+    const { data, error } = await supabase.rpc("get_transaksi_hari_ini_records", {
+      p_selected_date: formattedDate,
+    });
       
     if (error) {
       showError("Gagal memuat data transaksi hari ini.");
@@ -83,19 +76,11 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       showError("Mohon pilih tanggal terlebih dahulu.");
       return;
     }
-    const startOfSelectedDate = startOfDay(date);
-    const endOfSelectedDate = endOfDay(date);
-    const startString = format(startOfSelectedDate, "yyyy-MM-dd HH:mm:ss");
-    const endString = format(endOfSelectedDate, "yyyy-MM-dd HH:mm:ss");
+    console.log(`Fetching data for 'Belum Kirim (Hari Ini)' modal for date: ${formattedDate} using RPC.`);
 
-    console.log(`Fetching data for 'Belum Kirim (Hari Ini)' modal for date range: ${startString} to ${endString}`);
-
-    const { data, error } = await supabase
-      .from("tbl_expedisi")
-      .select("resino, orderno, chanelsales, couriername, created, flag, datetrans, cekfu")
-      .eq("flag", "NO")
-      .gte("created", startString)
-      .lt("created", endString);
+    const { data, error } = await supabase.rpc("get_belum_kirim_records", {
+      p_selected_date: formattedDate,
+    });
       
     if (error) {
       showError("Gagal memuat data resi yang belum dikirim.");
@@ -152,20 +137,12 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       return;
     }
 
-    const startOfSelectedDate = startOfDay(date);
-    const endOfSelectedDate = endOfDay(date);
-    const startString = format(startOfSelectedDate, "yyyy-MM-dd HH:mm:ss");
-    const endString = format(endOfSelectedDate, "yyyy-MM-dd HH:mm:ss");
+    console.log(`Fetching detail data for '${courierName}' (Belum Kirim) for date: ${formattedDate} using RPC.`);
 
-    console.log(`Fetching detail data for '${courierName}' (Belum Kirim) for date range: ${startString} to ${endString}`);
-
-    const { data, error } = await supabase
-      .from("tbl_expedisi")
-      .select("resino, orderno, chanelsales, couriername, created, flag, datetrans, cekfu")
-      .eq("couriername", courierName)
-      .eq("flag", "NO")
-      .gte("created", startString)
-      .lt("created", endString);
+    const { data, error } = await supabase.rpc("get_expedition_detail_records", {
+      p_couriername: courierName,
+      p_selected_date: formattedDate,
+    });
 
     if (error) {
       showError(`Gagal memuat detail resi untuk ${courierName}.`);

@@ -286,7 +286,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       // If it's not a Map, invalidate the query to force a refetch from Supabase
       // This is a fallback for when deserialization fails despite the persister fix.
       // Note: This might cause a brief flicker as data is refetched.
-      queryClient.invalidateQueries({ queryKey: ["allExpedisiDataUnfiltered"] }); // Re-enabled this line
+      queryClient.invalidateQueries({ queryKey: ["allExpedisiDataUnfiltered"] });
     }
 
     const sortedNames = Array.from(uniqueNames).sort((a, b) => a.localeCompare(b));

@@ -30,6 +30,8 @@ import { Copy } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
 import { cn } from "@/lib/utils";
 
+console.log("ResiDetailModal.tsx: Component file loaded.");
+
 // Define a common interface for items displayed in the modal
 interface ModalDataItem {
   Resi?: string; // Used for 'followUp' modal type (from tbl_resi or RPC)
@@ -274,7 +276,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
         </DialogHeader>
         <div className="my-4 flex flex-col md:flex-row gap-2">
           <Input
-            id="search-term-input" {/* Added id attribute here */}
+            id="search-term-input"
             placeholder="Cari Resi, No Order, Marketplace, Kurir, atau Tanggal Pembelian..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}

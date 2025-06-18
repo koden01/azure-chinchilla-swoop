@@ -114,13 +114,22 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
   });
 
   // NEW: Query to fetch ALL tbl_resi data (unfiltered by date or expedition) for comprehensive duplicate checking
-  const { data: allResiDataComprehensive, isLoading: isLoadingAllResiDataComprehensive } = useQuery<ResiExpedisiData[]>({
+  // Data is now stored as a Map for O(1) lookup
+  const { data: allResiDataComprehensiveMap, isLoading: isLoadingAllResiDataComprehensive } = useQuery<Map<string, ResiExpedisiData>>({
     queryKey: ["allResiDataComprehensive"],
     queryFn: async () => {
       console.log("Fetching allResiDataComprehensive (paginated) for global duplicate checking.");
       const data = await fetchAllDataPaginated("tbl_resi", undefined, undefined, undefined); // No date or expedition filter
       console.log("All Resi Data (comprehensive, paginated) for global duplicate checking:", data.length, "items");
-      return data;
+      
+      // Convert array to Map for faster lookups
+      const resiMap = new Map<string, ResiExpedisiData>();
+      data.forEach(item => {
+        if (item.Resi) {
+          resiMap.set(item.Resi.toLowerCase(), item);
+        }
+      });
+      return resiMap;
     },
     enabled: true, // Always enabled to get all mappings
     staleTime: 0, // Set staleTime to 0 to ensure it always refetches when invalidated
@@ -128,13 +137,22 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
   });
 
   // NEW: Fetch ALL tbl_expedisi data (unfiltered by date) to build a comprehensive resi-to-courier map for local validation
-  const { data: allExpedisiDataUnfiltered, isLoading: isLoadingAllExpedisiUnfiltered } = useQuery<ExpedisiData[]>({
+  // Data is now stored as a Map for O(1) lookup
+  const { data: allExpedisiDataUnfilteredMap, isLoading: isLoadingAllExpedisiUnfiltered } = useQuery<Map<string, ExpedisiData>>({
     queryKey: ["allExpedisiDataUnfiltered"], // No date in key, fetch all
     queryFn: async () => {
       console.log("Fetching allExpedisiDataUnfiltered (paginated) for local validation.");
       const data = await fetchAllDataPaginated("tbl_expedisi");
       console.log("All Expedisi Data (unfiltered, paginated) for local validation:", data.length, "items");
-      return data;
+
+      // Convert array to Map for faster lookups
+      const expedisiMap = new Map<string, ExpedisiData>();
+      data.forEach(item => {
+        if (item.resino) {
+          expedisiMap.set(item.resino.toLowerCase(), item);
+        }
+      });
+      return expedisiMap;
     },
     enabled: true, // Always enabled to get all mappings
   });
@@ -243,13 +261,13 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     })) : [];
   }, [allKarungSummariesData]);
 
-  // NEW: Derive unique expedition options from allExpedisiDataUnfiltered
+  // NEW: Derive unique expedition options from allExpedisiDataUnfilteredMap
   const expeditionOptions = React.useMemo(() => {
     const uniqueNames = new Set<string>();
     // Add hardcoded 'ID' first, as it has special handling
     uniqueNames.add("ID"); 
 
-    allExpedisiDataUnfiltered?.forEach(exp => {
+    allExpedisiDataUnfilteredMap?.forEach(exp => {
       const name = exp.couriername?.trim().toUpperCase();
       if (name) {
         uniqueNames.add(name);
@@ -259,14 +277,14 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     const sortedNames = Array.from(uniqueNames).sort((a, b) => a.localeCompare(b));
     console.log("Generated expedition options:", sortedNames);
     return sortedNames;
-  }, [allExpedisiDataUnfiltered]);
+  }, [allExpedisiDataUnfilteredMap]);
 
 
   return {
     allResiForExpedition, // Now returned
     isLoadingAllResiForExpedition: isLoadingAllResiForExpedition || isLoadingLastKarung || isLoadingKarungSummary || isLoadingAllExpedisiUnfiltered || isLoadingAllResiDataComprehensive || isLoadingAllKarungSummaries, // Combine loading states
-    allResiDataComprehensive, // NEW: Return comprehensive resi data
-    allExpedisiDataUnfiltered, // NEW: Return all expedisi data
+    allResiDataComprehensive: allResiDataComprehensiveMap, // NEW: Return comprehensive resi data as Map
+    allExpedisiDataUnfiltered: allExpedisiDataUnfilteredMap, // NEW: Return all expedisi data as Map
     currentCount,
     lastKarung,
     highestKarung,

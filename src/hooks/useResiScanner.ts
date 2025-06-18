@@ -6,6 +6,7 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
+import { useResiInputData } from "./useResiInputData"; // Import useResiInputData to access allResiForExpedition
 
 // Define the type for ResiExpedisiData to match useResiInputData
 interface ResiExpedisiData {
@@ -17,19 +18,10 @@ interface ResiExpedisiData {
   optimisticId?: string;
 }
 
-// Menghapus interface ExpedisiData karena tidak lagi digunakan
-// interface ExpedisiData {
-//   resino: string;
-//   couriername: string | null;
-//   created: string;
-// }
-
 interface UseResiScannerProps {
   expedition: string;
   selectedKarung: string;
   formattedDate: string;
-  // allResiDataComprehensive: Map<string, ResiExpedisiData> | undefined; // REMOVED
-  // allExpedisiDataUnfiltered: Map<string, ExpedisiData> | undefined; // REMOVED
 }
 
 export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: UseResiScannerProps) => {
@@ -38,16 +30,15 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
   const resiInputRef = React.useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
+  const { allResiForExpedition } = useResiInputData(expedition, false); // Get the locally cached data
+
   const lastOptimisticIdRef = React.useRef<string | null>(null);
 
   const debouncedInvalidate = useDebounce(() => {
     console.log("Debounced invalidation triggered!");
     invalidateDashboardQueries(queryClient, new Date(), expedition);
-    // NEW: Invalidate historyData for the current day to ensure immediate update
+    // Invalidate historyData for the current day to ensure immediate update
     queryClient.invalidateQueries({ queryKey: ["historyData", formattedDate, formattedDate] });
-    // Invalidate the comprehensive resi data to ensure it's up-to-date for future scans
-    // These queries are no longer fetched comprehensively, so no need to invalidate them here.
-    // queryClient.invalidateQueries({ queryKey: ["allResiDataComprehensive"] }); // REMOVED
   }, 150);
 
   const keepFocus = () => {
@@ -93,7 +84,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
     console.log("Starting handleScanResi for:", currentResi, "at:", new Date().toISOString());
     console.log("Supabase Project ID in useResiScanner:", SUPABASE_PROJECT_ID); // Log Supabase Project ID
 
-    const queryKey = ["allResiForExpedition", expedition, formattedDate]; // Still used for optimistic update
+    const queryKey = ["allResiForExpedition", expedition, formattedDate];
 
     const currentOptimisticId = Date.now().toString() + Math.random().toString(36).substring(2, 9);
 
@@ -102,22 +93,16 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
       let validationMessage: string | null = null;
       let validationStatus: "OK" | "DUPLICATE_RESI" | "MISMATCH_EXPEDISI" | "NOT_FOUND_EXPEDISI" = "OK";
 
-      // 1. Global Resi Duplicate Check (direct Supabase query)
-      console.log(`Checking for duplicate resi ${currentResi} in tbl_resi...`);
-      const { data: existingResiScan, error: duplicateCheckError } = await supabase
-        .from("tbl_resi")
-        .select("Resi, nokarung, Keterangan, created")
-        .eq("Resi", currentResi)
-        .single();
+      // 1. Quick Local Duplicate Check (using allResiForExpedition cache)
+      console.log(`Performing quick local duplicate check for resi ${currentResi}...`);
+      const localDuplicate = allResiForExpedition?.find(
+        (item) => item.Resi.toLowerCase() === currentResi.toLowerCase()
+      );
 
-      if (duplicateCheckError && duplicateCheckError.code !== 'PGRST116') { // PGRST116 means "no rows found"
-        throw duplicateCheckError;
-      }
-
-      if (existingResiScan) {
-        const existingScanDate = new Date(existingResiScan.created);
+      if (localDuplicate) {
+        const existingScanDate = new Date(localDuplicate.created);
         validationStatus = 'DUPLICATE_RESI';
-        validationMessage = `DOUBLE! Resi ini sudah discan di karung ${existingResiScan.nokarung} pada tanggal ${format(existingScanDate, 'dd/MM/yyyy')} dengan keterangan ${existingResiScan.Keterangan}.`;
+        validationMessage = `DOUBLE! Resi ini sudah discan di karung ${localDuplicate.nokarung} pada tanggal ${format(existingScanDate, 'dd/MM/yyyy')} dengan keterangan ${localDuplicate.Keterangan}.`;
       }
 
       if (validationStatus !== 'OK') {
@@ -129,24 +114,34 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
         }
         setIsProcessing(false);
         keepFocus();
-        return; // Exit early if duplicate
+        return; // Exit early if duplicate found locally
       }
 
-      // 2. Check tbl_expedisi for the resi number and determine actualCourierName (direct Supabase query)
-      console.log(`Checking for resi ${currentResi} in tbl_expedisi...`);
-      const { data: expedisiRecord, error: expedisiCheckError } = await supabase
-        .from("tbl_expedisi")
-        .select("resino, couriername, created")
-        .eq("resino", currentResi)
-        .single();
+      // 2. Server-Side Combined Validation (RPC Call)
+      console.log(`Calling RPC get_resi_validation_details for resi ${currentResi}...`);
+      const { data: rpcData, error: rpcError } = await supabase.rpc("get_resi_validation_details", {
+        p_resi_number: currentResi,
+      }).single(); // Use .single() as the RPC returns a single row
 
-      if (expedisiCheckError && expedisiCheckError.code !== 'PGRST116') { // PGRST116 means "no rows found"
-        throw expedisiCheckError;
+      if (rpcError) {
+        console.error("Error calling get_resi_validation_details RPC:", rpcError);
+        throw rpcError;
       }
 
-      if (expedition === 'ID') {
+      const resiRecord = rpcData?.resi_record;
+      const expedisiRecord = rpcData?.expedisi_record;
+
+      console.log("RPC Result - resi_record:", resiRecord);
+      console.log("RPC Result - expedisi_record:", expedisiRecord);
+
+      // Check for global duplicate (if resiRecord exists, it's a duplicate)
+      if (resiRecord) {
+        const existingScanDate = new Date(resiRecord.created);
+        validationStatus = 'DUPLICATE_RESI';
+        validationMessage = `DOUBLE! Resi ini sudah discan di karung ${resiRecord.nokarung} pada tanggal ${format(existingScanDate, 'dd/MM/yyyy')} dengan keterangan ${resiRecord.Keterangan}.`;
+      } else if (expedition === 'ID') {
         if (expedisiRecord) {
-          // Resi found in tbl_expedisi
+          // Resi found in tbl_expedisi, but current expedition is 'ID'
           if (expedisiRecord.couriername?.trim().toUpperCase() === 'ID') {
             actualCourierName = 'ID'; // Store as 'ID' if it's genuinely an 'ID' resi in tbl_expedisi
           } else {
@@ -155,10 +150,10 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
             validationMessage = `Resi ini bukan milik ekspedisi ${expedition}, melainkan milik ekspedisi ${expedisiRecord.couriername}.`;
           }
         } else {
-          // Resi NOT found in tbl_expedisi at all
+          // Resi NOT found in tbl_expedisi at all, and current expedition is 'ID'
           actualCourierName = 'ID_REKOMENDASI'; // Store as 'ID_REKOMENDASI' if not found in tbl_expedisi
         }
-      } else { // For non-ID expeditions (this part remains the same)
+      } else { // For non-ID expeditions
         if (!expedisiRecord) {
           validationStatus = 'NOT_FOUND_EXPEDISI';
           validationMessage = 'Data tidak ada di database ekspedisi.';
@@ -173,13 +168,13 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
       if (validationStatus !== 'OK') {
         showError(validationMessage || "Validasi gagal.");
         try {
-          beepFailure.play();
+          beepDouble.play(); // Use beepDouble for any validation failure
         } catch (e) {
-          console.error("Error playing beepFailure:", e);
+          console.error("Error playing beepDouble:", e);
         }
         setIsProcessing(false);
         keepFocus();
-        return; // Exit early if expedisi validation fails
+        return; // Exit early if server-side validation fails
       }
 
       // --- Optimistic UI Update ---
@@ -196,12 +191,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
       queryClient.setQueryData(queryKey, (oldData: ResiExpedisiData[] | undefined) => {
         return [...(oldData || []), newResiEntry]; // Ensure oldData is an array
       });
-      // The comprehensive list (Map) is no longer maintained on the client for performance.
-      // queryClient.setQueryData(["allResiDataComprehensive"], (oldData: Map<string, ResiExpedisiData> | undefined) => {
-      //   const newDataMap = new Map(oldData); // Create a new Map to ensure immutability
-      //   newDataMap.set(currentResi.toLowerCase(), newResiEntry);
-      //   return newDataMap;
-      // });
 
       lastOptimisticIdRef.current = currentOptimisticId;
       console.log("Optimistically updated caches with ID:", currentOptimisticId);
@@ -274,12 +263,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
           queryClient.setQueryData(queryKey, (oldData: ResiExpedisiData[] | undefined) => {
               return (oldData || []).filter(item => item.optimisticId !== lastOptimisticIdRef.current);
           });
-          // The comprehensive list (Map) is no longer maintained on the client for performance.
-          // queryClient.setQueryData(["allResiDataComprehensive"], (oldData: Map<string, ResiExpedisiData> | undefined) => {
-          //   const newDataMap = new Map(oldData);
-          //   newDataMap.delete(currentResi.toLowerCase());
-          //   return newDataMap;
-          // });
           console.log(`Reverted optimistic update for ID: ${lastOptimisticIdRef.current} due to error.`);
       }
       lastOptimisticIdRef.current = null; // Clear the ref after attempting revert

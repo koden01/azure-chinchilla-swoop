@@ -161,6 +161,18 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
   };
 
   const handleBatalResi = async (resiNumber: string) => {
+    // Optimistic UI update: Remove the item immediately
+    const originalModalData = modalData;
+    const itemToBatal = originalModalData.find(item => (item.Resi || item.resino) === resiNumber);
+    setModalData(prevData => {
+      const newData = prevData.filter(item => {
+        const itemResi = item.Resi || item.resino;
+        return itemResi !== resiNumber;
+      });
+      console.log(`Optimistically removed ${resiNumber} from modal data. New length: ${newData.length}`);
+      return newData;
+    });
+
     try {
       console.log(`Attempting to batal resi: ${resiNumber}`);
       
@@ -214,26 +226,33 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         showSuccess(`Resi ${resiNumber} berhasil dibatalkan.`);
       }
 
-      // Update modalData state immediately
-      setModalData(prevData => {
-        const newData = prevData.filter(item => {
-          const itemResi = item.Resi || item.resino;
-          return itemResi !== resiNumber;
-        });
-        console.log(`Modal data after batal for ${resiNumber}: ${prevData.length} -> ${newData.length}`);
-        return newData;
-      });
-
       // Invalidate queries to trigger refetch for dashboard summaries
       invalidateDashboardQueries(queryClient, date);
 
     } catch (error: any) {
+      // Revert optimistic update on error
+      if (itemToBatal) {
+        setModalData(originalModalData); // Revert to original data
+        console.log(`Reverted optimistic update for ${resiNumber} due to error.`);
+      }
       showError(`Gagal membatalkan resi ${resiNumber}. ${error.message || "Silakan coba lagi."}`);
       console.error("Error batal resi:", error);
     }
   };
 
   const handleConfirmResi = async (resiNumber: string) => {
+    // Optimistic UI update: Remove the item immediately
+    const originalModalData = modalData;
+    const itemToConfirm = originalModalData.find(item => (item.Resi || item.resino) === resiNumber);
+    setModalData(prevData => {
+      const newData = prevData.filter(item => {
+        const itemResi = item.Resi || item.resino;
+        return itemResi !== resiNumber;
+      });
+      console.log(`Optimistically removed ${resiNumber} from modal data. New length: ${newData.length}`);
+      return newData;
+    });
+
     try {
       console.log(`Attempting to confirm resi: ${resiNumber}`);
       // Use allExpedisiData (Map) to get couriername and created timestamp
@@ -296,20 +315,15 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         showSuccess(`Resi ${resiNumber} berhasil dikonfirmasi.`);
       }
 
-      // Update modalData state immediately
-      setModalData(prevData => {
-        const newData = prevData.filter(item => {
-          const itemResi = item.Resi || item.resino;
-          return itemResi !== resiNumber;
-        });
-        console.log(`Modal data after confirm for ${resiNumber}: ${prevData.length} -> ${newData.length}`);
-        return newData;
-      });
-
       // Invalidate queries to trigger refetch for dashboard summaries
       invalidateDashboardQueries(queryClient, date);
 
     } catch (error: any) {
+      // Revert optimistic update on error
+      if (itemToConfirm) {
+        setModalData(originalModalData); // Revert to original data
+        console.log(`Reverted optimistic update for ${resiNumber} due to error.`);
+      }
       showError(`Gagal mengkonfirmasi resi ${resiNumber}. ${error.message || "Silakan coba lagi."}`);
       console.error("Error confirming resi:", error);
     }
@@ -317,26 +331,39 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
 
   const handleCekfuToggle = async (resiNumber: string, currentCekfuStatus: boolean) => {
     console.log(`Toggling CEKFU for resi ${resiNumber} from ${currentCekfuStatus} to ${!currentCekfuStatus}`);
-    const { error } = await supabase
-      .from("tbl_expedisi")
-      .update({ cekfu: !currentCekfuStatus })
-      .eq("resino", resiNumber);
+    // Optimistic UI update for CEKFU toggle
+    setModalData(prevData =>
+      prevData.map(item => {
+        const itemResi = item.Resi || item.resino;
+        return itemResi === resiNumber
+          ? { ...item, cekfu: !currentCekfuStatus }
+          : item;
+      })
+    );
 
-    if (error) {
-      showError(`Gagal memperbarui status CEKFU resi ${resiNumber}.`);
-      console.error("Error updating CEKFU status:", error);
-    } else {
+    try {
+      const { error } = await supabase
+        .from("tbl_expedisi")
+        .update({ cekfu: !currentCekfuStatus })
+        .eq("resino", resiNumber);
+
+      if (error) {
+        throw error;
+      }
       showSuccess(`Status CEKFU resi ${resiNumber} berhasil diperbarui.`);
-      // Update modalData state immediately for CEKFU toggle
+      invalidateDashboardQueries(queryClient, date);
+    } catch (error: any) {
+      // Revert optimistic update on error
       setModalData(prevData =>
         prevData.map(item => {
           const itemResi = item.Resi || item.resino;
           return itemResi === resiNumber
-            ? { ...item, cekfu: !currentCekfuStatus }
+            ? { ...item, cekfu: currentCekfuStatus } // Revert to original status
             : item;
         })
       );
-      invalidateDashboardQueries(queryClient, date);
+      showError(`Gagal memperbarui status CEKFU resi ${resiNumber}. ${error.message || "Silakan coba lagi."}`);
+      console.error("Error updating CEKFU status:", error);
     }
   };
 

@@ -183,7 +183,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
         nokarung: selectedKarung,
         created: new Date().toISOString(),
         Keterangan: actualCourierName, // Use validated courier name
-        schedule: "ontime", // Optimistic schedule
+        schedule: "ontime", // Optimistic schedule (will be corrected by DB trigger if 'late')
         optimisticId: currentOptimisticId,
       };
 
@@ -201,6 +201,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
       keepFocus(); // Keep focus on the input
 
       // --- Direct Supabase Insert/Update using upsert ---
+      // Remove 'schedule' from upsert to let the database trigger handle 'ontime'/'late'
       const { error: upsertError } = await supabase
         .from("tbl_resi")
         .upsert({
@@ -208,7 +209,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
           nokarung: selectedKarung,
           created: new Date().toISOString(),
           Keterangan: actualCourierName,
-          schedule: "ontime",
+          // schedule: "ontime", // Dihapus agar trigger database yang menentukan
         }, { onConflict: 'Resi' }); // Specify the unique column for conflict resolution
 
       if (upsertError) {

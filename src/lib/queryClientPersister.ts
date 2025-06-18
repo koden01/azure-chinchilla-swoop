@@ -1,8 +1,8 @@
+import { Persister, PersistedClient } from '@tanstack/query-persist-client-core'; // Corrected import
 import { get, set, del } from 'idb-keyval';
-import { Persister } from '@tanstack/react-query';
 
 // Custom replacer for JSON.stringify to handle Map objects
-function replacer(key: string, value: any): any {
+function replacer(_key: string, value: any): any { // Added _ to key
   if (value instanceof Map) {
     return {
       dataType: 'Map',
@@ -13,7 +13,7 @@ function replacer(key: string, value: any): any {
 }
 
 // Custom reviver for JSON.parse to handle Map objects
-function reviver(key: string, value: any): any {
+function reviver(_key: string, value: any): any { // Added _ to key
   if (typeof value === 'object' && value !== null && value.dataType === 'Map') {
     return new Map(value.value);
   }
@@ -21,7 +21,7 @@ function reviver(key: string, value: any): any {
 }
 
 export const persister: Persister = {
-  persistClient: async (client) => {
+  persistClient: async (client: PersistedClient) => { // Added PersistedClient type
     console.log('Persisting client...');
     // Use custom replacer when stringifying
     await set('scanresihg-query-cache', JSON.stringify(client, replacer));

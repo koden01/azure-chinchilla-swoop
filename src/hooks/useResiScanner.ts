@@ -5,7 +5,7 @@ import { beepSuccess, beepFailure, beepDouble } from "@/utils/audio";
 import { useDebounce } from "@/hooks/useDebounce";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
 import { useQueryClient } from "@tanstack/react-query";
-import { format, startOfDay, endOfDay } from "date-fns";
+import { format } from "date-fns"; // Menghapus startOfDay, endOfDay
 
 // Define the type for ResiExpedisiData to match useResiInputData
 interface ResiExpedisiData {
@@ -28,12 +28,12 @@ interface UseResiScannerProps {
   expedition: string;
   selectedKarung: string;
   formattedDate: string;
-  allResiForExpedition: ResiExpedisiData[] | undefined; // This is still used for optimistic updates
+  // allResiForExpedition: ResiExpedisiData[] | undefined; // This is still used for optimistic updates - REMOVED
   allResiDataComprehensive: Map<string, ResiExpedisiData> | undefined; // NEW: Comprehensive list as Map
   allExpedisiDataUnfiltered: Map<string, ExpedisiData> | undefined; // Prop for all expedisi data as Map
 }
 
-export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allResiForExpedition, allResiDataComprehensive, allExpedisiDataUnfiltered }: UseResiScannerProps) => {
+export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allResiDataComprehensive, allExpedisiDataUnfiltered }: UseResiScannerProps) => {
   const [resiNumber, setResiNumber] = React.useState<string>("");
   const [isProcessing, setIsProcessing] = React.useState<boolean>(false);
   const resiInputRef = React.useRef<HTMLInputElement>(null);
@@ -81,7 +81,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
   };
 
   const handleScanResi = async () => {
-    dismissToast();
+    dismissToast(); // Memanggil dismissToast tanpa argumen untuk menutup semua toast
     const currentResi = resiNumber.trim();
     setResiNumber("");
 

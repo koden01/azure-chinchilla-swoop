@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { CalendarIcon, CalendarDays, Package, Loader2 } from "lucide-react"; // Import Loader2
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { useQueryClient } from "@tanstack/react-query";
+// import { useQueryClient } from "@tanstack/react-query"; // Removed unused import
 import ResiDetailModal from "@/components/ResiDetailModal";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useDashboardModals } from "@/hooks/useDashboardModals";
@@ -26,7 +26,7 @@ import {
 const DashboardPage: React.FC = () => {
   console.log("DashboardPage rendering..."); // Added this line to force re-evaluation
   const [date, setDate] = React.useState<Date | undefined>(new Date());
-  const queryClient = useQueryClient();
+  // const queryClient = useQueryClient(); // Removed unused declaration
 
   // Inisialisasi useTransition
   const [isPending, startTransition] = React.useTransition();
@@ -62,7 +62,7 @@ const DashboardPage: React.FC = () => {
     modalType,
     selectedCourier,
     handleOpenTransaksiHariIniModal,
-    handleOpenBelumKirimModal,
+    handleOpenBelumKirimModal, // Keep this as it's now used
     handleOpenFollowUpFlagNoModal,
     handleOpenScanFollowupModal,
     handleOpenExpeditionDetailModal,
@@ -158,6 +158,7 @@ const DashboardPage: React.FC = () => {
             gradientTo="to-blue-500"
             icon="package"
             onClick={handleOpenTransaksiHariIniModal}
+            onSisaClick={handleOpenBelumKirimModal} {/* Added onClick for Sisa */}
           />
           <SummaryCard
             title="Total Scan"

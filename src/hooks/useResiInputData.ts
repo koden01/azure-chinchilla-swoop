@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, /* useQueryClient */ } from "@tanstack/react-query"; // Menghapus useQueryClient karena tidak digunakan
 import { supabase } from "@/integrations/supabase/client";
 import { format, startOfDay, endOfDay } from "date-fns";
 import React from "react";
@@ -17,17 +17,17 @@ interface ResiExpedisiData {
   schedule: string | null;
 }
 
-// Define type for tbl_expedisi data
-interface ExpedisiData {
-  resino: string;
-  orderno: string | null;
-  chanelsales: string | null;
-  couriername: string | null;
-  created: string;
-  flag: string | null;
-  datetrans: string | null;
-  cekfu: boolean | null;
-}
+// Menghapus interface ExpedisiData karena tidak lagi digunakan
+// interface ExpedisiData {
+//   resino: string;
+//   orderno: string | null;
+//   chanelsales: string | null;
+//   couriername: string | null;
+//   created: string;
+//   flag: string | null;
+//   datetrans: string | null;
+//   cekfu: boolean | null;
+// }
 
 // NEW: Type for all karung summaries
 interface AllKarungSummaryItem {
@@ -84,7 +84,8 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
   const formattedDate = format(today, "yyyy-MM-dd");
   const startOfTodayISO = startOfDay(today).toISOString();
   const endOfTodayISO = endOfDay(today).toISOString();
-  const queryClient = useQueryClient(); // Get query client instance
+  // Menghapus queryClient karena tidak digunakan
+  // const queryClient = useQueryClient(); 
 
   // Query to fetch all resi data for the current expedition and date for local validation
   const { data: allResiForExpedition, isLoading: isLoadingAllResiForExpedition } = useQuery<ResiExpedisiData[]>({
@@ -179,16 +180,16 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     queryKey: ["uniqueExpeditionNames"],
     queryFn: async () => {
       console.log("Fetching unique expedition names from tbl_expedisi.");
+      // Menggunakan sintaks distinct yang benar
       const { data, error } = await supabase
         .from("tbl_expedisi")
-        .select("couriername")
-        .distinct("couriername");
+        .select("couriername", { distinct: true }); // Perbaikan di sini
 
       if (error) {
         console.error("Error fetching unique expedition names:", error);
         throw error;
       }
-      const names = Array.from(new Set(data.map(item => item.couriername?.trim().toUpperCase()).filter(Boolean) as string[]));
+      const names = Array.from(new Set(data.map((item: { couriername: string | null }) => item.couriername?.trim().toUpperCase()).filter(Boolean) as string[])); // Perbaikan tipe 'item'
       names.push("ID"); // Ensure 'ID' is always present
       return names.sort((a, b) => a.localeCompare(b));
     },

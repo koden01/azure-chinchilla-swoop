@@ -183,7 +183,6 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         console.warn(`Resi ${resiNumber} not found in allExpedisiData map. Proceeding with tbl_resi update/insert for 'batal' with default values.`);
       }
 
-      // const courierNameFromExpedisi = expedisiRecord?.couriername || "UNKNOWN"; // Default if not found - REMOVED UNUSED VARIABLE
       const createdTimestampFromExpedisi = expedisiRecord?.created || new Date().toISOString(); // Default to now if not found
 
       const { data: existingResi, error: checkError } = await supabase
@@ -201,7 +200,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         const { error: updateError } = await supabase
           .from("tbl_resi")
           .update({ 
-            schedule: "batal",
+            schedule: "batal", // This is explicitly 'batal', so keep it
             created: createdTimestampFromExpedisi, // Update created date from tbl_expedisi
             Keterangan: "BATAL", // Ensure Keterangan is BATAL
             nokarung: "0", // Ensure nokarung is 0 for batal
@@ -219,7 +218,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
             created: createdTimestampFromExpedisi, // Use created from tbl_expedisi
             Keterangan: "BATAL",
             nokarung: "0",
-            schedule: "batal",
+            schedule: "batal", // This is explicitly 'batal', so keep it
           });
 
         if (insertError) throw insertError;
@@ -293,7 +292,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
             created: expedisiCreatedTimestamp, // Use created from tbl_expedisi
             Keterangan: courierNameFromExpedisi,
             nokarung: "0",
-            schedule: "ontime", // Set schedule to ontime upon confirmation
+            // schedule: "ontime", // Dihapus agar trigger database yang menentukan
           })
           .eq("Resi", resiNumber);
 
@@ -308,7 +307,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
             created: expedisiCreatedTimestamp, // Use created from tbl_expedisi
             Keterangan: courierNameFromExpedisi,
             nokarung: "0",
-            schedule: "ontime", // Set schedule to ontime upon confirmation
+            // schedule: "ontime", // Dihapus agar trigger database yang menentukan
           });
 
         if (insertResiError) throw insertResiError;

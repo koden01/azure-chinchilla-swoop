@@ -28,7 +28,7 @@ import {
 import { format } from "date-fns";
 import { Copy } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
-// import { cn } from "@/lib/utils"; // Menghapus import cn karena tidak digunakan
+import { useDebounce } from "@/hooks/useDebounce"; // Import useDebounce
 
 console.log("ResiDetailModal.tsx: Component file loaded.");
 
@@ -72,19 +72,21 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
   onConfirmResi,
   onCekfuToggle,
 }) => {
-  const [searchTerm, setSearchTerm] = useState("");
+  const [rawSearchTerm, setRawSearchTerm] = useState(""); // State for raw input
+  const debouncedSearchTerm = useDebounce(rawSearchTerm, 300); // Debounced search term
+
   const [currentPage, setCurrentPage] = useState(1);
 
   // Log when the data prop changes
   useEffect(() => {
     console.log("ResiDetailModal: data prop changed. New length:", data.length);
     setCurrentPage(1); // Reset page when data changes
-    setSearchTerm(""); // Reset search term when data changes
+    setRawSearchTerm(""); // Reset raw search term when data changes
   }, [data, isOpen, modalType]); // Added data to dependency array
 
   const sortedAndFilteredData = React.useMemo(() => {
     console.log("ResiDetailModal: Recalculating sortedAndFilteredData. Initial data length:", data.length);
-    const lowerCaseSearchTerm = searchTerm.toLowerCase();
+    const lowerCaseSearchTerm = debouncedSearchTerm.toLowerCase(); // Use debounced term
     let tempFilteredData = data.filter((item) => {
       // Use item.resino for tbl_expedisi based modals, item.Resi for tbl_resi based modals
       const resiIdentifier = modalType === "followUp" ? item.Resi : item.resino;
@@ -123,7 +125,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
     }
     console.log("ResiDetailModal: Filtered data length after search/sort:", tempFilteredData.length);
     return tempFilteredData;
-  }, [searchTerm, data, modalType]); // Added data to dependency array
+  }, [debouncedSearchTerm, data, modalType]); // Use debouncedSearchTerm as dependency
 
   const totalPages = Math.ceil(sortedAndFilteredData.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -278,8 +280,8 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
           <Input
             id="search-term-input"
             placeholder="Cari Resi, No Order, Marketplace, Kurir, atau Tanggal Pembelian..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            value={rawSearchTerm} // Bind to rawSearchTerm
+            onChange={(e) => setRawSearchTerm(e.target.value)} // Update rawSearchTerm
             className="w-full"
           />
           <Button

@@ -1,7 +1,7 @@
 import React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns"; // Menghapus startOfDay, endOfDay
+import { format } from "date-fns";
 import { showSuccess, showError } from "@/utils/toast";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
 
@@ -164,21 +164,15 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
     try {
       console.log(`Attempting to batal resi: ${resiNumber}`);
       
-      // Fetch the 'created' timestamp and couriername from tbl_expedisi first
-      const { data: expedisiData, error: expFetchError } = await supabase
-        .from("tbl_expedisi")
-        .select("couriername, created") // Select 'created' column
-        .eq("resino", resiNumber)
-        .single();
-
-      if (expFetchError || !expedisiData) {
-        // If not found in tbl_expedisi, it might be a manually added resi or an error.
-        // For 'batal', we can still proceed by trying to update tbl_resi or insert a 'BATAL' record.
-        console.warn(`Resi ${resiNumber} not found in tbl_expedisi. Proceeding with tbl_resi update/insert for 'batal'.`);
+      // Use allExpedisiData (Map) to get couriername and created timestamp
+      const expedisiRecord = allExpedisiData?.get(resiNumber.toLowerCase());
+      
+      if (!expedisiRecord) {
+        console.warn(`Resi ${resiNumber} not found in allExpedisiData map. Proceeding with tbl_resi update/insert for 'batal' with default values.`);
       }
 
-      const courierName = expedisiData?.couriername || "UNKNOWN"; // Default if not found
-      const createdTimestampFromExpedisi = expedisiData?.created || new Date().toISOString(); // Default to now if not found
+      const courierNameFromExpedisi = expedisiRecord?.couriername || "UNKNOWN"; // Default if not found
+      const createdTimestampFromExpedisi = expedisiRecord?.created || new Date().toISOString(); // Default to now if not found
 
       const { data: existingResi, error: checkError } = await supabase
         .from("tbl_resi")
@@ -242,19 +236,15 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
   const handleConfirmResi = async (resiNumber: string) => {
     try {
       console.log(`Attempting to confirm resi: ${resiNumber}`);
-      // Fetch the 'created' timestamp and couriername from tbl_expedisi first
-      const { data: expedisiData, error: expFetchError } = await supabase
-        .from("tbl_expedisi")
-        .select("couriername, created") // Select 'created' column
-        .eq("resino", resiNumber)
-        .single();
+      // Use allExpedisiData (Map) to get couriername and created timestamp
+      const expedisiRecord = allExpedisiData?.get(resiNumber.toLowerCase());
 
-      if (expFetchError || !expedisiData) {
-        throw new Error(`Gagal mendapatkan data ekspedisi untuk resi ${resiNumber}: ${expFetchError?.message || "Data tidak ditemukan"}`);
+      if (!expedisiRecord) {
+        throw new Error(`Gagal mendapatkan data ekspedisi untuk resi ${resiNumber}: Data tidak ditemukan di cache.`);
       }
 
-      const courierName = expedisiData.couriername;
-      const expedisiCreatedTimestamp = expedisiData.created; // Get the created timestamp
+      const courierNameFromExpedisi = expedisiRecord.couriername;
+      const expedisiCreatedTimestamp = expedisiRecord.created; // Get the created timestamp
 
       console.log(`Updating flag to 'YES' for resi ${resiNumber} in tbl_expedisi.`);
       const { error: expUpdateError } = await supabase
@@ -282,7 +272,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
           .from("tbl_resi")
           .update({
             created: expedisiCreatedTimestamp, // Use created from tbl_expedisi
-            Keterangan: courierName,
+            Keterangan: courierNameFromExpedisi,
             nokarung: "0",
             schedule: "ontime", // Set schedule to ontime upon confirmation
           })
@@ -297,7 +287,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
           .insert({
             Resi: resiNumber,
             created: expedisiCreatedTimestamp, // Use created from tbl_expedisi
-            Keterangan: courierName,
+            Keterangan: courierNameFromExpedisi,
             nokarung: "0",
             schedule: "ontime", // Set schedule to ontime upon confirmation
           });

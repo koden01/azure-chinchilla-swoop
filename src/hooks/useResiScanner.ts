@@ -5,7 +5,7 @@ import { beepSuccess, beepFailure, beepDouble } from "@/utils/audio";
 import { useDebounce } from "@/hooks/useDebounce";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
 import { useQueryClient } from "@tanstack/react-query";
-import { format } from "date-fns"; // Menghapus startOfDay, endOfDay
+import { format } from "date-fns";
 
 // Define the type for ResiExpedisiData to match useResiInputData
 interface ResiExpedisiData {
@@ -197,7 +197,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
 
       // --- Direct Supabase Insert/Update ---
       // 1. Insert into tbl_resi with onConflict to avoid unique constraint error
-      const { data: insertedData, error: insertError } = await supabase
+      const { error: insertError } = await supabase
         .from("tbl_resi")
         .insert({
           Resi: currentResi,
@@ -205,35 +205,16 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
           created: new Date().toISOString(),
           Keterangan: actualCourierName,
           schedule: "ontime",
-        }, { onConflict: "Resi", ignoreDuplicates: true }) // Corrected: Use onConflict option directly
-        .select(); // Select the inserted row to check if it was actually inserted
+        }, { ignoreDuplicates: true }); // Corrected: Use ignoreDuplicates for single object insert
 
       if (insertError) {
+        // If the error is not a duplicate key error, then throw it
+        // Supabase client's `ignoreDuplicates` handles the conflict silently,
+        // so if we get an error here, it's a different issue.
         throw new Error(`Gagal menyisipkan resi ke tbl_resi: ${insertError.message}`);
       }
-
-      if (!insertedData || insertedData.length === 0) {
-        // This case should ideally not be hit often if client-side validation is good,
-        // but it's a fallback for true race conditions.
-        console.warn("Supabase insert was ignored due to duplicate Resi (race condition). Client-side validation should have caught this.");
-        // No need to show error here, as client-side already showed it.
-        // Just ensure optimistic update is reverted if it somehow wasn't already.
-        if (lastOptimisticIdRef.current) {
-          queryClient.setQueryData(queryKey, (oldData: ResiExpedisiData[] | undefined) => {
-              return (oldData || []).filter(item => item.optimisticId !== lastOptimisticIdRef.current);
-          });
-          queryClient.setQueryData(["allResiDataComprehensive"], (oldData: Map<string, ResiExpedisiData> | undefined) => {
-            const newDataMap = new Map(oldData);
-            newDataMap.delete(currentResi.toLowerCase());
-            return newDataMap;
-          });
-          console.log(`Reverted optimistic update for ID: ${lastOptimisticIdRef.current} due to database conflict.`);
-        }
-        lastOptimisticIdRef.current = null; // Clear the ref
-        return; // Exit as it was a duplicate handled by DB
-      }
       
-      console.log("Successfully inserted into tbl_resi.");
+      console.log("Successfully inserted into tbl_resi (or ignored duplicate).");
 
       // 2. Update tbl_expedisi flag to 'YES'
       const { error: updateExpedisiError } = await supabase

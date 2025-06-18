@@ -92,7 +92,7 @@ const DashboardPage: React.FC = () => {
       } else if (expeditionCurrentPage >= totalExpeditionPages - 1) {
         pages.push(totalExpeditionPages - 2, totalExpeditionPages - 1, totalExpeditionPages);
       } else {
-        pages.push(expeditionCurrentPage - 1, expeditionCurrentPage, expeditionCurrentPage + 1);
+        pages.push(currentPage - 1, currentPage, currentPage + 1);
       }
     }
     return pages;
@@ -100,6 +100,8 @@ const DashboardPage: React.FC = () => {
 
   console.log("DashboardPage: expeditionSummaries (from hook):", expeditionSummaries); // Debug log
   console.log("DashboardPage: currentExpeditionSummaries (after pagination):", currentExpeditionSummaries); // Debug log
+  console.log("DashboardPage: currentExpeditionSummaries being mapped:", currentExpeditionSummaries);
+
 
   return (
     <>
@@ -182,6 +184,7 @@ const DashboardPage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {currentExpeditionSummaries && currentExpeditionSummaries.length > 0 ? (
               currentExpeditionSummaries.map((summary) => {
+                console.log("DashboardPage: Summary object being passed to ExpeditionDetailCard:", JSON.stringify(summary));
                 return (
                   <div key={summary.name} onClick={() => handleOpenExpeditionDetailModal(summary.name)}>
                     <ExpeditionDetailCard
@@ -220,11 +223,13 @@ const DashboardPage: React.FC = () => {
                     </PaginationLink>
                   </PaginationItem>
                 ))}
-                <PaginationNext
-                  href="#"
-                  onClick={() => handleExpeditionPageChange(expeditionCurrentPage + 1)}
-                  className={expeditionCurrentPage === totalExpeditionPages ? "pointer-events-none opacity-50" : ""}
-                />
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={() => handleExpeditionPageChange(expeditionCurrentPage + 1)}
+                    className={expeditionCurrentPage === totalExpeditionPages ? "pointer-events-none opacity-50" : ""}
+                  />
+                </PaginationItem>
               </PaginationContent>
             </Pagination>
           )}

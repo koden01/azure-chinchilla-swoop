@@ -61,14 +61,13 @@ const ExpeditionDetailCard: React.FC<ExpeditionDetailCardProps> = ({
             {showIdRekomendasi && <p>ID Rekomendasi:</p>}
           </div>
           <div className="text-right font-medium">
-            {/* Temporarily render raw values for debugging */}
-            <p>{totalTransaksi} (Raw)</p>
-            <p>{totalScan} (Raw)</p>
-            <p>{sisa} (Raw)</p>
-            <p>{jumlahKarung} (Raw)</p>
-            <p>{totalBatal} (Raw)</p>
-            <p>{totalScanFollowUp} (Raw)</p>
-            {showIdRekomendasi && <p>{idRekomendasi} (Raw)</p>}
+            <p>{totalTransaksi}</p>
+            <p>{totalScan}</p>
+            <p>{sisa}</p>
+            <p>{jumlahKarung}</p>
+            <p>{totalBatal}</p>
+            <p>{totalScanFollowUp}</p>
+            {showIdRekomendasi && <p>{idRekomendasi}</p>}
           </div>
         </CardContent>
       </div>

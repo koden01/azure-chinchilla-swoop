@@ -186,6 +186,23 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
   const handleBatalResi = async (resiNumber: string) => {
     try {
       console.log(`Attempting to batal resi: ${resiNumber}`);
+      
+      // Fetch the 'created' timestamp and couriername from tbl_expedisi first
+      const { data: expedisiData, error: expFetchError } = await supabase
+        .from("tbl_expedisi")
+        .select("couriername, created") // Select 'created' column
+        .eq("resino", resiNumber)
+        .single();
+
+      if (expFetchError || !expedisiData) {
+        // If not found in tbl_expedisi, it might be a manually added resi or an error.
+        // For 'batal', we can still proceed by trying to update tbl_resi or insert a 'BATAL' record.
+        console.warn(`Resi ${resiNumber} not found in tbl_expedisi. Proceeding with tbl_resi update/insert for 'batal'.`);
+      }
+
+      const courierNameFromExpedisi = expedisiData?.couriername || "UNKNOWN"; // Default if not found
+      const createdTimestampFromExpedisi = expedisiData?.created || new Date().toISOString(); // Default to now if not found
+
       const { data: existingResi, error: checkError } = await supabase
         .from("tbl_resi")
         .select("Resi")
@@ -197,34 +214,26 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       }
 
       if (existingResi) {
-        console.log(`Resi ${resiNumber} found in tbl_resi, updating schedule to 'batal'.`);
+        console.log(`Resi ${resiNumber} found in tbl_resi, updating schedule to 'batal' and created date.`);
         const { error: updateError } = await supabase
           .from("tbl_resi")
-          .update({ schedule: "batal" })
+          .update({ 
+            schedule: "batal",
+            created: createdTimestampFromExpedisi, // Update created date from tbl_expedisi
+            Keterangan: "BATAL", // Ensure Keterangan is BATAL
+            nokarung: "0", // Ensure nokarung is 0 for batal
+          })
           .eq("Resi", resiNumber);
 
         if (updateError) throw updateError;
         showSuccess(`Resi ${resiNumber} berhasil dibatalkan.`);
       } else {
-        console.log(`Resi ${resiNumber} not found in tbl_resi, fetching from tbl_expedisi to insert as 'batal'.`);
-        const { data: expedisiData, error: expFetchError } = await supabase
-          .from("tbl_expedisi")
-          .select("resino, created")
-          .eq("resino", resiNumber)
-          .single();
-
-        if (expFetchError) {
-          showError(`Gagal menemukan data ekspedisi untuk resi ${resiNumber}.`);
-          console.error("Error fetching expedisi data for batal:", expFetchError);
-          return;
-        }
-
-        console.log(`Inserting resi ${resiNumber} into tbl_resi with schedule 'batal'.`);
+        console.log(`Resi ${resiNumber} not found in tbl_resi, inserting as 'batal'.`);
         const { error: insertError } = await supabase
           .from("tbl_resi")
           .insert({
             Resi: resiNumber,
-            created: expedisiData.created,
+            created: createdTimestampFromExpedisi, // Use created from tbl_expedisi
             Keterangan: "BATAL",
             nokarung: "0",
             schedule: "batal",

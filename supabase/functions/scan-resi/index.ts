@@ -72,17 +72,18 @@ serve(async (req) => {
       throw new Error(`Database error during expedisi check: ${expedisiCheckError.message}`);
     }
 
-    let expedisiCreatedTimestamp: string | null = null;
+    let expedisiCreatedTimestamp: string; // Make it non-nullable, always assign a value
 
     if (expedisiRecord && expedisiRecord.created) {
-      // Explicitly convert timestamp without time zone to ISO string with time zone
-      // This handles cases where 'created' from tbl_expedisi might be a simple date string
-      try {
-        expedisiCreatedTimestamp = new Date(expedisiRecord.created).toISOString();
+      // Attempt to parse the timestamp from tbl_expedisi.created
+      // Assuming it's in a format like "YYYY-MM-DD HH:MM:SS" (timestamp without time zone)
+      // Append 'Z' to treat it as UTC to avoid local timezone parsing issues
+      const dateCandidate = new Date(expedisiRecord.created + 'Z');
+      if (!isNaN(dateCandidate.getTime())) {
+        expedisiCreatedTimestamp = dateCandidate.toISOString();
         console.log(`Edge Function: Converted expedisi created timestamp: ${expedisiRecord.created} -> ${expedisiCreatedTimestamp}`);
-      } catch (e) {
-        console.error(`Edge Function: Error converting expedisi created timestamp '${expedisiRecord.created}':`, e);
-        // Fallback to current time if conversion fails
+      } else {
+        console.warn(`Edge Function: Failed to parse expedisi created timestamp '${expedisiRecord.created}'. Falling back to current time.`);
         expedisiCreatedTimestamp = new Date().toISOString();
       }
     } else {

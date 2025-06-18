@@ -364,17 +364,13 @@ const HistoryPage = () => {
               </TableHeader>
               <TableBody>
                 {isLoadingHistory ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center">
+                  <TableRow><TableCell colSpan={7} className="text-center">
                       Memuat data...
-                    </TableCell>
-                  </TableRow>
+                    </TableCell></TableRow>
                 ) : currentData.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center">
+                  <TableRow><TableCell colSpan={7} className="text-center">
                       Tidak ada data.
-                    </TableCell>
-                  </TableRow>
+                    </TableCell></TableRow>
                 ) : (
                   currentData.map((data, index) => (
                     <TableRow key={data.Resi + index} className="hover:bg-gray-100">

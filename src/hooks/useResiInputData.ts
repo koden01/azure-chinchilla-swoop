@@ -93,25 +93,21 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
 
       console.log(`Fetching allResiForExpedition for ${expedition} on ${formattedDate} (for local validation)`);
       
-      let query = supabase
-        .from("tbl_resi")
-        .select("Resi, nokarung, created, Keterangan, schedule")
-        .gte("created", startOfTodayISO)
-        .lt("created", endOfTodayISO);
+      const data = await fetchAllDataPaginated(
+        "tbl_resi",
+        "created", // dateFilterColumn
+        startOfTodayISO,
+        endOfTodayISO,
+        (baseQuery) => { // Custom filter function
+          if (expedition === 'ID') {
+            return baseQuery.in("Keterangan", ['ID', 'ID_REKOMENDASI']);
+          } else {
+            return baseQuery.eq("Keterangan", expedition);
+          }
+        }
+      );
 
-      if (expedition === 'ID') {
-        query = query.in("Keterangan", ['ID', 'ID_REKOMENDASI']);
-      } else {
-        query = query.eq("Keterangan", expedition);
-      }
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.error("Error fetching all resi for expedition:", error);
-        throw error;
-      }
-      console.log(`Fetched ${data?.length || 0} resi for local validation.`);
+      console.log(`Fetched ${data?.length || 0} resi for local validation. Data:`, data);
       return data || [];
     },
     enabled: !!expedition,

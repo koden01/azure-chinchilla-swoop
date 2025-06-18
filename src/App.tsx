@@ -50,8 +50,7 @@ const App = () => {
           position="top-center"
           duration={3000} // Durasi diubah menjadi 3000ms (3 detik)
           toastOptions={{
-            success: {}, 
-            error: {},
+            // `success` dan `error` tidak valid di sini, dikelola oleh `toast.success()` atau `toast.error()`
           }}
         />
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>

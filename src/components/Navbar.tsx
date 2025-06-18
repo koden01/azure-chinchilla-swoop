@@ -1,9 +1,6 @@
-import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Search, Plus, History, LayoutDashboard } from "lucide-react";
-import { cn } from "@/lib/utils"; // Perbaikan di sini
+import { cn } from "@/lib/utils";
+import { Plus, History, LayoutDashboard } from "lucide-react"; // Menghapus Search, Input, Button
 
 const Navbar = () => {
   const location = useLocation();

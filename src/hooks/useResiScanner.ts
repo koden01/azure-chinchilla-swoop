@@ -136,15 +136,15 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
           if (expedisiRecord.couriername?.trim().toUpperCase() === 'ID') {
             actualCourierName = 'ID'; // Store as 'ID' if it's genuinely an 'ID' resi in tbl_expedisi
           } else {
-            // Mismatch: found in tbl_expedisi but not 'ID'
+            // Mismatch: found in tbl_expedisi but not 'ID' (e.g., JNE, SPX)
             validationStatus = 'MISMATCH_EXPEDISI';
             validationMessage = `Resi ini bukan milik ekspedisi ${expedition}, melainkan milik ekspedisi ${expedisiRecord.couriername}.`;
           }
         } else {
-          // Resi NOT found in tbl_expedisi
+          // Resi NOT found in tbl_expedisi at all
           actualCourierName = 'ID_REKOMENDASI'; // Store as 'ID_REKOMENDASI' if not found in tbl_expedisi
         }
-      } else { // For non-ID expeditions
+      } else { // For non-ID expeditions (this part remains the same)
         if (!expedisiRecord) {
           validationStatus = 'NOT_FOUND_EXPEDISI';
           validationMessage = 'Data tidak ada di database ekspedisi.';

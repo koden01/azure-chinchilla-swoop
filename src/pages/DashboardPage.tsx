@@ -68,7 +68,7 @@ const DashboardPage: React.FC = () => {
 
   return (
     <React.Fragment>
-      <div className="p-4 md:p-6 bg-gray-50 min-h-[calc(100vh-64px)] mt-16">
+      <div className="p-4 md:p-6 bg-gray-50 min-h-[calc(100vh-64px)]"> {/* Removed mt-16 */}
         <div className="max-w-7xl mx-auto">
           {/* Date Picker Section */}
           <DashboardDatePicker

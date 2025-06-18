@@ -130,7 +130,8 @@ const HistoryPage = () => {
 
   const filteredHistoryData = React.useMemo(() => {
     if (!historyData) return [];
-    const lowerCaseSearchQuery = debouncedSearchQuery.toLowerCase(); // Use debounced term
+    // Ensure debouncedSearchQuery is treated as a string
+    const lowerCaseSearchQuery = (debouncedSearchQuery || "").toLowerCase(); // Use debounced term and handle potential null/undefined
     const filtered = historyData.filter(data =>
       data.Resi.toLowerCase().includes(lowerCaseSearchQuery) ||
       (data.Keterangan?.toLowerCase() || "").includes(lowerCaseSearchQuery) ||

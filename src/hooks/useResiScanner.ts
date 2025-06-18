@@ -1,7 +1,7 @@
 import React from "react";
 import { supabase, SUPABASE_PROJECT_ID } from "@/integrations/supabase/client";
 import { showSuccess, showError, dismissToast } from "@/utils/toast";
-import { beepSuccess, beepFailure, beepDouble, beepCancel } from "@/utils/audio";
+import { beepSuccess, beepFailure, beepDouble } from "@/utils/audio"; // Removed beepCancel
 import { useDebounce } from "@/hooks/useDebounce";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
 import { useQueryClient } from "@tanstack/react-query";

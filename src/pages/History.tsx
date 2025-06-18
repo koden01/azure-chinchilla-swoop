@@ -3,7 +3,7 @@ import { MadeWithDyad } from "@/components/made-with-dyad";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon, Copy, CalendarDays } from "lucide-react"; // Menambahkan CalendarDays di sini
+import { CalendarIcon, Copy, CalendarDays } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -73,7 +73,7 @@ const HistoryPage = () => {
     while (hasMore) {
       const { data, error } = await supabase
         .from("tbl_resi")
-        .select("Resi, Keterangan, nokarung, created, schedule")
+        .select("Resi, Keterangan, nokarung, created, schedule") // Only select necessary columns
         .gte("created", startIso)
         .lte("created", endIso)
         .order("created", { ascending: false })
@@ -258,7 +258,7 @@ const HistoryPage = () => {
 
   return (
     <React.Fragment>
-      <div className="p-6 space-y-6 bg-gray-50 min-h-[calc(100vh-64px)]">
+      <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
         <div className="bg-gradient-to-r from-green-500 to-blue-600 p-6 rounded-lg shadow-md">
           <h2 className="text-white text-xl font-semibold mb-4 flex items-center">
             <CalendarDays className="mr-2 h-6 w-6" /> Filter Tanggal

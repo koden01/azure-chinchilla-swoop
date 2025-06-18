@@ -37,7 +37,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { showSuccess, showError } from "@/utils/toast";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
-import { useDebounce } from "@/hooks/useDebounce"; // Import useDebounce
+import { useDebounce } from "@/hooks/useDebounce"; // Menggunakan useDebounce untuk nilai
 
 interface HistoryData {
   Resi: string;
@@ -51,7 +51,7 @@ const HistoryPage = () => {
   const [startDate, setStartDate] = React.useState<Date | undefined>(new Date());
   const [endDate, setEndDate] = React.useState<Date | undefined>(new Date());
   const [rawSearchQuery, setRawSearchQuery] = React.useState<string>(""); // State for raw input
-  const debouncedSearchQuery = useDebounce(rawSearchQuery, 300); // Debounced search query
+  const debouncedSearchQuery = useDebounce(rawSearchQuery, 300); // Debounced search query for value
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [resiToDelete, setResiToDelete] = React.useState<string | null>(null);

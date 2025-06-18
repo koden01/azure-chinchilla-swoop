@@ -16,17 +16,34 @@ serve(async (req) => {
     console.log(`Edge Function: Received request for resi: ${resiNumber}, expedition: ${expedition}, karung: ${selectedKarung}`);
 
     if (!resiNumber || !expedition || !selectedKarung) {
-      console.error("Edge Function: Missing required parameters.");
+      console.error("Edge Function: Missing required parameters (resiNumber, expedition, or selectedKarung).");
       return new Response(JSON.stringify({ error: "Missing required parameters." }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
       });
     }
 
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    // --- START: Add robust environment variable checks ---
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+    if (!SUPABASE_URL) {
+      console.error("Edge Function: SUPABASE_URL environment variable is not set.");
+      return new Response(JSON.stringify({ success: false, message: "Server configuration error: SUPABASE_URL is missing." }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500,
+      });
+    }
+    if (!SUPABASE_SERVICE_ROLE_KEY) {
+      console.error("Edge Function: SUPABASE_SERVICE_ROLE_KEY environment variable is not set.");
+      return new Response(JSON.stringify({ success: false, message: "Server configuration error: SUPABASE_SERVICE_ROLE_KEY is missing." }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500,
+      });
+    }
+    // --- END: Add robust environment variable checks ---
+
+    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     let actualCourierName: string | null = null;
     let validationMessage: string | null = null;

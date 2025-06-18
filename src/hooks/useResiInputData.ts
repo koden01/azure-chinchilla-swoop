@@ -36,43 +36,54 @@ interface AllKarungSummaryItem {
   quantity: number;
 }
 
+// Function to fetch all data from a table with pagination
+// Now accepts an optional queryModifier function to apply additional filters
+const fetchAllDataPaginated = async (
+  tableName: string,
+  dateFilterColumn?: string,
+  startDate?: string,
+  endDate?: string,
+  queryModifier?: (query: any) => any // New optional parameter
+) => {
+  let allRecords: any[] = [];
+  let offset = 0;
+  const limit = 1000; // Fetch 1000 records at a time
+  let hasMore = true;
+
+  while (hasMore) {
+    let query = supabase.from(tableName).select("*").range(offset, offset + limit - 1);
+
+    if (dateFilterColumn && startDate && endDate) {
+      query = query.gte(dateFilterColumn, startDate).lt(dateFilterColumn, endDate);
+    }
+
+    if (queryModifier) { // Apply custom modifier if provided
+      query = queryModifier(query);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error(`Error fetching paginated data from ${tableName}:`, error);
+      throw error;
+    }
+
+    if (data && data.length > 0) {
+      allRecords = allRecords.concat(data);
+      offset += data.length;
+      hasMore = data.length === limit; // If less than limit, no more data
+    } else {
+      hasMore = false;
+    }
+  }
+  return allRecords;
+};
+
 export const useResiInputData = (expedition: string, showAllExpeditionSummary: boolean) => {
   const today = new Date();
   const formattedDate = format(today, "yyyy-MM-dd");
   const startOfTodayISO = startOfDay(today).toISOString();
   const endOfTodayISO = endOfDay(today).toISOString();
-
-  // Function to fetch all data from a table with pagination
-  const fetchAllDataPaginated = async (tableName: string, dateFilterColumn?: string, startDate?: string, endDate?: string) => {
-    let allRecords: any[] = [];
-    let offset = 0;
-    const limit = 1000; // Fetch 1000 records at a time
-    let hasMore = true;
-
-    while (hasMore) {
-      let query = supabase.from(tableName).select("*").range(offset, offset + limit - 1);
-
-      if (dateFilterColumn && startDate && endDate) {
-        query = query.gte(dateFilterColumn, startDate).lt(dateFilterColumn, endDate);
-      }
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.error(`Error fetching paginated data from ${tableName}:`, error);
-        throw error;
-      }
-
-      if (data && data.length > 0) {
-        allRecords = allRecords.concat(data);
-        offset += data.length;
-        hasMore = data.length === limit; // If less than limit, no more data
-      } else {
-        hasMore = false;
-      }
-    }
-    return allRecords;
-  };
 
   // Query to fetch all resi data for the current expedition and date for local validation
   const { data: allResiForExpedition, isLoading: isLoadingAllResiForExpedition } = useQuery<ResiExpedisiData[]>({
@@ -82,25 +93,21 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
 
       console.log(`Fetching allResiForExpedition for ${expedition} on ${formattedDate} (for local validation)`);
       
-      let query = supabase
-        .from("tbl_resi")
-        .select("Resi, nokarung, created, Keterangan, schedule")
-        .gte("created", startOfTodayISO)
-        .lt("created", endOfTodayISO);
+      const data = await fetchAllDataPaginated(
+        "tbl_resi",
+        "created", // dateFilterColumn
+        startOfTodayISO,
+        endOfTodayISO,
+        (baseQuery) => { // Custom filter function
+          if (expedition === 'ID') {
+            return baseQuery.in("Keterangan", ['ID', 'ID_REKOMENDASI']);
+          } else {
+            return baseQuery.eq("Keterangan", expedition);
+          }
+        }
+      );
 
-      if (expedition === 'ID') {
-        query = query.in("Keterangan", ['ID', 'ID_REKOMENDASI']);
-      } else {
-        query = query.eq("Keterangan", expedition);
-      }
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.error("Error fetching all resi for expedition:", error);
-        throw error;
-      }
-      console.log(`Fetched ${data?.length || 0} resi for local validation.`);
+      console.log(`Fetched ${data?.length || 0} resi for local validation. Data:`, data);
       return data || [];
     },
     enabled: !!expedition,

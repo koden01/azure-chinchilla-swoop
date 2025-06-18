@@ -43,6 +43,7 @@ const fetchAllDataPaginated = async (
   dateFilterColumn?: string,
   startDate?: string,
   endDate?: string,
+  selectColumns: string = "*", // Added selectColumns parameter
   queryModifier?: (query: any) => any // New optional parameter
 ) => {
   let allRecords: any[] = [];
@@ -51,7 +52,7 @@ const fetchAllDataPaginated = async (
   let hasMore = true;
 
   while (hasMore) {
-    let query = supabase.from(tableName).select("*").range(offset, offset + limit - 1);
+    let query = supabase.from(tableName).select(selectColumns).range(offset, offset + limit - 1); // Use selectColumns
 
     if (dateFilterColumn && startDate && endDate) {
       query = query.gte(dateFilterColumn, startDate).lt(dateFilterColumn, endDate);
@@ -100,6 +101,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
         "created", // dateFilterColumn
         startOfTodayISO,
         endOfTodayISO,
+        "Resi, nokarung, created, Keterangan, schedule", // Only select necessary columns
         (baseQuery) => { // Custom filter function
           if (expedition === 'ID') {
             return baseQuery.in("Keterangan", ['ID', 'ID_REKOMENDASI']);

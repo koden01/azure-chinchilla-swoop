@@ -24,7 +24,7 @@ const iconMap = {
   clock: Clock,
 };
 
-const SummaryCard: React.FC<SummaryCardProps> = ({
+const SummaryCard: React.FC<SummaryCardProps> = React.memo(({
   title,
   value,
   secondaryTitle,
@@ -76,6 +76,6 @@ const SummaryCard: React.FC<SummaryCardProps> = ({
       </div>
     </Card>
   );
-};
+});
 
 export default SummaryCard;

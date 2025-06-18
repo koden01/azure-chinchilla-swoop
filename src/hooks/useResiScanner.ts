@@ -29,8 +29,8 @@ interface UseResiScannerProps {
   selectedKarung: string;
   formattedDate: string;
   allResiForExpedition: ResiExpedisiData[] | undefined; // This is still used for optimistic updates
-  allResiDataComprehensive: ResiExpedisiData[] | undefined; // NEW: Comprehensive list
-  allExpedisiDataUnfiltered: ExpedisiData[] | undefined; // Prop for all expedisi data
+  allResiDataComprehensive: Map<string, ResiExpedisiData> | undefined; // NEW: Comprehensive list as Map
+  allExpedisiDataUnfiltered: Map<string, ExpedisiData> | undefined; // Prop for all expedisi data as Map
 }
 
 export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allResiForExpedition, allResiDataComprehensive, allExpedisiDataUnfiltered }: UseResiScannerProps) => {
@@ -102,10 +102,9 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
       let validationMessage: string | null = null;
       let validationStatus: "OK" | "DUPLICATE_RESI" | "MISMATCH_EXPEDISI" | "NOT_FOUND_EXPEDISI" = "OK";
 
-      // 1. Global Resi Duplicate Check (from allResiDataComprehensive)
-      const existingResiScan = allResiDataComprehensive?.find(
-        (item) => item.Resi.toLowerCase() === currentResi.toLowerCase()
-      );
+      // 1. Global Resi Duplicate Check (from allResiDataComprehensiveMap)
+      // Use Map.get() for O(1) average time complexity lookup
+      const existingResiScan = allResiDataComprehensive?.get(currentResi.toLowerCase());
 
       if (existingResiScan) {
         const existingScanDate = new Date(existingResiScan.created);
@@ -126,9 +125,8 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
       }
 
       // 2. Check tbl_expedisi for the resi number and determine actualCourierName
-      const expedisiRecord = allExpedisiDataUnfiltered?.find(
-        (exp) => exp.resino?.trim().toLowerCase() === currentResi.toLowerCase()
-      );
+      // Use Map.get() for O(1) average time complexity lookup
+      const expedisiRecord = allExpedisiDataUnfiltered?.get(currentResi.toLowerCase());
 
       if (expedition === 'ID') {
         if (expedisiRecord) {
@@ -182,9 +180,11 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
       queryClient.setQueryData(queryKey, (oldData: ResiExpedisiData[] | undefined) => {
         return [...(oldData || []), newResiEntry]; // Ensure oldData is an array
       });
-      // Also optimistically update the comprehensive list
-      queryClient.setQueryData(["allResiDataComprehensive"], (oldData: ResiExpedisiData[] | undefined) => {
-        return [...(oldData || []), newResiEntry];
+      // Also optimistically update the comprehensive list (the Map)
+      queryClient.setQueryData(["allResiDataComprehensive"], (oldData: Map<string, ResiExpedisiData> | undefined) => {
+        const newDataMap = new Map(oldData); // Create a new Map to ensure immutability
+        newDataMap.set(currentResi.toLowerCase(), newResiEntry);
+        return newDataMap;
       });
 
       lastOptimisticIdRef.current = currentOptimisticId;
@@ -222,8 +222,10 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
           queryClient.setQueryData(queryKey, (oldData: ResiExpedisiData[] | undefined) => {
               return (oldData || []).filter(item => item.optimisticId !== lastOptimisticIdRef.current);
           });
-          queryClient.setQueryData(["allResiDataComprehensive"], (oldData: ResiExpedisiData[] | undefined) => {
-            return (oldData || []).filter(item => item.optimisticId !== lastOptimisticIdRef.current);
+          queryClient.setQueryData(["allResiDataComprehensive"], (oldData: Map<string, ResiExpedisiData> | undefined) => {
+            const newDataMap = new Map(oldData);
+            newDataMap.delete(currentResi.toLowerCase());
+            return newDataMap;
           });
           console.log(`Reverted optimistic update for ID: ${lastOptimisticIdRef.current} due to database conflict.`);
         }
@@ -279,8 +281,10 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
           queryClient.setQueryData(queryKey, (oldData: ResiExpedisiData[] | undefined) => {
               return (oldData || []).filter(item => item.optimisticId !== lastOptimisticIdRef.current);
           });
-          queryClient.setQueryData(["allResiDataComprehensive"], (oldData: ResiExpedisiData[] | undefined) => {
-            return (oldData || []).filter(item => item.optimisticId !== lastOptimisticIdRef.current);
+          queryClient.setQueryData(["allResiDataComprehensive"], (oldData: Map<string, ResiExpedisiData> | undefined) => {
+            const newDataMap = new Map(oldData);
+            newDataMap.delete(currentResi.toLowerCase());
+            return newDataMap;
           });
           console.log(`Reverted optimistic update for ID: ${lastOptimisticIdRef.current} due to error.`);
       }

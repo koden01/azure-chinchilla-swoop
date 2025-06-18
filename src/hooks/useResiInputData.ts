@@ -292,7 +292,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     const sortedNames = Array.from(uniqueNames).sort((a, b) => a.localeCompare(b));
     console.log("Generated expedition options:", sortedNames);
     return sortedNames;
-  }, [allExpedisiDataUnfilteredMap, queryClient]); // Added queryClient to dependencies
+  }, [allExpedisiDataUnfilteredMap, queryClient]);
 
   return {
     allResiForExpedition, // Now returned

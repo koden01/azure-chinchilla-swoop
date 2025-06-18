@@ -28,12 +28,11 @@ interface UseResiScannerProps {
   expedition: string;
   selectedKarung: string;
   formattedDate: string;
-  // allResiForExpedition: ResiExpedisiData[] | undefined; // This is still used for optimistic updates - REMOVED
-  allResiDataComprehensive: Map<string, ResiExpedisiData> | undefined; // NEW: Comprehensive list as Map
-  allExpedisiDataUnfiltered: Map<string, ExpedisiData> | undefined; // Prop for all expedisi data as Map
+  // allResiDataComprehensive: Map<string, ResiExpedisiData> | undefined; // REMOVED
+  // allExpedisiDataUnfiltered: Map<string, ExpedisiData> | undefined; // REMOVED
 }
 
-export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allResiDataComprehensive, allExpedisiDataUnfiltered }: UseResiScannerProps) => {
+export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: UseResiScannerProps) => {
   const [resiNumber, setResiNumber] = React.useState<string>("");
   const [isProcessing, setIsProcessing] = React.useState<boolean>(false);
   const resiInputRef = React.useRef<HTMLInputElement>(null);
@@ -47,7 +46,8 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
     // NEW: Invalidate historyData for the current day to ensure immediate update
     queryClient.invalidateQueries({ queryKey: ["historyData", formattedDate, formattedDate] });
     // Invalidate the comprehensive resi data to ensure it's up-to-date for future scans
-    queryClient.invalidateQueries({ queryKey: ["allResiDataComprehensive"] });
+    // These queries are no longer fetched comprehensively, so no need to invalidate them here.
+    // queryClient.invalidateQueries({ queryKey: ["allResiDataComprehensive"] }); // REMOVED
   }, 150);
 
   const keepFocus = () => {
@@ -102,9 +102,17 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
       let validationMessage: string | null = null;
       let validationStatus: "OK" | "DUPLICATE_RESI" | "MISMATCH_EXPEDISI" | "NOT_FOUND_EXPEDISI" = "OK";
 
-      // 1. Global Resi Duplicate Check (from allResiDataComprehensiveMap)
-      // Use Map.get() for O(1) average time complexity lookup
-      const existingResiScan = allResiDataComprehensive?.get(currentResi.toLowerCase());
+      // 1. Global Resi Duplicate Check (direct Supabase query)
+      console.log(`Checking for duplicate resi ${currentResi} in tbl_resi...`);
+      const { data: existingResiScan, error: duplicateCheckError } = await supabase
+        .from("tbl_resi")
+        .select("Resi, nokarung, Keterangan, created")
+        .eq("Resi", currentResi)
+        .single();
+
+      if (duplicateCheckError && duplicateCheckError.code !== 'PGRST116') { // PGRST116 means "no rows found"
+        throw duplicateCheckError;
+      }
 
       if (existingResiScan) {
         const existingScanDate = new Date(existingResiScan.created);
@@ -124,9 +132,17 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
         return; // Exit early if duplicate
       }
 
-      // 2. Check tbl_expedisi for the resi number and determine actualCourierName
-      // Use Map.get() for O(1) average time complexity lookup
-      const expedisiRecord = allExpedisiDataUnfiltered?.get(currentResi.toLowerCase());
+      // 2. Check tbl_expedisi for the resi number and determine actualCourierName (direct Supabase query)
+      console.log(`Checking for resi ${currentResi} in tbl_expedisi...`);
+      const { data: expedisiRecord, error: expedisiCheckError } = await supabase
+        .from("tbl_expedisi")
+        .select("resino, couriername, created")
+        .eq("resino", currentResi)
+        .single();
+
+      if (expedisiCheckError && expedisiCheckError.code !== 'PGRST116') { // PGRST116 means "no rows found"
+        throw expedisiCheckError;
+      }
 
       if (expedition === 'ID') {
         if (expedisiRecord) {
@@ -180,12 +196,12 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
       queryClient.setQueryData(queryKey, (oldData: ResiExpedisiData[] | undefined) => {
         return [...(oldData || []), newResiEntry]; // Ensure oldData is an array
       });
-      // Also optimistically update the comprehensive list (the Map)
-      queryClient.setQueryData(["allResiDataComprehensive"], (oldData: Map<string, ResiExpedisiData> | undefined) => {
-        const newDataMap = new Map(oldData); // Create a new Map to ensure immutability
-        newDataMap.set(currentResi.toLowerCase(), newResiEntry);
-        return newDataMap;
-      });
+      // The comprehensive list (Map) is no longer maintained on the client for performance.
+      // queryClient.setQueryData(["allResiDataComprehensive"], (oldData: Map<string, ResiExpedisiData> | undefined) => {
+      //   const newDataMap = new Map(oldData); // Create a new Map to ensure immutability
+      //   newDataMap.set(currentResi.toLowerCase(), newResiEntry);
+      //   return newDataMap;
+      // });
 
       lastOptimisticIdRef.current = currentOptimisticId;
       console.log("Optimistically updated caches with ID:", currentOptimisticId);
@@ -258,11 +274,12 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allR
           queryClient.setQueryData(queryKey, (oldData: ResiExpedisiData[] | undefined) => {
               return (oldData || []).filter(item => item.optimisticId !== lastOptimisticIdRef.current);
           });
-          queryClient.setQueryData(["allResiDataComprehensive"], (oldData: Map<string, ResiExpedisiData> | undefined) => {
-            const newDataMap = new Map(oldData);
-            newDataMap.delete(currentResi.toLowerCase());
-            return newDataMap;
-          });
+          // The comprehensive list (Map) is no longer maintained on the client for performance.
+          // queryClient.setQueryData(["allResiDataComprehensive"], (oldData: Map<string, ResiExpedisiData> | undefined) => {
+          //   const newDataMap = new Map(oldData);
+          //   newDataMap.delete(currentResi.toLowerCase());
+          //   return newDataMap;
+          // });
           console.log(`Reverted optimistic update for ID: ${lastOptimisticIdRef.current} due to error.`);
       }
       lastOptimisticIdRef.current = null; // Clear the ref after attempting revert

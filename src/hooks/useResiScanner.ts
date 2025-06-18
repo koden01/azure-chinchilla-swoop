@@ -2,7 +2,7 @@ import React from "react";
 import { supabase, SUPABASE_PROJECT_ID } from "@/integrations/supabase/client";
 import { showSuccess, showError, dismissToast } from "@/utils/toast";
 import { beepSuccess, beepFailure, beepDouble } from "@/utils/audio";
-import { useDebounce } from "@/hooks/useDebounce";
+import { useDebouncedCallback } from "@/hooks/useDebouncedCallback"; // Mengubah import
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -34,7 +34,8 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
 
   const lastOptimisticIdRef = React.useRef<string | null>(null);
 
-  const debouncedInvalidate = useDebounce(() => {
+  // Menggunakan useDebouncedCallback untuk mendebounce pemanggilan fungsi invalidasi
+  const debouncedInvalidate = useDebouncedCallback(() => {
     console.log("Debounced invalidation triggered!");
     invalidateDashboardQueries(queryClient, new Date(), expedition);
     // Invalidate historyData for the current day to ensure immediate update

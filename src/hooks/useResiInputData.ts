@@ -183,7 +183,8 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       // Menggunakan sintaks distinct yang benar
       const { data, error } = await supabase
         .from("tbl_expedisi")
-        .select("couriername", { distinct: true }); // Perbaikan di sini
+        .select("couriername") // Select the column
+        .distinct(); // Apply distinct as a method call
 
       if (error) {
         console.error("Error fetching unique expedition names:", error);

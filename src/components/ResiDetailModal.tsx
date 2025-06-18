@@ -86,7 +86,8 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
 
   const sortedAndFilteredData = React.useMemo(() => {
     console.log("ResiDetailModal: Recalculating sortedAndFilteredData. Initial data length:", data.length);
-    const lowerCaseSearchTerm = debouncedSearchTerm.toLowerCase(); // Use debounced term
+    // Ensure debouncedSearchTerm is treated as a string
+    const lowerCaseSearchTerm = (debouncedSearchTerm || "").toLowerCase(); // Use debounced term and handle potential null/undefined
     let tempFilteredData = data.filter((item) => {
       // Use item.resino for tbl_expedisi based modals, item.Resi for tbl_resi based modals
       const resiIdentifier = modalType === "followUp" ? item.Resi : item.resino;

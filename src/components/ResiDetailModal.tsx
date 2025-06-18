@@ -274,6 +274,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
         </DialogHeader>
         <div className="my-4 flex flex-col md:flex-row gap-2">
           <Input
+            id="search-term-input" {/* Added id attribute here */}
             placeholder="Cari Resi, No Order, Marketplace, Kurir, atau Tanggal Pembelian..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}

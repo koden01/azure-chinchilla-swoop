@@ -15,7 +15,39 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Input } => {
+import { Input } from "@/components/ui/input"; // Perbaikan di sini
+import { Checkbox } from "@/components/ui/checkbox"; // Tambahkan import Checkbox
+import { Copy } from "lucide-react"; // Tambahkan import Copy
+import { format } from "date-fns";
+import { useDebounce } from "@/hooks/useDebounce"; // Pastikan useDebounce diimpor
+import { showSuccess, showError } from "@/utils/toast"; // Pastikan showSuccess dan showError diimpor
+import { ModalDataItem } from "@/types/data"; // Import ModalDataItem
+
+interface ResiDetailModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  data: ModalDataItem[];
+  modalType: "belumKirim" | "followUp" | "expeditionDetail" | "transaksiHariIni" | null;
+  selectedCourier?: string | null;
+  onBatalResi: (resiNumber: string) => Promise<void>;
+  onConfirmResi: (resiNumber: string) => Promise<void>;
+  onCekfuToggle: (resiNumber: string, currentCekfuStatus: boolean) => Promise<void>;
+}
+
+const ITEMS_PER_PAGE = 10; // Define ITEMS_PER_PAGE
+
+const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
+  isOpen,
+  onClose,
+  title,
+  data,
+  modalType,
+  selectedCourier,
+  onBatalResi,
+  onConfirmResi,
+  onCekfuToggle,
+}) => {
   const [rawSearchTerm, setRawSearchTerm] = useState(""); // State for raw input
   const debouncedSearchTerm = useDebounce(rawSearchTerm, 300); // Debounced search term for value
 

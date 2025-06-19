@@ -5,8 +5,8 @@ import { beepSuccess, beepFailure, beepDouble } from "@/utils/audio";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { format, startOfDay, endOfDay, subDays } from "date-fns";
-import { fetchAllDataPaginated } from "@/utils/supabaseFetch"; // Import the new utility
+import { format, subDays } from "date-fns"; // Removed startOfDay, endOfDay
+import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 
 // Define the type for ResiExpedisiData to match useResiInputData
 interface ResiExpedisiData {

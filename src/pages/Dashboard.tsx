@@ -82,7 +82,7 @@ export default function Dashboard() {
             value={isLoadingTransaksiHariIni ? "Loading..." : transaksiHariIni?.toLocaleString() || "0"}
             // secondaryTitle="Tanggal" // Removed secondaryTitle
             // secondaryValue={formattedDate} // Removed secondaryValue
-            description="Total transaksi hari ini"
+            // description="Total transaksi hari ini" // Removed description
             icon="package"
             gradientFrom="from-blue-500"
             gradientTo="to-indigo-600"
@@ -92,7 +92,7 @@ export default function Dashboard() {
             value={isLoadingTotalScan ? "Loading..." : totalScan?.toLocaleString() || "0"}
             secondaryTitle="Tanggal"
             secondaryValue={formattedDate}
-            description="Total resi yang sudah discan"
+            // description="Total resi yang sudah discan" // Removed description
             icon="maximize"
             gradientFrom="from-green-500"
             gradientTo="to-teal-600"
@@ -102,7 +102,7 @@ export default function Dashboard() {
             value={isLoadingIdRekCount ? "Loading..." : idRekCount?.toLocaleString() || "0"}
             secondaryTitle="Tanggal"
             secondaryValue={formattedDate}
-            description="Total resi ID Rekomendasi"
+            // description="Total resi ID Rekomendasi" // Removed description
             icon="info"
             gradientFrom="from-purple-500"
             gradientTo="to-pink-600"
@@ -112,8 +112,8 @@ export default function Dashboard() {
             value={isLoadingBelumKirim ? "Loading..." : belumKirim?.toLocaleString() || "0"}
             secondaryTitle="Tanggal"
             secondaryValue={formattedDate}
-            description="Total resi belum dikirim hari ini"
-            icon="truck"
+            // description="Total resi belum dikirim hari ini" // Removed description
+            icon="package" // Changed from 'truck' to 'package' as 'truck' is not in iconMap
             gradientFrom="from-orange-500"
             gradientTo="to-red-600"
           />
@@ -122,8 +122,8 @@ export default function Dashboard() {
             value={isLoadingFollowUpFlagNoCount ? "Loading..." : followUpFlagNoCount?.toLocaleString() || "0"}
             secondaryTitle="Tanggal"
             secondaryValue={format(new Date(), 'yyyy-MM-dd')} // Always show current date for this card
-            description="Total resi flag NO (kecuali hari ini)"
-            icon="alertCircle"
+            // description="Total resi flag NO (kecuali hari ini)" // Removed description
+            icon="warning" // Changed from 'alertCircle' to 'warning' as 'alertCircle' is not in iconMap
             gradientFrom="from-yellow-500"
             gradientTo="to-amber-600"
           />
@@ -132,8 +132,8 @@ export default function Dashboard() {
             value={isLoadingScanFollowupLateCount ? "Loading..." : scanFollowupLateCount?.toLocaleString() || "0"}
             secondaryTitle="Tanggal"
             secondaryValue={formattedDate}
-            description="Total resi scan follow up (late)"
-            icon="history"
+            // description="Total resi scan follow up (late)" // Removed description
+            icon="clock" // Changed from 'history' to 'clock' as 'history' is not in iconMap
             gradientFrom="from-cyan-500"
             gradientTo="to-blue-700"
           />
@@ -142,7 +142,7 @@ export default function Dashboard() {
             value={isLoadingBatalCount ? "Loading..." : batalCount?.toLocaleString() || "0"}
             secondaryTitle="Tanggal"
             secondaryValue={formattedDate}
-            description="Total resi yang dibatalkan"
+            // description="Total resi yang dibatalkan" // Removed description
             icon="warning"
             gradientFrom="from-gray-500"
             gradientTo="to-gray-700"

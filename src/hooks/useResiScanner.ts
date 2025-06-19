@@ -4,8 +4,8 @@ import { showSuccess, showError, dismissToast } from "@/utils/toast";
 import { beepSuccess, beepFailure, beepDouble } from "@/utils/audio";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
-import { useQueryClient } from "@tanstack/react-query";
-import { format } from "date-fns";
+import { useQueryClient, useQuery } from "@tanstack/react-query"; // Import useQuery
+import { format, startOfDay, endOfDay, subDays } from "date-fns"; // Import subDays
 import { useResiInputData } from "./useResiInputData";
 
 // Define the type for ResiExpedisiData to match useResiInputData
@@ -51,7 +51,39 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
   const resiInputRef = React.useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
-  const { allResiForExpedition } = useResiInputData(expedition, false); // Get the locally cached data
+  // Calculate date range for 5 days back for local validation data
+  const today = new Date();
+  const fiveDaysAgo = subDays(today, 4); // 5 days including today (today, yesterday, -2, -3, -4)
+  const fiveDaysAgoISO = startOfDay(fiveDaysAgo).toISOString();
+  const endOfTodayISO = endOfDay(today).toISOString();
+  const fiveDaysAgoFormatted = format(fiveDaysAgo, "yyyy-MM-dd");
+
+  // NEW: Query to fetch tbl_resi data for the last 5 days for local validation
+  const { data: recentResiDataForValidation } = useQuery<ResiExpedisiData[]>({
+    queryKey: ["recentResiDataForValidation", fiveDaysAgoFormatted, formattedDate],
+    queryFn: async () => {
+      console.log(`Fetching recentResiDataForValidation from ${fiveDaysAgoFormatted} to ${formattedDate}`);
+      const { data, error } = await supabase
+        .from("tbl_resi")
+        .select("Resi, nokarung, created, Keterangan, schedule")
+        .gte("created", fiveDaysAgoISO)
+        .lt("created", endOfTodayISO); // Use < endOfTodayISO to include all of today
+
+      if (error) {
+        console.error("Error fetching recent resi data for validation:", error);
+        throw error;
+      }
+      console.log(`Fetched ${data?.length || 0} recent resi records for validation.`);
+      return data || [];
+    },
+    staleTime: 1000 * 60 * 10, // Keep this data fresh for 10 minutes
+    gcTime: 1000 * 60 * 60 * 24 * 5, // Garbage collect after 5 days
+    enabled: true, // Always enabled for local validation
+  });
+
+  // The existing allResiForExpedition from useResiInputData is still useful for the input page's display of current expedition's data.
+  // We will use recentResiDataForValidation for the *duplicate check*.
+  // const { allResiForExpedition } = useResiInputData(expedition, false); // Keep this if needed for other purposes on Input page
 
   const lastOptimisticIdRef = React.useRef<string | null>(null);
 
@@ -61,6 +93,8 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
     invalidateDashboardQueries(queryClient, new Date(), expedition);
     // Invalidate historyData for the current day to ensure immediate update
     queryClient.invalidateQueries({ queryKey: ["historyData", formattedDate, formattedDate] });
+    // NEW: Invalidate the recentResiDataForValidation query
+    queryClient.invalidateQueries({ queryKey: ["recentResiDataForValidation", fiveDaysAgoFormatted, formattedDate] });
   }, 150);
 
   const keepFocus = () => {
@@ -106,7 +140,9 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
     console.log("Starting handleScanResi for:", currentResi, "at:", new Date().toISOString());
     console.log("Supabase Project ID in useResiScanner:", SUPABASE_PROJECT_ID); // Log Supabase Project ID
 
-    const queryKey = ["allResiForExpedition", expedition, formattedDate];
+    // Use the specific query key for the current expedition and date for optimistic update
+    // This is still relevant for the *display* on the input page, even if validation uses a broader set.
+    const queryKeyForInputPageDisplay = ["allResiForExpedition", expedition, formattedDate]; // Keep this as is for the input page's specific display
 
     const currentOptimisticId = Date.now().toString() + Math.random().toString(36).substring(2, 9);
 
@@ -115,9 +151,9 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
       let validationMessage: string | null = null;
       let validationStatus: "OK" | "DUPLICATE_RESI" | "MISMATCH_EXPEDISI" | "NOT_FOUND_EXPEDISI" = "OK";
 
-      // 1. Quick Local Duplicate Check (using allResiForExpedition cache)
-      console.log(`Performing quick local duplicate check for resi ${currentResi}...`);
-      const localDuplicate = allResiForExpedition?.find(
+      // 1. Quick Local Duplicate Check (using recentResiDataForValidation cache)
+      console.log(`Performing quick local duplicate check for resi ${currentResi} using recentResiDataForValidation...`);
+      const localDuplicate = recentResiDataForValidation?.find(
         (item) => item.Resi.toLowerCase() === currentResi.toLowerCase()
       );
 
@@ -212,9 +248,14 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
         optimisticId: currentOptimisticId,
       };
 
-      // Update the specific query for the current expedition and date
-      queryClient.setQueryData(queryKey, (oldData: ResiExpedisiData[] | undefined) => {
+      // Update the specific query for the current expedition and date (for input page display)
+      queryClient.setQueryData(queryKeyForInputPageDisplay, (oldData: ResiExpedisiData[] | undefined) => {
         return [...(oldData || []), newResiEntry]; // Ensure oldData is an array
+      });
+
+      // Also update the broader recentResiDataForValidation cache optimistically
+      queryClient.setQueryData(["recentResiDataForValidation", fiveDaysAgoFormatted, formattedDate], (oldData: ResiExpedisiData[] | undefined) => {
+        return [...(oldData || []), newResiEntry];
       });
 
       lastOptimisticIdRef.current = currentOptimisticId;
@@ -286,8 +327,11 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
 
       // Revert optimistic update on error
       if (lastOptimisticIdRef.current) {
-          queryClient.setQueryData(queryKey, (oldData: ResiExpedisiData[] | undefined) => {
+          queryClient.setQueryData(queryKeyForInputPageDisplay, (oldData: ResiExpedisiData[] | undefined) => {
               return (oldData || []).filter(item => item.optimisticId !== lastOptimisticIdRef.current);
+          });
+          queryClient.setQueryData(["recentResiDataForValidation", fiveDaysAgoFormatted, formattedDate], (oldData: ResiExpedisiData[] | undefined) => {
+            return (oldData || []).filter(item => item.optimisticId !== lastOptimisticIdRef.current);
           });
           console.log(`Reverted optimistic update for ID: ${lastOptimisticIdRef.current} due to error.`);
       }

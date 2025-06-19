@@ -1,5 +1,5 @@
 import { QueryClient } from "@tanstack/react-query";
-import { format } from "date-fns";
+import { format, subDays } from "date-fns"; // Import subDays
 
 export const invalidateDashboardQueries = (queryClient: QueryClient, date: Date | undefined, expedition?: string) => {
   const formattedDate = date ? format(date, "yyyy-MM-dd") : "";
@@ -14,7 +14,7 @@ export const invalidateDashboardQueries = (queryClient: QueryClient, date: Date 
   queryClient.invalidateQueries({ queryKey: ["scanFollowupLateCount", formattedDate] });
   queryClient.invalidateQueries({ queryKey: ["batalCount", formattedDate] });
   queryClient.invalidateQueries({ queryKey: ["followUpData", formattedDate] });
-  queryClient.invalidateQueries({ queryKey: ["allExpedisiData", formattedDate] }); // This is expedisiDataForSelectedDate
+  queryClient.invalidateQueries({ queryKey: ["expedisiDataForSelectedDate", formattedDate] }); // This is expedisiDataForSelectedDate
   queryClient.invalidateQueries({ queryKey: ["allResiData", formattedDate] }); // This is allResiData for selected date
   
   // Invalidate queries specific to the Input page and comprehensive data
@@ -31,6 +31,12 @@ export const invalidateDashboardQueries = (queryClient: QueryClient, date: Date 
   }
 
   // Always invalidate the comprehensive resi data cache, as a resi was deleted/added/updated
-  queryClient.invalidateQueries({ queryKey: ["allResiDataComprehensive"] });
+  queryClient.invalidateQueries({ queryKey: ["allResiDataComprehensive"] }); // This query key is not used anymore, but keeping it for safety if it's referenced elsewhere.
   queryClient.invalidateQueries({ queryKey: ["allExpedisiDataUnfiltered"] }); // Also invalidate this as it's used for validation
+
+  // NEW: Invalidate recentResiDataForValidation for local duplicate checks
+  const today = new Date();
+  const fiveDaysAgo = subDays(today, 4);
+  const fiveDaysAgoFormatted = format(fiveDaysAgo, "yyyy-MM-dd");
+  queryClient.invalidateQueries({ queryKey: ["recentResiDataForValidation", fiveDaysAgoFormatted, actualCurrentFormattedDate] });
 };

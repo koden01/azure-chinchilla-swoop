@@ -242,7 +242,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[800px] lg:max-w-[1000px] max-h-[90vh] flex flex-col">
+      <DialogContent className="sm:max-w-[800px] lg:max-w-[1000px] max-h-[90vh] flex flex-col overflow-y-scroll"> {/* Added overflow-y-scroll here */}
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
@@ -265,7 +265,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
             <Copy className="mr-2 h-4 w-4" /> Copy Table Data
           </Button>
         </div>
-        <div className="overflow-y-scroll overflow-x-scroll flex-grow"> {/* Changed here */}
+        <div className="overflow-x-scroll flex-grow"> {/* Removed overflow-y-scroll, kept flex-grow and overflow-x-scroll */}
           <Table>
             <TableHeader>
               <TableRow>

@@ -74,7 +74,7 @@ const DashboardSummaryCards: React.FC<DashboardSummaryCardsProps> = ({
         icon="info"
       />
       <SummaryCard
-        title="Belum Kirim (Hari Ini)"
+        title="Sisa (Hari Ini)"
         value={isLoadingBelumKirim ? <Loader2 className="h-5 w-5 animate-spin" /> : belumKirim}
         gradientFrom="from-red-500"
         gradientTo="to-orange-600"

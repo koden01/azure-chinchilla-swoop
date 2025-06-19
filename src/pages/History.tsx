@@ -1,4 +1,3 @@
-).">
 import React from "react";
 // import { MadeWithDyad } from "@/components/made-with-dyad"; // Removed
 import { Calendar } from "@/components/ui/calendar";
@@ -264,7 +263,7 @@ const HistoryPage = () => {
   };
 
   return (
-    <>
+    <React.Fragment>
       <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
         <div className="bg-gradient-to-r from-green-500 to-blue-600 p-6 rounded-lg shadow-md">
           <h2 className="text-white text-xl font-semibold mb-4 flex items-center">
@@ -403,8 +402,8 @@ const HistoryPage = () => {
                   currentData.map((data, index) => (
                     <TableRow 
                       key={data.Resi + index} 
-                      className="hover:bg-gray-100 cursor-pointer" 
-                      onDoubleClick={() => handleDeleteClick(data.Resi)} // Changed to onDoubleClick
+                      className="hover:bg-gray-100 cursor-pointer" // Added cursor-pointer
+                      onClick={() => handleDeleteClick(data.Resi)} // Added onClick to row
                     >
                       <TableCell className="font-medium">{startIndex + index + 1}</TableCell>
                       <TableCell className="w-[25%]">{data.Resi}</TableCell>
@@ -428,7 +427,7 @@ const HistoryPage = () => {
                 )}
               </TableBody>
             </Table>
-          )}
+          </div>
           {totalPages > 1 && (
             <Pagination className="mt-4">
               <PaginationContent>
@@ -480,7 +479,7 @@ const HistoryPage = () => {
           </AlertDialogContent>
         </AlertDialog>
       </div>
-    </>
+    </React.Fragment>
   );
 };
 

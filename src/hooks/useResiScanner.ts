@@ -7,7 +7,7 @@ import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { format, subDays } from "date-fns";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
-import { ModalDataItem } from "@/types/data"; // Import ModalDataItem for optimistic update consistency
+// import { ModalDataItem } from "@/types/data"; // Dihapus karena tidak digunakan
 
 // Define the type for ResiExpedisiData to match useResiInputData
 interface ResiExpedisiData {
@@ -110,6 +110,8 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
   const handleScanResi = async () => {
     dismissToast(); // Memanggil dismissToast tanpa argumen untuk menutup semua toast
     const currentResi = resiNumber.trim();
+    // Deklarasikan normalizedCurrentResi di sini agar dapat diakses di blok catch
+    const normalizedCurrentResi = currentResi.toLowerCase().trim(); 
     setResiNumber("");
 
     if (!validateInput(currentResi)) {
@@ -131,7 +133,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
 
       // 1. Local Duplicate Check (using recentResiNumbersForValidation Set)
       console.log(`Performing local duplicate check for resi ${currentResi} using recentResiNumbersForValidation Set...`);
-      const normalizedCurrentResi = currentResi.toLowerCase().trim();
       
       if (recentResiNumbersForValidation?.has(normalizedCurrentResi)) {
         console.log("DEBUG: Duplicate found in Set.");

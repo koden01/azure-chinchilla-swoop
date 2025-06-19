@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -84,7 +84,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
     setRawSearchTerm(""); // Reset raw search term when data changes
   }, [data, isOpen, modalType]); // Added data to dependency array
 
-  const sortedAndFilteredData = React.useMemo(() => {
+  const sortedAndFilteredData = useMemo(() => {
     console.log("ResiDetailModal: Recalculating sortedAndFilteredData. Initial data length:", data.length);
     // Ensure debouncedSearchTerm is treated as a string
     const lowerCaseSearchTerm = (debouncedSearchTerm || "").toLowerCase(); // Use debounced term and handle potential null/undefined
@@ -133,13 +133,13 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
   const endIndex = startIndex + ITEMS_PER_PAGE;
   const currentData = sortedAndFilteredData.slice(startIndex, endIndex);
 
-  const handlePageChange = (page: number) => {
+  const handlePageChange = useCallback((page: number) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
     }
-  };
+  }, [totalPages]);
 
-  const getTableHeaders = React.useCallback(() => {
+  const getTableHeaders = useCallback(() => {
     if (modalType === "belumKirim" || modalType === "expeditionDetail" || modalType === "transaksiHariIni") {
       return ["No. Resi", "No Order", "Marketplace", "Tanggal Pembelian", "Kurir", "Followup", "Aksi"];
     } else if (modalType === "followUp") {
@@ -148,7 +148,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
     return [];
   }, [modalType]);
 
-  const renderTableRows = React.useCallback(() => {
+  const renderTableRows = useCallback(() => {
     if (modalType === "belumKirim" || modalType === "expeditionDetail" || modalType === "transaksiHariIni") {
       return currentData.map((item, index) => (
         <TableRow key={item.resino || `exp-row-${index}`}>
@@ -202,7 +202,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
     return null;
   }, [currentData, modalType, onBatalResi, onConfirmResi, onCekfuToggle]);
 
-  const handleCopyTableData = async () => {
+  const handleCopyTableData = useCallback(async () => {
     if (sortedAndFilteredData.length === 0) {
       showError("Tidak ada data untuk disalin.");
       return;
@@ -247,9 +247,9 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
       showError(`Gagal menyalin data tabel: ${err.message || "Unknown error"}`);
       console.error("Failed to copy table data:", err);
     }
-  };
+  }, [sortedAndFilteredData, modalType, getTableHeaders]); // Added getTableHeaders as dependency
 
-  const getPaginationPages = React.useMemo(() => {
+  const getPaginationPages = useMemo(() => {
     const pages = [];
     if (totalPages <= 3) {
       for (let i = 1; i <= totalPages; i++) {

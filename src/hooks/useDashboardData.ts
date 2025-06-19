@@ -1,13 +1,40 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, startOfDay, endOfDay, subDays } from "date-fns"; // Import subDays
+import { format, startOfDay, endOfDay, subDays } from "date-fns";
 import { useEffect, useState } from "react";
-import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation"; // Import the invalidation utility
-import { fetchAllDataPaginated } from "@/utils/supabaseFetch"; // Import the new utility
+import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
+import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 
-export const useDashboardData = (date: Date | undefined) => {
+// Define the return type interface for useDashboardData
+interface DashboardDataReturn {
+  transaksiHariIni: number | undefined;
+  isLoadingTransaksiHariIni: boolean;
+  totalScan: number | undefined;
+  isLoadingTotalScan: boolean;
+  idRekCount: number | undefined;
+  isLoadingIdRekCount: boolean;
+  belumKirim: number | undefined;
+  isLoadingBelumKirim: boolean;
+  followUpFlagNoCount: number | undefined;
+  isLoadingFollowUpFlagNoCount: boolean;
+  scanFollowupLateCount: number | undefined;
+  isLoadingScanFollowupLateCount: boolean;
+  batalCount: number | undefined;
+  isLoadingBatalCount: boolean;
+  followUpData: any[] | undefined;
+  isLoadingFollowUp: boolean;
+  expeditionSummaries: any[];
+  formattedDate: string;
+  allExpedisiData: Map<string, any> | undefined; // This is the aliased allExpedisiDataUnfiltered
+  expedisiDataForSelectedDate: any[] | undefined; // Explicitly added
+  isLoadingExpedisiDataForSelectedDate: boolean; // Explicitly added
+  allResiData: any[] | undefined; // Explicitly added
+  isLoadingAllResi: boolean; // Explicitly added
+}
+
+export const useDashboardData = (date: Date | undefined): DashboardDataReturn => {
   const formattedDate = date ? format(date, "yyyy-MM-dd") : "";
-  const queryClient = useQueryClient(); // Get query client instance
+  const queryClient = useQueryClient();
 
   // State to hold expedition summaries
   const [expeditionSummaries, setExpeditionSummaries] = useState<any[]>([]);
@@ -461,5 +488,9 @@ export const useDashboardData = (date: Date | undefined) => {
     expeditionSummaries,
     formattedDate,
     allExpedisiData: allExpedisiDataUnfiltered, // Return the unfiltered data for other uses if needed
+    expedisiDataForSelectedDate, // Explicitly returned
+    isLoadingExpedisiDataForSelectedDate, // Explicitly returned
+    allResiData, // Explicitly returned
+    isLoadingAllResi, // Explicitly returned
   };
 };

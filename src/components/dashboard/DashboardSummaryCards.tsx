@@ -52,8 +52,6 @@ const DashboardSummaryCards: React.FC<DashboardSummaryCardsProps> = ({
       <SummaryCard
         title="Transaksi Hari Ini"
         value={isLoadingTransaksiHariIni ? <Loader2 className="h-5 w-5 animate-spin" /> : transaksiHariIni}
-        // secondaryTitle="Tanggal" // Dihapus
-        // secondaryValue={formattedDate} // Dihapus
         gradientFrom="from-blue-500"
         gradientTo="to-indigo-600"
         icon="package"
@@ -62,8 +60,8 @@ const DashboardSummaryCards: React.FC<DashboardSummaryCardsProps> = ({
       <SummaryCard
         title="Total Scan"
         value={isLoadingTotalScan ? <Loader2 className="h-5 w-5 animate-spin" /> : totalScan}
-        secondaryTitle="Tanggal"
-        secondaryValue={formattedDate}
+        // secondaryTitle="Tanggal" // Dihapus
+        // secondaryValue={formattedDate} // Dihapus
         gradientFrom="from-green-500"
         gradientTo="to-teal-600"
         icon="maximize"

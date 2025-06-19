@@ -185,7 +185,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       }
 
       const createdTimestampFromExpedisi = expedisiRecord?.created || new Date().toISOString(); // Default to now if not found
-      const courierNameForBatal = expedisiRecord?.couriername || "UNKNOWN"; // Use UNKNOWN if not found
+      // const courierNameForBatal = expedisiRecord?.couriername || "UNKNOWN"; // Dihapus karena tidak digunakan
 
       const { data: existingResi, error: checkError } = await supabase
         .from("tbl_resi")

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useCallback, useMemo, useRef } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
@@ -47,17 +47,17 @@ interface HistoryData {
 }
 
 const HistoryPage = () => {
-  const [startDate, setStartDate] = React.useState<Date | undefined>(new Date());
-  const [endDate, setEndDate] = React.useState<Date | undefined>(new Date());
-  const [rawSearchQuery, setRawSearchQuery] = React.useState<string>("");
+  const [startDate, setStartDate] = useState<Date | undefined>(new Date());
+  const [endDate, setEndDate] = useState<Date | undefined>(new Date());
+  const [rawSearchQuery, setRawSearchQuery] = useState<string>("");
   const debouncedSearchQuery = useDebounce(rawSearchQuery, 300);
 
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
-  const [resiToDelete, setResiToDelete] = React.useState<string | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [resiToDelete, setResiToDelete] = useState<string | null>(null);
 
   // State untuk melacak klik terakhir untuk deteksi double-click
-  const [lastClickInfo, setLastClickInfo] = React.useState<{ resi: string | null; timestamp: number | null } | null>(null);
-  const clickTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [lastClickInfo, setLastClickInfo] = useState<{ resi: string | null; timestamp: number | null } | null>(null);
+  const clickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const queryClient = useQueryClient();
 
@@ -70,7 +70,7 @@ const HistoryPage = () => {
   console.log("HistoryPage: formattedEndDate", formattedEndDate);
 
   // Function to fetch all data from tbl_resi with pagination for a given date range
-  const fetchAllResiDataPaginated = async (startIso: string, endIso: string) => {
+  const fetchAllResiDataPaginated = useCallback(async (startIso: string, endIso: string) => {
     let allRecords: HistoryData[] = [];
     let offset = 0;
     const limit = 1000; // Fetch 1000 records at a time
@@ -99,7 +99,7 @@ const HistoryPage = () => {
       }
     }
     return allRecords;
-  };
+  }, []); // No dependencies, as it's a pure fetch function
 
   const { data: historyData, isLoading: isLoadingHistory, error: historyError } = useQuery<HistoryData[]>({
     queryKey: ["historyData", formattedStartDate, formattedEndDate],
@@ -132,7 +132,7 @@ const HistoryPage = () => {
   console.log("HistoryPage: historyData (from query)", historyData);
   console.log("HistoryPage: historyError", historyError);
 
-  const filteredHistoryData = React.useMemo(() => {
+  const filteredHistoryData = useMemo(() => {
     if (!historyData) return [];
     // Ensure debouncedSearchQuery is treated as a string
     const lowerCaseSearchQuery = (debouncedSearchQuery || "").toLowerCase(); // Use debounced term and handle potential null/undefined
@@ -148,7 +148,7 @@ const HistoryPage = () => {
   }, [historyData, debouncedSearchQuery]); // Use debouncedSearchQuery as dependency
 
   const ITEMS_PER_PAGE = 10;
-  const [currentPage, setCurrentPage] = React.useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const totalPages = Math.ceil(filteredHistoryData.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -157,17 +157,17 @@ const HistoryPage = () => {
 
   console.log("HistoryPage: currentData (for table)", currentData);
 
-  const handlePageChange = (page: number) => {
+  const handlePageChange = useCallback((page: number) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
     }
-  };
+  }, [totalPages]); // totalPages is a dependency
 
   React.useEffect(() => {
     setCurrentPage(1);
   }, [debouncedSearchQuery, startDate, endDate]); // Use debouncedSearchQuery here
 
-  const getPaginationPages = React.useMemo(() => {
+  const getPaginationPages = useMemo(() => {
     const pages = [];
     if (totalPages <= 3) {
       for (let i = 1; i <= totalPages; i++) {
@@ -185,13 +185,13 @@ const HistoryPage = () => {
     return pages;
     }, [currentPage, totalPages]);
 
-  const handleDeleteClick = (resi: string) => {
+  const handleDeleteClick = useCallback((resi: string) => {
     setResiToDelete(resi);
     setIsDeleteDialogOpen(true);
-  };
+  }, []); // No dependencies
 
   // New handler for row clicks to detect double-click
-  const handleRowClick = (resi: string) => {
+  const handleRowClick = useCallback((resi: string) => {
     const now = Date.now();
 
     if (lastClickInfo && lastClickInfo.resi === resi && (now - lastClickInfo.timestamp!) < 300) { // 300ms for double click
@@ -212,9 +212,9 @@ const HistoryPage = () => {
         setLastClickInfo(null); // Clear after timeout if no second click
       }, 300);
     }
-  };
+  }, [lastClickInfo, handleDeleteClick]); // lastClickInfo and handleDeleteClick are dependencies
 
-  const confirmDeleteResi = async () => {
+  const confirmDeleteResi = useCallback(async () => {
     if (!resiToDelete) return;
 
     // Find the item to get its creation date and Keterangan (expedition)
@@ -252,9 +252,9 @@ const HistoryPage = () => {
     }
     setIsDeleteDialogOpen(false);
     setResiToDelete(null);
-  };
+  }, [resiToDelete, historyData, formattedStartDate, formattedEndDate, queryClient]); // Dependencies
 
-  const handleCopyTableData = async () => {
+  const handleCopyTableData = useCallback(async () => {
     if (filteredHistoryData.length === 0) {
       showError("Tidak ada data untuk disalin.");
       return;
@@ -288,7 +288,7 @@ const HistoryPage = () => {
       showError(`Gagal menyalin data tabel: ${err.message || "Unknown error"}`);
       console.error("Failed to copy table data:", err);
     }
-  };
+  }, [filteredHistoryData, startIndex]); // Dependencies
 
   return (
     <React.Fragment>

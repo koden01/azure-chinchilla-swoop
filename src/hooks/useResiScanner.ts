@@ -141,7 +141,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
 
       // 2. Server-Side Combined Validation (RPC Call)
       console.log(`Calling RPC get_resi_validation_details for resi ${currentResi}...`);
-      // Remove generic arguments from rpc call and explicitly type `data` later
       const { data, error: rpcError } = await supabase.rpc("get_resi_validation_details", {
         p_resi_number: currentResi,
       }).single();
@@ -152,7 +151,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
       }
 
       // Explicitly type `rpcData` after the call
-      const rpcData: ResiValidationDetails | null = data;
+      const rpcData: ResiValidationDetails | null = data as ResiValidationDetails | null; // Add type assertion here
 
       const resiRecord = rpcData?.resi_record;
       const expedisiRecord = rpcData?.expedisi_record;

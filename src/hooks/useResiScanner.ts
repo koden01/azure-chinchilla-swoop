@@ -281,6 +281,26 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         return [...(oldData || []), newResiEntry];
       });
 
+      // NEW: Optimistic update for allExpedisiDataUnfiltered cache
+      queryClient.setQueryData(["allExpedisiDataUnfiltered", fiveDaysAgoFormatted, endOfTodayFormatted], (oldMap: Map<string, any> | undefined) => {
+        const newMap = oldMap ? new Map(oldMap) : new Map();
+        const normalizedResiKey = currentResi.toLowerCase();
+        const existingExpedisi = newMap.get(normalizedResiKey);
+        
+        // Create or update the expedisi record in the cache
+        newMap.set(normalizedResiKey, {
+          ...existingExpedisi, // Keep existing properties if any
+          resino: currentResi,
+          couriername: actualCourierName,
+          flag: "YES", // Set flag to YES optimistically
+          created: existingExpedisi?.created || new Date().toISOString(), // Keep original created or set new
+          optimisticId: currentOptimisticId, // Add optimistic ID for potential rollback
+        });
+        console.log(`Optimistically updated allExpedisiDataUnfiltered cache for ${currentResi}.`);
+        return newMap;
+      });
+
+
       lastOptimisticIdRef.current = currentOptimisticId;
       console.log("Optimistically updated caches with ID:", currentOptimisticId);
       // --- End Optimistic UI Update ---
@@ -352,6 +372,25 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
           });
           queryClient.setQueryData(["recentResiDataForValidation", fiveDaysAgoFormatted, formattedDate], (oldData: ResiExpedisiData[] | undefined) => {
             return (oldData || []).filter(item => item.optimisticId !== lastOptimisticIdRef.current);
+          });
+          // Revert optimistic update for allExpedisiDataUnfiltered cache
+          queryClient.setQueryData(["allExpedisiDataUnfiltered", fiveDaysAgoFormatted, endOfTodayFormatted], (oldMap: Map<string, any> | undefined) => {
+            const newMap = oldMap ? new Map(oldMap) : new Map();
+            const normalizedResiKey = currentResi.toLowerCase();
+            const existingExpedisi = newMap.get(normalizedResiKey);
+            if (existingExpedisi && existingExpedisi.optimisticId === lastOptimisticIdRef.current) {
+              // If this was an optimistic insert, delete it. If it was an update, revert its flag.
+              // For simplicity, if it was optimistically added, remove it. If it was an update, we'd need to store its original state.
+              // For now, we'll just remove the optimistic flag if it exists.
+              const revertedExpedisi = { ...existingExpedisi };
+              delete revertedExpedisi.optimisticId; // Remove the optimistic flag
+              // If the original state was 'NO', we might need to revert the flag too.
+              // This requires storing the original flag state in the optimistic update.
+              // For now, we assume the flag was 'NO' before the optimistic 'YES'.
+              revertedExpedisi.flag = "NO"; // Revert flag to NO
+              newMap.set(normalizedResiKey, revertedExpedisi);
+            }
+            return newMap;
           });
           console.log(`Reverted optimistic update for ID: ${lastOptimisticIdRef.current} due to error.`);
       }

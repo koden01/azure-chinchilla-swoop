@@ -60,19 +60,13 @@ const DashboardSummaryCards: React.FC<DashboardSummaryCardsProps> = ({
       <SummaryCard
         title="Total Scan"
         value={isLoadingTotalScan ? <Loader2 className="h-5 w-5 animate-spin" /> : totalScan}
-        // secondaryTitle="Tanggal" // Dihapus
-        // secondaryValue={formattedDate} // Dihapus
+        secondaryTitle="ID Rekomendasi" // Menambahkan sub-item untuk ID Rekomendasi
+        secondaryValue={isLoadingIdRekCount ? <Loader2 className="h-3 w-3 animate-spin inline-block" /> : idRekCount}
         gradientFrom="from-green-500"
         gradientTo="to-teal-600"
         icon="maximize"
       />
-      <SummaryCard
-        title="ID Rekomendasi"
-        value={isLoadingIdRekCount ? <Loader2 className="h-5 w-5 animate-spin" /> : idRekCount}
-        gradientFrom="from-purple-500"
-        gradientTo="to-pink-600"
-        icon="info"
-      />
+      {/* Kartu ID Rekomendasi yang terpisah dihapus */}
       <SummaryCard
         title="Sisa (Hari Ini)"
         value={isLoadingBelumKirim ? <Loader2 className="h-5 w-5 animate-spin" /> : belumKirim}

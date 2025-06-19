@@ -239,18 +239,20 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
     });
 
     try {
-      console.log(`Attempting to confirm resi: ${resiNumber}`);
+      console.log(`[handleConfirmResi] Starting confirmation for resi: ${resiNumber}`);
       // Use allExpedisiData (Map) to get couriername and created timestamp
       const expedisiRecord = allExpedisiData?.get(resiNumber.toLowerCase());
+      console.log(`[handleConfirmResi] Retrieved expedisiRecord from cache:`, expedisiRecord);
 
       if (!expedisiRecord) {
         throw new Error(`Gagal mendapatkan data ekspedisi untuk resi ${resiNumber}: Data tidak ditemukan di cache.`);
       }
 
       const courierNameFromExpedisi = expedisiRecord.couriername;
-      const expedisiCreatedTimestamp = expedisiRecord.created; // Get the created timestamp
+      const expedisiCreatedTimestamp = expedisiRecord.created; // Get the created timestamp from tbl_expedisi
+      console.log(`[handleConfirmResi] Extracted courierNameFromExpedisi: ${courierNameFromExpedisi}, expedisiCreatedTimestamp: ${expedisiCreatedTimestamp}`);
 
-      console.log(`Updating flag to 'YES' for resi ${resiNumber} in tbl_expedisi.`);
+      console.log(`[handleConfirmResi] Updating flag to 'YES' for resi ${resiNumber} in tbl_expedisi.`);
       const { error: expUpdateError } = await supabase
         .from("tbl_expedisi")
         .update({ flag: "YES" })
@@ -259,6 +261,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       if (expUpdateError) {
         throw new Error(`Gagal mengkonfirmasi resi ${resiNumber} di tbl_expedisi: ${expUpdateError.message}`);
       }
+      console.log(`[handleConfirmResi] Successfully updated tbl_expedisi flag to 'YES' for ${resiNumber}.`);
 
       const { data: existingResi, error: checkResiError } = await supabase
         .from("tbl_resi")
@@ -270,47 +273,49 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         throw checkResiError;
       }
 
+      const resiDataToUpsert = {
+        Resi: resiNumber,
+        created: expedisiCreatedTimestamp, // Use created from tbl_expedisi
+        Keterangan: courierNameFromExpedisi,
+        nokarung: "0", // Default to "0" for confirmed resi from dashboard
+        // schedule: "ontime", // Dihapus agar trigger database yang menentukan
+      };
+      console.log(`[handleConfirmResi] Data to upsert into tbl_resi:`, resiDataToUpsert);
+
+
       if (existingResi) {
-        console.log(`Resi ${resiNumber} found in tbl_resi, updating details.`);
+        console.log(`[handleConfirmResi] Resi ${resiNumber} found in tbl_resi, updating details.`);
         const { error: updateResiError } = await supabase
           .from("tbl_resi")
-          .update({
-            created: expedisiCreatedTimestamp, // Use created from tbl_expedisi
-            Keterangan: courierNameFromExpedisi,
-            nokarung: "0",
-            // schedule: "ontime", // Dihapus agar trigger database yang menentukan
-          })
+          .update(resiDataToUpsert)
           .eq("Resi", resiNumber);
 
         if (updateResiError) throw updateResiError;
         showSuccess(`Resi ${resiNumber} berhasil dikonfirmasi.`);
+        console.log(`[handleConfirmResi] Successfully updated tbl_resi for ${resiNumber}.`);
       } else {
-        console.log(`Resi ${resiNumber} not found in tbl_resi, inserting new record.`);
+        console.log(`[handleConfirmResi] Resi ${resiNumber} not found in tbl_resi, inserting new record.`);
         const { error: insertResiError } = await supabase
           .from("tbl_resi")
-          .insert({
-            Resi: resiNumber,
-            created: expedisiCreatedTimestamp, // Use created from tbl_expedisi
-            Keterangan: courierNameFromExpedisi,
-            nokarung: "0",
-            // schedule: "ontime", // Dihapus agar trigger database yang menentukan
-          });
+          .insert(resiDataToUpsert);
 
         if (insertResiError) throw insertResiError;
         showSuccess(`Resi ${resiNumber} berhasil dikonfirmasi.`);
+        console.log(`[handleConfirmResi] Successfully inserted new record into tbl_resi for ${resiNumber}.`);
       }
 
       // Invalidate queries to trigger refetch for dashboard summaries
+      console.log(`[handleConfirmResi] Invalidating dashboard queries for date: ${date?.toISOString() || 'N/A'}.`);
       invalidateDashboardQueries(queryClient, date);
 
     } catch (error: any) {
       // Revert optimistic update on error
       if (itemToConfirm) {
         setModalData(originalModalData); // Revert to original data
-        console.log(`Reverted optimistic update for ${resiNumber} due to error.`);
+        console.log(`[handleConfirmResi] Reverted optimistic update for ${resiNumber} due to error.`);
       }
       showError(`Gagal mengkonfirmasi resi ${resiNumber}. ${error.message || "Silakan coba lagi."}`);
-      console.error("Error confirming resi:", error);
+      console.error("[handleConfirmResi] Error confirming resi:", error);
     }
   };
 

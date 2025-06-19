@@ -4,16 +4,16 @@ import { Package, Maximize, TriangleAlert, Info, Clock } from "lucide-react";
 
 interface SummaryCardProps {
   title: string;
-  value: number | string | React.ReactNode; // Updated to React.ReactNode
+  value: number | string | React.ReactNode;
   secondaryTitle?: string;
-  secondaryValue?: number | string;
-  sisaTitle?: string; // New prop for 'Sisa' title
-  sisaValue?: number | string; // New prop for 'Sisa' value
+  secondaryValue?: number | string | React.ReactNode; // Updated to React.ReactNode
+  sisaTitle?: string;
+  sisaValue?: number | string | React.ReactNode; // Updated to React.ReactNode
   gradientFrom: string;
   gradientTo: string;
   icon: "package" | "maximize" | "warning" | "info" | "clock";
   onClick?: () => void;
-  onSisaClick?: () => void; // New prop for 'Sisa' click handler
+  onSisaClick?: () => void;
 }
 
 const iconMap = {
@@ -29,13 +29,13 @@ const SummaryCard: React.FC<SummaryCardProps> = React.memo(({
   value,
   secondaryTitle,
   secondaryValue,
-  sisaTitle, // Destructure new prop
-  sisaValue, // Destructure new prop
+  sisaTitle,
+  sisaValue,
   gradientFrom,
   gradientTo,
   icon,
   onClick,
-  onSisaClick, // Destructure new prop
+  onSisaClick,
 }) => {
   const IconComponent = iconMap[icon];
 
@@ -65,7 +65,7 @@ const SummaryCard: React.FC<SummaryCardProps> = React.memo(({
             <p
               className={`text-xs text-white opacity-80 mt-1 ${onSisaClick ? "cursor-pointer hover:underline" : ""}`}
               onClick={(e) => {
-                e.stopPropagation(); // Prevent parent card's onClick from firing
+                e.stopPropagation();
                 onSisaClick && onSisaClick();
               }}
             >

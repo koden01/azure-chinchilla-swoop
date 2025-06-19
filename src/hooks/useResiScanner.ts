@@ -2,11 +2,11 @@ import React from "react";
 import { supabase, SUPABASE_PROJECT_ID } from "@/integrations/supabase/client";
 import { showSuccess, showError, dismissToast } from "@/utils/toast";
 import { beepSuccess, beepFailure, beepDouble } from "@/utils/audio";
-import { useDebouncedCallback } from "@/hooks/useDebouncedCallback"; // Mengubah import
+import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { useResiInputData } from "./useResiInputData"; // Import useResiInputData to access allResiForExpedition
+import { useResiInputData } from "./useResiInputData";
 
 // Define the type for ResiExpedisiData to match useResiInputData
 interface ResiExpedisiData {
@@ -16,6 +16,27 @@ interface ResiExpedisiData {
   Keterangan: string | null;
   schedule: string | null;
   optimisticId?: string;
+}
+
+// NEW: Define interface for the RPC return type
+interface ResiValidationDetails {
+  resi_record: {
+    Resi: string;
+    nokarung: string;
+    created: string;
+    Keterangan: string;
+    schedule: string;
+  } | null;
+  expedisi_record: {
+    resino: string;
+    orderno: string;
+    chanelsales: string;
+    couriername: string;
+    created: string;
+    flag: string;
+    datetrans: string;
+    cekfu: boolean;
+  } | null;
 }
 
 interface UseResiScannerProps {
@@ -120,7 +141,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
 
       // 2. Server-Side Combined Validation (RPC Call)
       console.log(`Calling RPC get_resi_validation_details for resi ${currentResi}...`);
-      const { data: rpcData, error: rpcError } = await supabase.rpc("get_resi_validation_details", {
+      const { data: rpcData, error: rpcError } = await supabase.rpc<ResiValidationDetails>("get_resi_validation_details", { // Apply the new interface here
         p_resi_number: currentResi,
       }).single(); // Use .single() as the RPC returns a single row
 

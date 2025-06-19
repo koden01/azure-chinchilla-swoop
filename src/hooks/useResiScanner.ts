@@ -34,13 +34,13 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
   // Calculate date range for 5 days back for local validation data
   const today = new Date();
   const fiveDaysAgo = subDays(today, 4); // 5 days including today (today, yesterday, -2, -3, -4)
-  const fiveDaysAgoISO = startOfDay(fiveDaysAgo).toISOString();
-  const endOfTodayISO = endOfDay(today).toISOString();
+  // const fiveDaysAgoISO = startOfDay(fiveDaysAgo).toISOString(); // Dihapus karena tidak terpakai
+  // const endOfTodayISO = endOfDay(today).toISOString(); // Dihapus karena tidak terpakai
   const fiveDaysAgoFormatted = format(fiveDaysAgo, "yyyy-MM-dd");
   const endOfTodayFormatted = format(today, "yyyy-MM-dd"); // Consistent with allExpedisiDataUnfiltered query key
 
   // Query to fetch tbl_resi data for the last 5 days for local validation
-  const { data: recentResiDataForValidation, isLoading: isLoadingRecentResiDataForValidation } = useQuery<ResiExpedisiData[]>({
+  const { data: recentResiDataForValidation, /* isLoading: isLoadingRecentResiDataForValidation */ } = useQuery<ResiExpedisiData[]>({ // Dihapus isLoadingRecentResiDataForValidation
     queryKey: ["recentResiDataForValidation", fiveDaysAgoFormatted, formattedDate],
     queryFn: async () => {
       console.log(`Fetching recentResiDataForValidation from ${fiveDaysAgoFormatted} to ${formattedDate} using fetchAllDataPaginated.`);

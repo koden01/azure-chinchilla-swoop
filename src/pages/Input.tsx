@@ -13,10 +13,10 @@ import { useResiScanner } from "@/hooks/useResiScanner";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import KarungSummaryModal from "@/components/KarungSummaryModal";
-import { useQuery } from "@tanstack/react-query"; // Import useQuery
-import { supabase } from "@/integrations/supabase/client"; // Import supabase client
-import { format, subDays } from "date-fns"; // Import date-fns utilities
-import { fetchAllDataPaginated } from "@/utils/supabaseFetch"; // Import fetchAllDataPaginated
+import { useQuery } from "@tanstack/react-query";
+// import { supabase } from "@/integrations/supabase/client"; // Dihapus karena tidak digunakan langsung
+import { format, subDays } from "date-fns";
+import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 
 const InputPage = () => {
   const { expedition, setExpedition } = useExpedition();
@@ -52,7 +52,7 @@ const InputPage = () => {
   });
 
   const {
-    allResiForExpedition,
+    // allResiForExpedition, // Dihapus karena tidak digunakan langsung di komponen ini
     isLoadingAllResiForExpedition,
     currentCount: getCountForSelectedKarung,
     lastKarung,

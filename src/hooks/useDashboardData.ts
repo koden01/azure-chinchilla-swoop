@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format, startOfDay, endOfDay, subDays } from "date-fns"; // Import subDays
 import { useEffect, useState } from "react";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation"; // Import the invalidation utility
+import { fetchAllDataPaginated } from "@/utils/supabaseFetch"; // Import the new utility
 
 export const useDashboardData = (date: Date | undefined) => {
   const formattedDate = date ? format(date, "yyyy-MM-dd") : "";
@@ -199,50 +200,11 @@ export const useDashboardData = (date: Date | undefined) => {
   console.log("useDashboardData: Follow Up Data - isLoading:", isLoadingFollowUp, "data length:", followUpData?.length, "error:", followUpDataError);
 
 
-  // Function to fetch all data from a table with pagination
-  // This function is now only used for allExpedisiDataUnfiltered and allResiData
-  const fetchAllDataPaginated = async (tableName: string, dateFilterColumn?: string, selectedStartDate?: Date, selectedEndDate?: Date) => {
-    let allRecords: any[] = [];
-    let offset = 0;
-    const limit = 1000; // Fetch 1000 records at a time
-    let hasMore = true;
-
-    while (hasMore) {
-      let query = supabase.from(tableName).select("*").range(offset, offset + limit - 1);
-
-      if (dateFilterColumn && selectedStartDate && selectedEndDate) {
-        if (tableName === "tbl_expedisi" && dateFilterColumn === "created") {
-          // For tbl_expedisi.created (timestamp without time zone), filter by date part
-          query = query.gte(dateFilterColumn, format(selectedStartDate, "yyyy-MM-dd")).lt(dateFilterColumn, format(selectedEndDate, "yyyy-MM-dd"));
-        } else {
-          // For tbl_resi.created (timestamp with time zone), use ISO strings for range
-          query = query.gte(dateFilterColumn, startOfDay(selectedStartDate).toISOString()).lt(dateFilterColumn, endOfDay(selectedEndDate).toISOString());
-        }
-      }
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.error(`Error fetching paginated data from ${tableName}:`, error);
-        throw error;
-      }
-
-      if (data && data.length > 0) {
-        allRecords = allRecords.concat(data);
-        offset += data.length;
-        hasMore = data.length === limit; // If less than limit, no more data
-      } else {
-        hasMore = false;
-      }
-    }
-    return allRecords;
-  };
-
   // Fetch tbl_expedisi data for the last 5 days to build a comprehensive resi-to-courier map for local validation
   const { data: allExpedisiDataUnfiltered, isLoading: isLoadingAllExpedisiUnfiltered, error: allExpedisiDataUnfilteredError } = useQuery<Map<string, any>>({ // Changed type to Map
     queryKey: ["allExpedisiDataUnfiltered", fiveDaysAgoFormatted, endOfTodayFormatted], // New query key with 5-day range
     queryFn: async () => {
-      console.log(`Fetching allExpedisiDataUnfiltered (paginated) for last 5 days: ${fiveDaysAgoFormatted} to ${endOfTodayFormatted}.`);
+      console.log(`Fetching allExpedisiDataUnfiltered (paginated) for last 5 days: ${fiveDaysAgoFormatted} to ${endOfTodayFormatted} using fetchAllDataPaginated.`);
       // Pass the 5-day range to fetchAllDataPaginated
       const data = await fetchAllDataPaginated("tbl_expedisi", "created", fiveDaysAgo, today);
       console.log("All Expedisi Data (unfiltered, paginated, 5-day range):", data.length, "items");
@@ -288,7 +250,7 @@ export const useDashboardData = (date: Date | undefined) => {
     queryKey: ["allResiData", formattedDate],
     queryFn: async () => {
       if (!date) return [];
-      console.log(`Fetching allResiData for date (paginated): ${formattedDate}`);
+      console.log(`Fetching allResiData for date (paginated): ${formattedDate} using fetchAllDataPaginated.`);
       const data = await fetchAllDataPaginated("tbl_resi", "created", date, date); // Use the new date filtering logic
       console.log("All Resi Data (filtered by selected date, paginated):", data.length, "items");
       return data;

@@ -150,8 +150,8 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
         throw rpcError;
       }
 
-      // Explicitly type `rpcData` after the call
-      const rpcData: ResiValidationDetails | null = data as ResiValidationDetails | null; // Add type assertion here
+      // Menggunakan penegasan tipe ganda untuk mengatasi masalah inferensi
+      const rpcData: ResiValidationDetails | null = data as any as ResiValidationDetails | null;
 
       const resiRecord = rpcData?.resi_record;
       const expedisiRecord = rpcData?.expedisi_record;

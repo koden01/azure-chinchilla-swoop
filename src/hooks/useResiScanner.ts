@@ -18,7 +18,7 @@ interface ResiExpedisiData {
   optimisticId?: string;
 }
 
-// NEW: Define interface for the RPC return type
+// Define interface for the RPC return type
 interface ResiValidationDetails {
   resi_record: {
     Resi: string;
@@ -37,6 +37,11 @@ interface ResiValidationDetails {
     datetrans: string;
     cekfu: boolean;
   } | null;
+}
+
+// NEW: Define interface for the RPC arguments
+interface GetResiValidationDetailsArgs {
+  p_resi_number: string;
 }
 
 interface UseResiScannerProps {
@@ -141,7 +146,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
 
       // 2. Server-Side Combined Validation (RPC Call)
       console.log(`Calling RPC get_resi_validation_details for resi ${currentResi}...`);
-      const { data: rpcData, error: rpcError } = await supabase.rpc<ResiValidationDetails>("get_resi_validation_details", { // Apply the new interface here
+      const { data: rpcData, error: rpcError } = await supabase.rpc<ResiValidationDetails, GetResiValidationDetailsArgs>("get_resi_validation_details", { // Apply the new interface here
         p_resi_number: currentResi,
       }).single(); // Use .single() as the RPC returns a single row
 

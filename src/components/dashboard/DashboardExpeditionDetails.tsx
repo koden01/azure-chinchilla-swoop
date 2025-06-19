@@ -44,7 +44,6 @@ const DashboardExpeditionDetails: React.FC<DashboardExpeditionDetailsProps> = ({
                 className="relative overflow-hidden rounded-lg shadow-lg transform transition-transform hover:scale-105"
                 onClick={() => handleOpenExpeditionDetailModal(summary.name)}
               >
-                {/* Lapisan gradien dinamis dihapus dari sini karena sudah diatur di parent */}
                 <ExpeditionDetailCard
                   name={summary.name}
                   totalTransaksi={summary.totalTransaksi}
@@ -54,6 +53,7 @@ const DashboardExpeditionDetails: React.FC<DashboardExpeditionDetailsProps> = ({
                   idRekomendasi={summary.idRekomendasi}
                   totalBatal={summary.totalBatal}
                   totalScanFollowUp={summary.totalScanFollowUp}
+                  {/* Properti gradientFrom dan gradientTo dihapus dari sini */}
                 />
               </div>
             ))

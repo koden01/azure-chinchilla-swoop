@@ -28,8 +28,8 @@ interface AllKarungSummaryItem {
 export const useResiInputData = (expedition: string, showAllExpeditionSummary: boolean) => {
   const today = new Date();
   const formattedDate = format(today, "yyyy-MM-dd");
-  const startOfTodayISO = startOfDay(today).toISOString();
-  const endOfTodayISO = endOfDay(today).toISOString();
+  // const startOfTodayISO = startOfDay(today).toISOString(); // Dihapus karena tidak terpakai
+  // const endOfTodayISO = endOfDay(today).toISOString(); // Dihapus karena tidak terpakai
   // Menghapus queryClient karena tidak digunakan
   // const queryClient = useQueryClient(); 
 

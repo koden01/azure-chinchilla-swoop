@@ -1,10 +1,10 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, startOfDay, endOfDay, subDays } from "date-fns";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
-import { useDebouncedCallback } from "@/hooks/useDebouncedCallback"; // Import useDebouncedCallback
+import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 
 // Define the return type interface for useDashboardData
 interface DashboardDataReturn {
@@ -479,7 +479,7 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
       supabase.removeChannel(resiChannel);
       supabase.removeChannel(expedisiChannel);
     };
-  }, [debouncedInvalidateDashboardQueries]); // Dependency changed to the debounced function
+  }, [debouncedInvalidateDashboardQueries]);
 
   console.log("useDashboardData returning expeditionSummaries:", expeditionSummaries); // Debug log
 

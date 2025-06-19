@@ -57,6 +57,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
   const fiveDaysAgoISO = startOfDay(fiveDaysAgo).toISOString();
   const endOfTodayISO = endOfDay(today).toISOString();
   const fiveDaysAgoFormatted = format(fiveDaysAgo, "yyyy-MM-dd");
+  const endOfTodayFormatted = format(today, "yyyy-MM-dd"); // Consistent with allExpedisiDataUnfiltered query key
 
   // Query to fetch tbl_resi data for the last 5 days for local validation
   const { data: recentResiDataForValidation } = useQuery<ResiExpedisiData[]>({
@@ -169,10 +170,61 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         return; // Exit early if duplicate found locally
       }
 
-      // 2. Local Expedition Validation (using allExpedisiDataUnfiltered cache)
+      // 2. Local Expedition Validation (using allExpedisiDataUnfiltered cache, with fallback to direct fetch)
       console.log(`Performing local expedition validation for resi ${currentResi} using allExpedisiDataUnfiltered...`);
-      const expedisiRecord = allExpedisiDataUnfiltered?.get(currentResi.toLowerCase());
+      let expedisiRecord = allExpedisiDataUnfiltered?.get(currentResi.toLowerCase());
 
+      // If not found in cache, try a direct fetch from tbl_expedisi
+      if (!expedisiRecord) {
+          console.log(`Resi ${currentResi} not found in allExpedisiDataUnfiltered cache. Attempting direct fetch from tbl_expedisi.`);
+          const { data: directExpedisiData, error: directExpedisiError } = await supabase
+              .from("tbl_expedisi")
+              .select("*")
+              .eq("resino", currentResi)
+              .single();
+
+          if (directExpedisiError && directExpedisiError.code !== 'PGRST116') { // PGRST116 means "no rows found"
+              throw directExpedisiError; // Re-throw other errors
+          }
+          
+          if (directExpedisiData) {
+              expedisiRecord = directExpedisiData;
+              console.log(`Resi ${currentResi} found via direct fetch from tbl_expedisi.`);
+              // Optionally, update the cache with this fresh data to prevent future direct fetches for this item
+              queryClient.setQueryData(
+                  ["allExpedisiDataUnfiltered", fiveDaysAgoFormatted, endOfTodayFormatted], // Use the correct query key for allExpedisiDataUnfiltered
+                  (oldMap: Map<string, any> | undefined) => {
+                      const newMap = oldMap ? new Map(oldMap) : new Map();
+                      newMap.set(currentResi.toLowerCase(), directExpedisiData);
+                      return newMap;
+                  }
+              );
+          } else {
+              console.log(`Resi ${currentResi} NOT found via direct fetch from tbl_expedisi.`);
+              validationStatus = 'NOT_FOUND_EXPEDISI';
+              validationMessage = 'Data tidak ada di database ekspedisi.';
+          }
+      }
+
+      if (validationStatus !== 'OK') {
+        showError(validationMessage || "Validasi gagal.");
+        try {
+          // Conditional beep based on validation status
+          if (validationStatus === 'NOT_FOUND_EXPEDISI') {
+            beepFailure.play(); // Play beepFailure for "data tidak ada"
+          } else {
+            beepDouble.play(); // Keep beepDouble for other mismatches
+          }
+        } catch (e) {
+          console.error("Error playing beep sound:", e);
+        }
+        setIsProcessing(false);
+        keepFocus();
+        return; // Exit early if local expedition validation fails
+      }
+
+      // If expedisiRecord is still null here, it means NOT_FOUND_EXPEDISI was set.
+      // If it's not null, proceed with courier name validation.
       if (expedition === 'ID') {
         if (expedisiRecord) {
           const normalizedExpedisiCourier = expedisiRecord.couriername?.trim().toUpperCase();
@@ -183,10 +235,20 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
             validationMessage = `Resi ini bukan milik ekspedisi ${expedition}, melainkan milik ekspedisi ${expedisiRecord.couriername}.`;
           }
         } else {
+          // This branch is reached if expedisiRecord was not found in cache AND not found via direct fetch.
+          // This means validationStatus is already 'NOT_FOUND_EXPEDISI'.
+          // However, for 'ID' expedition, if not found in tbl_expedisi, it can be ID_REKOMENDASI.
+          // This logic needs to be careful not to override a 'NOT_FOUND_EXPEDISI' status if it was set.
+          // If we are here, it means expedisiRecord is null, so it's truly not found.
+          // For 'ID' expedition, if not found, it's considered 'ID_REKOMENDASI'.
+          // This is a specific business rule.
           actualCourierName = 'ID_REKOMENDASI';
+          console.log(`Resi ${currentResi} not found in tbl_expedisi, but selected expedition is 'ID'. Assuming 'ID_REKOMENDASI'.`);
         }
       } else { // For non-ID expeditions
         if (!expedisiRecord) {
+          // This case should ideally be caught by the earlier direct fetch logic.
+          // If we reach here and expedisiRecord is null, it means it was truly not found.
           validationStatus = 'NOT_FOUND_EXPEDISI';
           validationMessage = 'Data tidak ada di database ekspedisi.';
         } else {

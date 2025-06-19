@@ -22,6 +22,7 @@ export const useDashboardData = (date: Date | undefined) => {
   const { data: transaksiHariIni, isLoading: isLoadingTransaksiHariIni, error: transaksiHariIniError } = useQuery<number>({
     queryKey: ["transaksiHariIni", formattedDate],
     queryFn: async () => {
+      console.log("QueryFn: transaksiHariIni");
       if (!date) return 0;
       console.log(`Fetching transaksiHariIni count for date: ${formattedDate} using RPC.`);
       const { data: countData, error } = await supabase.rpc("get_transaksi_hari_ini_count", {
@@ -43,6 +44,7 @@ export const useDashboardData = (date: Date | undefined) => {
   const { data: totalScan, isLoading: isLoadingTotalScan, error: totalScanError } = useQuery<number>({
     queryKey: ["totalScan", formattedDate],
     queryFn: async () => {
+      console.log("QueryFn: totalScan");
       if (!date) return 0;
       console.log(`Fetching totalScan for date: ${formattedDate}`);
       const { count, error } = await supabase
@@ -67,6 +69,7 @@ export const useDashboardData = (date: Date | undefined) => {
   const { data: idRekCount, isLoading: isLoadingIdRekCount, error: idRekCountError } = useQuery<number>({
     queryKey: ["idRekCount", formattedDate],
     queryFn: async () => {
+      console.log("QueryFn: idRekCount");
       if (!date) return 0;
       console.log(`Fetching idRekCount for date: ${formattedDate}`);
       const { count, error } = await supabase
@@ -91,6 +94,7 @@ export const useDashboardData = (date: Date | undefined) => {
   const { data: belumKirim, isLoading: isLoadingBelumKirim, error: belumKirimError } = useQuery<number>({
     queryKey: ["belumKirim", formattedDate],
     queryFn: async () => {
+      console.log("QueryFn: belumKirim");
       if (!date) return 0;
       console.log(`Fetching belumKirim count for date: ${formattedDate} using RPC.`);
       const { data: countData, error } = await supabase.rpc("get_belum_kirim_count", {
@@ -112,6 +116,7 @@ export const useDashboardData = (date: Date | undefined) => {
   const { data: followUpFlagNoCount, isLoading: isLoadingFollowUpFlagNoCount, error: followUpFlagNoCountError } = useQuery<number>({
     queryKey: ["followUpFlagNoCount", format(new Date(), 'yyyy-MM-dd')], // Query key based on actual current date
     queryFn: async () => {
+      console.log("QueryFn: followUpFlagNoCount");
       // Always use the actual current date for this specific query
       const actualCurrentFormattedDate = format(new Date(), 'yyyy-MM-dd');
       console.log(`Fetching followUpFlagNoCount for actual current date: ${actualCurrentFormattedDate}`);
@@ -135,6 +140,7 @@ export const useDashboardData = (date: Date | undefined) => {
   const { data: scanFollowupLateCount, isLoading: isLoadingScanFollowupLateCount, error: scanFollowupLateCountError } = useQuery<number>({
     queryKey: ["scanFollowupLateCount", formattedDate],
     queryFn: async () => {
+      console.log("QueryFn: scanFollowupLateCount");
       if (!date) return 0;
       console.log(`Fetching scanFollowupLateCount for date: ${formattedDate}`);
       const { count, error } = await supabase
@@ -159,6 +165,7 @@ export const useDashboardData = (date: Date | undefined) => {
   const { data: batalCount, isLoading: isLoadingBatalCount, error: batalCountError } = useQuery<number>({
     queryKey: ["batalCount", formattedDate],
     queryFn: async () => {
+      console.log("QueryFn: batalCount");
       if (!date) return 0;
       console.log(`Fetching batalCount for date: ${formattedDate}`);
       const { count, error } = await supabase
@@ -183,6 +190,7 @@ export const useDashboardData = (date: Date | undefined) => {
   const { data: followUpData, isLoading: isLoadingFollowUp, error: followUpDataError } = useQuery<any[]>({
     queryKey: ["followUpData", formattedDate],
     queryFn: async () => {
+      console.log("QueryFn: followUpData");
       if (!date) return [];
       console.log(`Fetching followUpData for date: ${formattedDate}`);
       const { data, error } = await supabase.rpc("get_scan_follow_up", {
@@ -204,6 +212,7 @@ export const useDashboardData = (date: Date | undefined) => {
   const { data: allExpedisiDataUnfiltered, isLoading: isLoadingAllExpedisiUnfiltered, error: allExpedisiDataUnfilteredError } = useQuery<Map<string, any>>({ // Changed type to Map
     queryKey: ["allExpedisiDataUnfiltered", fiveDaysAgoFormatted, endOfTodayFormatted], // New query key with 5-day range
     queryFn: async () => {
+      console.log("QueryFn: allExpedisiDataUnfiltered");
       console.log(`Fetching allExpedisiDataUnfiltered (paginated) for last 5 days: ${fiveDaysAgoFormatted} to ${endOfTodayFormatted} using fetchAllDataPaginated.`);
       // Pass the 5-day range to fetchAllDataPaginated
       const data = await fetchAllDataPaginated("tbl_expedisi", "created", fiveDaysAgo, today);
@@ -228,6 +237,7 @@ export const useDashboardData = (date: Date | undefined) => {
   const { data: expedisiDataForSelectedDate, isLoading: isLoadingExpedisiDataForSelectedDate, error: expedisiDataForSelectedDateError } = useQuery<any[]>({
     queryKey: ["expedisiDataForSelectedDate", formattedDate],
     queryFn: async () => {
+      console.log("QueryFn: expedisiDataForSelectedDate");
       if (!date) return [];
       console.log(`RPC Call: get_transaksi_hari_ini_records for date: ${formattedDate}`);
       const { data, error } = await supabase.rpc("get_transaksi_hari_ini_records", {
@@ -249,6 +259,7 @@ export const useDashboardData = (date: Date | undefined) => {
   const { data: allResiData, isLoading: isLoadingAllResi, error: allResiDataError } = useQuery<any[]>({
     queryKey: ["allResiData", formattedDate],
     queryFn: async () => {
+      console.log("QueryFn: allResiData");
       if (!date) return [];
       console.log(`Fetching allResiData for date (paginated): ${formattedDate} using fetchAllDataPaginated.`);
       const data = await fetchAllDataPaginated("tbl_resi", "created", date, date); // Use the new date filtering logic

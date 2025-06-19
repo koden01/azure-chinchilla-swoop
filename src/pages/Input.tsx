@@ -1,5 +1,4 @@
 import React from "react";
-// import { MadeWithDyad } from "@/components/made-with-dyad"; // Removed
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -14,13 +13,43 @@ import { useResiScanner } from "@/hooks/useResiScanner";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import KarungSummaryModal from "@/components/KarungSummaryModal";
-// import { Button } from "@/components/ui/button"; // Removed unused import
+import { useQuery } from "@tanstack/react-query"; // Import useQuery
+import { supabase } from "@/integrations/supabase/client"; // Import supabase client
+import { format, subDays } from "date-fns"; // Import date-fns utilities
+import { fetchAllDataPaginated } from "@/utils/supabaseFetch"; // Import fetchAllDataPaginated
 
 const InputPage = () => {
   const { expedition, setExpedition } = useExpedition();
   const [selectedKarung, setSelectedKarung] = React.useState<string>("1"); // Default to "1"
 
   const [isKarungSummaryModalOpen, setIsKarungSummaryModalOpen] = React.useState(false);
+
+  // Calculate date range for 5 days back for allExpedisiDataUnfiltered
+  const today = new Date();
+  const fiveDaysAgo = subDays(today, 4); // 5 days including today (today, yesterday, -2, -3, -4)
+  const fiveDaysAgoFormatted = format(fiveDaysAgo, "yyyy-MM-dd");
+  const endOfTodayFormatted = format(today, "yyyy-MM-dd"); // For the end of the range key
+
+  // NEW: Query to fetch tbl_expedisi data for the last 5 days for local validation
+  const { data: allExpedisiDataUnfiltered, isLoading: isLoadingAllExpedisiUnfiltered } = useQuery<Map<string, any>>({
+    queryKey: ["allExpedisiDataUnfiltered", fiveDaysAgoFormatted, endOfTodayFormatted], // New query key with 5-day range
+    queryFn: async () => {
+      console.log("InputPage: QueryFn: allExpedisiDataUnfiltered");
+      console.log(`InputPage: Fetching allExpedisiDataUnfiltered (paginated) for last 5 days: ${fiveDaysAgoFormatted} to ${endOfTodayFormatted} using fetchAllDataPaginated.`);
+      const data = await fetchAllDataPaginated("tbl_expedisi", "created", fiveDaysAgo, today);
+      console.log("InputPage: All Expedisi Data (unfiltered, paginated, 5-day range):", data.length, "items");
+      const expedisiMap = new Map<string, any>();
+      data.forEach(item => {
+        if (item.resino) {
+          expedisiMap.set(item.resino.toLowerCase(), item);
+        }
+      });
+      return expedisiMap;
+    },
+    enabled: true, // Always enabled for local validation
+    staleTime: 1000 * 60 * 5, // Keep this data fresh for 5 minutes
+    gcTime: 1000 * 60 * 60 * 24 * 5, // Garbage collect after 5 days
+  });
 
   const {
     allResiForExpedition,
@@ -32,8 +61,7 @@ const InputPage = () => {
     formattedDate,
     karungSummary,
     expeditionOptions,
-    allExpedisiDataUnfiltered, // NEW: Get allExpedisiDataUnfiltered
-  } = useResiInputData(expedition, false); // Added false for showAllExpeditionSummary
+  } = useResiInputData(expedition, false);
 
   const {
     resiNumber,
@@ -77,23 +105,23 @@ const InputPage = () => {
     expedition,
     selectedKarung,
     isLoadingAllResiForExpedition,
-    allResiForExpeditionCount: allResiForExpedition?.length,
     currentCount,
     isProcessing,
     karungSummary,
     expeditionOptions,
     allExpedisiDataUnfilteredSize: allExpedisiDataUnfiltered?.size, // Log size
+    isLoadingAllExpedisiUnfiltered, // Log loading state
   });
 
   return (
     <React.Fragment>
-      <div className="flex flex-col items-center justify-center p-4 md:p-6 bg-gray-50"> {/* Removed h-[calc(100vh-64px)] */}
+      <div className="flex flex-col items-center justify-center p-4 md:p-6 bg-gray-50">
         <div className="w-full bg-gradient-to-r from-blue-500 to-purple-600 p-6 md:p-8 rounded-lg shadow-md text-white text-center space-y-4">
           <h2 className="text-2xl font-semibold">Input Data Resi</h2>
           <div className="text-6xl font-bold">
             {!expedition
               ? "Pilih Expedisi"
-              : isLoadingAllResiForExpedition
+              : isLoadingAllResiForExpedition || isLoadingAllExpedisiUnfiltered // Include new loading state
               ? "..."
               : currentCount}
           </div>
@@ -162,7 +190,7 @@ const InputPage = () => {
                   "w-full bg-white text-gray-800 h-16 text-2xl text-center pr-10",
                   isProcessing && "opacity-70 cursor-not-allowed"
                 )}
-                disabled={!expedition || !selectedKarung || isProcessing}
+                disabled={!expedition || !selectedKarung || isProcessing || isLoadingAllExpedisiUnfiltered} // Disable if allExpedisiDataUnfiltered is loading
                 inputMode="none"
               />
               {isProcessing && (
@@ -171,7 +199,6 @@ const InputPage = () => {
             </div>
           </div>
         </div>
-        {/* <MadeWithDyad /> Removed */}
       </div>
 
       <KarungSummaryModal

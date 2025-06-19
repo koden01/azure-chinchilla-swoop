@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-// import { MadeWithDyad } from "@/components/made-with-dyad"; // Removed
 import ResiDetailModal from "@/components/ResiDetailModal";
 import DashboardDatePicker from "@/components/dashboard/DashboardDatePicker";
 import DashboardSummaryCards from "@/components/dashboard/DashboardSummaryCards";
@@ -68,7 +67,7 @@ const DashboardPage: React.FC = () => {
 
   return (
     <React.Fragment>
-      <div className="p-4 md:p-6 bg-gray-50 min-h-screen"> {/* Changed min-h-[calc(100vh-64px)] to min-h-screen */}
+      <div className="p-4 md:p-6 bg-gray-50 min-h-screen">
         <div className="max-w-7xl mx-auto">
           {/* Date Picker Section */}
           <DashboardDatePicker
@@ -92,7 +91,6 @@ const DashboardPage: React.FC = () => {
             isLoadingScanFollowupLateCount={isLoadingScanFollowupLateCount}
             batalCount={batalCount}
             isLoadingBatalCount={isLoadingBatalCount}
-            formattedDate={formattedDate}
             handleOpenTransaksiHariIniModal={handleOpenTransaksiHariIniModal}
             handleOpenBelumKirimModal={handleOpenBelumKirimModal}
             handleOpenFollowUpFlagNoModal={handleOpenFollowUpFlagNoModal}
@@ -106,7 +104,6 @@ const DashboardPage: React.FC = () => {
             handleOpenExpeditionDetailModal={handleOpenExpeditionDetailModal}
           />
         </div>
-        {/* <MadeWithDyad /> Removed */}
       </div>
 
       <ResiDetailModal

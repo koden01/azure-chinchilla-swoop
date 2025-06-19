@@ -3,7 +3,13 @@ import { format, subDays } from "date-fns"; // Import subDays
 
 export const invalidateDashboardQueries = (queryClient: QueryClient, date: Date | undefined, expedition?: string) => {
   const formattedDate = date ? format(date, "yyyy-MM-dd") : "";
-  const actualCurrentFormattedDate = format(new Date(), 'yyyy-MM-dd');
+  const actualCurrentDate = new Date();
+  const actualCurrentFormattedDate = format(actualCurrentDate, 'yyyy-MM-dd');
+
+  // Calculate date range for 5 days back for allExpedisiDataUnfiltered invalidation
+  const fiveDaysAgo = subDays(actualCurrentDate, 4);
+  const fiveDaysAgoFormatted = format(fiveDaysAgo, "yyyy-MM-dd");
+  const endOfTodayFormatted = format(actualCurrentDate, "yyyy-MM-dd");
 
   // Invalidate dashboard summary queries
   queryClient.invalidateQueries({ queryKey: ["transaksiHariIni", formattedDate] });
@@ -30,13 +36,9 @@ export const invalidateDashboardQueries = (queryClient: QueryClient, date: Date 
     queryClient.invalidateQueries({ queryKey: ["allResiForExpedition", normalizedExpeditionForInput, formattedDate] });
   }
 
-  // Always invalidate the comprehensive resi data cache, as a resi was deleted/added/updated
-  queryClient.invalidateQueries({ queryKey: ["allResiDataComprehensive"] }); // This query key is not used anymore, but keeping it for safety if it's referenced elsewhere.
-  queryClient.invalidateQueries({ queryKey: ["allExpedisiDataUnfiltered"] }); // Also invalidate this as it's used for validation
+  // Invalidate the allExpedisiDataUnfiltered query with its new key
+  queryClient.invalidateQueries({ queryKey: ["allExpedisiDataUnfiltered", fiveDaysAgoFormatted, endOfTodayFormatted] });
 
-  // NEW: Invalidate recentResiDataForValidation for local duplicate checks
-  const today = new Date();
-  const fiveDaysAgo = subDays(today, 4);
-  const fiveDaysAgoFormatted = format(fiveDaysAgo, "yyyy-MM-dd");
+  // Invalidate recentResiDataForValidation for local duplicate checks
   queryClient.invalidateQueries({ queryKey: ["recentResiDataForValidation", fiveDaysAgoFormatted, actualCurrentFormattedDate] });
 };

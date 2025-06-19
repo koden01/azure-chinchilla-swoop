@@ -1,5 +1,4 @@
 import React from "react";
-// import { MadeWithDyad } from "@/components/made-with-dyad"; // Removed
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
@@ -37,7 +36,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { showSuccess, showError } from "@/utils/toast";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
-import { useDebounce } from "@/hooks/useDebounce"; // Menggunakan useDebounce untuk nilai
+import { useDebounce } from "@/hooks/useDebounce";
 
 interface HistoryData {
   Resi: string;
@@ -50,11 +49,15 @@ interface HistoryData {
 const HistoryPage = () => {
   const [startDate, setStartDate] = React.useState<Date | undefined>(new Date());
   const [endDate, setEndDate] = React.useState<Date | undefined>(new Date());
-  const [rawSearchQuery, setRawSearchQuery] = React.useState<string>(""); // State for raw input
-  const debouncedSearchQuery = useDebounce(rawSearchQuery, 300); // Debounced search query for value
+  const [rawSearchQuery, setRawSearchQuery] = React.useState<string>("");
+  const debouncedSearchQuery = useDebounce(rawSearchQuery, 300);
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [resiToDelete, setResiToDelete] = React.useState<string | null>(null);
+
+  // State untuk melacak klik terakhir untuk deteksi double-click
+  const [lastClickInfo, setLastClickInfo] = React.useState<{ resi: string | null; timestamp: number | null } | null>(null);
+  const clickTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const queryClient = useQueryClient();
 
@@ -101,6 +104,7 @@ const HistoryPage = () => {
   const { data: historyData, isLoading: isLoadingHistory, error: historyError } = useQuery<HistoryData[]>({
     queryKey: ["historyData", formattedStartDate, formattedEndDate],
     queryFn: async () => {
+      console.log("QueryFn: historyData"); // Log for debugging
       if (!startDate || !endDate) {
         console.log("HistoryPage: Skipping query, startDate or endDate is undefined.");
         return [];
@@ -184,6 +188,30 @@ const HistoryPage = () => {
   const handleDeleteClick = (resi: string) => {
     setResiToDelete(resi);
     setIsDeleteDialogOpen(true);
+  };
+
+  // New handler for row clicks to detect double-click
+  const handleRowClick = (resi: string) => {
+    const now = Date.now();
+
+    if (lastClickInfo && lastClickInfo.resi === resi && (now - lastClickInfo.timestamp!) < 300) { // 300ms for double click
+      // Double click detected
+      if (clickTimeoutRef.current) {
+        clearTimeout(clickTimeoutRef.current);
+        clickTimeoutRef.current = null;
+      }
+      setLastClickInfo(null); // Reset for next double click
+      handleDeleteClick(resi); // Trigger the delete confirmation
+    } else {
+      // First click or different resi
+      if (clickTimeoutRef.current) {
+        clearTimeout(clickTimeoutRef.current);
+      }
+      setLastClickInfo({ resi, timestamp: now });
+      clickTimeoutRef.current = setTimeout(() => {
+        setLastClickInfo(null); // Clear after timeout if no second click
+      }, 300);
+    }
   };
 
   const confirmDeleteResi = async () => {
@@ -362,8 +390,8 @@ const HistoryPage = () => {
                   id="search-input"
                   type="text"
                   placeholder="Cari no. resi, keterangan, atau lainnya..."
-                  value={rawSearchQuery} // Bind to rawSearchQuery
-                  onChange={(e) => setRawSearchQuery(e.target.value)} // Update rawSearchQuery
+                  value={rawSearchQuery}
+                  onChange={(e) => setRawSearchQuery(e.target.value)}
                   className="w-full"
                 />
               </div>
@@ -390,7 +418,6 @@ const HistoryPage = () => {
                   <TableHead>No Karung</TableHead>
                   <TableHead>Schedule</TableHead>
                   <TableHead>Tanggal Input</TableHead>
-                  {/* <TableHead>Aksi</TableHead> Removed Aksi column */}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -402,8 +429,8 @@ const HistoryPage = () => {
                   currentData.map((data, index) => (
                     <TableRow 
                       key={data.Resi + index} 
-                      className="hover:bg-gray-100 cursor-pointer" // Added cursor-pointer
-                      onClick={() => handleDeleteClick(data.Resi)} // Added onClick to row
+                      className="hover:bg-gray-100 cursor-pointer"
+                      onClick={() => handleRowClick(data.Resi)} // Menggunakan handler double-click
                     >
                       <TableCell className="font-medium">{startIndex + index + 1}</TableCell>
                       <TableCell className="w-[25%]">{data.Resi}</TableCell>
@@ -421,7 +448,6 @@ const HistoryPage = () => {
                       <TableCell>{data.nokarung}</TableCell>
                       <TableCell>{data.schedule || "-"}</TableCell>
                       <TableCell>{format(new Date(data.created), "dd/MM/yyyy HH:mm")}</TableCell>
-                      {/* Removed Hapus button */}
                     </TableRow>
                   ))
                 )}
@@ -460,7 +486,6 @@ const HistoryPage = () => {
             </Pagination>
           )}
         </div>
-        {/* <MadeWithDyad /> */}
 
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <AlertDialogContent>

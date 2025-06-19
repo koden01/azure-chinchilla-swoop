@@ -32,14 +32,14 @@ const KarungSummaryModal: React.FC<KarungSummaryModalProps> = ({
 }) => {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px] max-h-[90vh] flex flex-col overflow-y-scroll overflow-x-hidden"> {/* Added overflow-x-hidden here */}
+      <DialogContent className="sm:max-w-[425px] max-h-[90vh] flex flex-col overflow-y-auto overflow-x-hidden"> {/* Changed to overflow-y-auto */}
         <DialogHeader>
           <DialogTitle>Ringkasan Karung</DialogTitle>
           <DialogDescription>
             Detail karung untuk ekspedisi {expedition} pada tanggal {date}.
           </DialogDescription>
         </DialogHeader>
-        <div className="py-4 flex-grow overflow-x-scroll"> {/* This div will handle horizontal scrolling for the table */}
+        <div className="py-4 flex-grow overflow-x-scroll">
           <Table>
             <TableHeader>
               <TableRow>

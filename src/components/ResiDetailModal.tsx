@@ -29,7 +29,7 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-} from "@/components/ui/pagination"; // Import yang ditambahkan
+} from "@/components/ui/pagination";
 
 interface ResiDetailModalProps {
   isOpen: boolean;
@@ -250,7 +250,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[800px] lg:max-w-[1000px] max-h-[90vh] flex flex-col overflow-y-scroll overflow-x-hidden">
+      <DialogContent className="sm:max-w-[800px] lg:max-w-[1000px] max-h-[90vh] flex flex-col overflow-y-auto overflow-x-hidden"> {/* Changed to overflow-y-auto */}
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>

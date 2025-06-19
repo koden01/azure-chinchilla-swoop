@@ -15,63 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
-import { format } from "date-fns";
-import { Copy } from "lucide-react";
-import { showSuccess, showError } from "@/utils/toast";
-import { useDebounce } from "@/hooks/useDebounce"; // Menggunakan useDebounce untuk nilai
-
-console.log("ResiDetailModal.tsx: Component file loaded.");
-
-// Define a common interface for items displayed in the modal
-interface ModalDataItem {
-  Resi?: string; // Used for 'followUp' modal type (from tbl_resi or RPC)
-  resino?: string; // Used for 'belumKirim', 'expeditionDetail', 'transaksiHariIni' (from tbl_expedisi)
-  orderno?: string | null;
-  chanelsales?: string | null;
-  couriername?: string | null;
-  created?: string; // For tbl_resi
-  datetrans?: string | null; // For tbl_expedisi
-  flag?: string | null;
-  cekfu?: boolean | null;
-  created_resi?: string; // For followUp RPC
-  created_expedisi?: string; // For followUp RPC
-}
-
-interface ResiDetailModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  title: string;
-  data: ModalDataItem[]; // This is modalData from useDashboardModals
-  modalType: "belumKirim" | "followUp" | "expeditionDetail" | "transaksiHariIni" | null;
-  selectedCourier?: string | null;
-  onBatalResi: (resiNumber: string) => Promise<void>;
-  onConfirmResi: (resiNumber: string) => Promise<void>;
-  onCekfuToggle: (resiNumber: string, currentCekfuStatus: boolean) => Promise<void>;
-}
-
-const ITEMS_PER_PAGE = 20;
-
-const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
-  isOpen,
-  onClose,
-  title,
-  data, // This is modalData from useDashboardModals
-  modalType,
-  selectedCourier,
-  onBatalResi,
-  onConfirmResi,
-  onCekfuToggle,
-}) => {
+import { Input } => {
   const [rawSearchTerm, setRawSearchTerm] = useState(""); // State for raw input
   const debouncedSearchTerm = useDebounce(rawSearchTerm, 300); // Debounced search term for value
 

@@ -52,28 +52,24 @@ const DashboardSummaryCards: React.FC<DashboardSummaryCardsProps> = ({
       <SummaryCard
         title="Transaksi Hari Ini"
         value={isLoadingTransaksiHariIni ? <Loader2 className="h-5 w-5 animate-spin" /> : transaksiHariIni}
+        sisaTitle="Sisa (Hari Ini)" // Menambahkan sub-item untuk Sisa (Hari Ini)
+        sisaValue={isLoadingBelumKirim ? <Loader2 className="h-3 w-3 animate-spin inline-block" /> : belumKirim}
+        onSisaClick={handleOpenBelumKirimModal} // Menambahkan onClick untuk sub-item Sisa
         gradientFrom="from-blue-500"
         gradientTo="to-indigo-600"
         icon="package"
-        // onClick={handleOpenTransaksiHariIniModal} // Dihapus
+        // onClick={handleOpenTransaksiHariIniModal} // Dihapus karena sudah tidak ada modal utama
       />
       <SummaryCard
         title="Total Scan"
         value={isLoadingTotalScan ? <Loader2 className="h-5 w-5 animate-spin" /> : totalScan}
-        secondaryTitle="ID Rekomendasi" // Menambahkan sub-item untuk ID Rekomendasi
+        secondaryTitle="ID Rekomendasi"
         secondaryValue={isLoadingIdRekCount ? <Loader2 className="h-3 w-3 animate-spin inline-block" /> : idRekCount}
         gradientFrom="from-green-500"
         gradientTo="to-teal-600"
         icon="maximize"
       />
-      <SummaryCard
-        title="Sisa (Hari Ini)"
-        value={isLoadingBelumKirim ? <Loader2 className="h-5 w-5 animate-spin" /> : belumKirim}
-        gradientFrom="from-red-500"
-        gradientTo="to-orange-600"
-        icon="warning"
-        onClick={handleOpenBelumKirimModal}
-      />
+      {/* Kartu Sisa (Hari Ini) yang terpisah dihapus */}
       <SummaryCard
         title="Follow Up (Belum Kirim)"
         value={isLoadingFollowUpFlagNoCount ? <Loader2 className="h-5 w-5 animate-spin" /> : followUpFlagNoCount}

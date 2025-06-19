@@ -22,6 +22,14 @@ import { format } from "date-fns";
 import { useDebounce } from "@/hooks/useDebounce";
 import { showSuccess, showError } from "@/utils/toast";
 import { ModalDataItem } from "@/types/data";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"; // Import yang ditambahkan
 
 interface ResiDetailModalProps {
   isOpen: boolean;
@@ -242,7 +250,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[800px] lg:max-w-[1000px] max-h-[90vh] flex flex-col overflow-y-scroll overflow-x-hidden"> {/* Kept overflow-x-hidden here */}
+      <DialogContent className="sm:max-w-[800px] lg:max-w-[1000px] max-h-[90vh] flex flex-col overflow-y-scroll overflow-x-hidden">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
@@ -250,7 +258,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
             {selectedCourier && ` (Kurir: ${selectedCourier})`}
           </DialogDescription>
         </DialogHeader>
-        <div className="my-4 flex flex-col md:flex-row gap-2 w-full overflow-x-hidden"> {/* Added w-full and overflow-x-hidden here */}
+        <div className="my-4 flex flex-col md:flex-row gap-2 w-full overflow-x-hidden">
           <Input
             id="search-term-input"
             placeholder="Cari Resi, No Order, Marketplace, Kurir, atau Tanggal Pembelian..."
@@ -265,7 +273,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
             <Copy className="mr-2 h-4 w-4" /> Copy Table Data
           </Button>
         </div>
-        <div className="overflow-x-scroll flex-grow"> {/* This div will handle horizontal scrolling for the table */}
+        <div className="overflow-x-scroll flex-grow">
           <Table>
             <TableHeader>
               <TableRow>

@@ -6,6 +6,7 @@ import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { format, startOfDay, endOfDay, subDays } from "date-fns";
+import { fetchAllDataPaginated } from "@/utils/supabaseFetch"; // Import the new utility
 
 // Define the type for ResiExpedisiData to match useResiInputData
 interface ResiExpedisiData {
@@ -42,17 +43,14 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
   const { data: recentResiDataForValidation, isLoading: isLoadingRecentResiDataForValidation } = useQuery<ResiExpedisiData[]>({
     queryKey: ["recentResiDataForValidation", fiveDaysAgoFormatted, formattedDate],
     queryFn: async () => {
-      console.log(`Fetching recentResiDataForValidation from ${fiveDaysAgoFormatted} to ${formattedDate}`);
-      const { data, error } = await supabase
-        .from("tbl_resi")
-        .select("Resi, nokarung, created, Keterangan, schedule")
-        .gte("created", fiveDaysAgoISO)
-        .lt("created", endOfTodayISO); // Use < endOfTodayISO to include all of today
-
-      if (error) {
-        console.error("Error fetching recent resi data for validation:", error);
-        throw error;
-      }
+      console.log(`Fetching recentResiDataForValidation from ${fiveDaysAgoFormatted} to ${formattedDate} using fetchAllDataPaginated.`);
+      const data = await fetchAllDataPaginated(
+        "tbl_resi",
+        "created", // dateFilterColumn
+        fiveDaysAgo, // selectedStartDate
+        today, // selectedEndDate (use 'today' to include all of today)
+        "Resi, nokarung, created, Keterangan, schedule" // selectColumns
+      );
       console.log(`Fetched ${data?.length || 0} recent resi records for validation.`);
       return data || [];
     },
@@ -118,7 +116,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       return;
     }
 
-    setIsProcessing(true);
+    setIsProcessing(true); // Set to true at the very beginning
     console.log("Starting handleScanResi for:", currentResi, "at:", new Date().toISOString());
     console.log("Supabase Project ID in useResiScanner:", SUPABASE_PROJECT_ID); // Log Supabase Project ID
 
@@ -161,9 +159,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         } catch (e) {
           console.error("Error playing beepDouble:", e);
         }
-        setIsProcessing(false);
-        keepFocus();
-        return;
+        return; // Exit early if validation fails
       }
 
       // 2. Local Expedition Validation (using allExpedisiDataUnfiltered cache, with fallback to direct fetch)
@@ -214,8 +210,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         } catch (e) {
           console.error("Error playing beep sound:", e);
         }
-        setIsProcessing(false);
-        keepFocus();
         return; // Exit early if local expedition validation fails
       }
 
@@ -267,8 +261,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         } catch (e) {
           console.error("Error playing beep sound:", e);
         }
-        setIsProcessing(false);
-        keepFocus();
         return; // Exit early if local expedition validation fails
       }
 
@@ -282,12 +274,9 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         optimisticId: currentOptimisticId,
       };
 
-      // Update the specific query for the current expedition and date (for input page display)
       queryClient.setQueryData(queryKeyForInputPageDisplay, (oldData: ResiExpedisiData[] | undefined) => {
         return [...(oldData || []), newResiEntry]; // Ensure oldData is an array
       });
-
-      // Also update the broader recentResiDataForValidation cache optimistically
       queryClient.setQueryData(["recentResiDataForValidation", fiveDaysAgoFormatted, formattedDate], (oldData: ResiExpedisiData[] | undefined) => {
         return [...(oldData || []), newResiEntry];
       });
@@ -296,35 +285,32 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       console.log("Optimistically updated caches with ID:", currentOptimisticId);
       // --- End Optimistic UI Update ---
 
-      // Re-enable input immediately after optimistic update
-      setIsProcessing(false); // Allow user to type next resi
-      keepFocus(); // Keep focus on the input
-
       // --- Direct Supabase Insert/Update using upsert ---
-      // Remove 'schedule' from upsert to let the database trigger handle 'ontime'/'late'
-      const { error: upsertError } = await supabase
+      console.log(`Attempting upsert for tbl_resi with Resi: ${currentResi}, Keterangan: ${actualCourierName}, nokarung: ${selectedKarung}`);
+      const { data: upsertData, error: upsertError } = await supabase
         .from("tbl_resi")
         .upsert({
           Resi: currentResi,
           nokarung: selectedKarung,
           created: new Date().toISOString(),
           Keterangan: actualCourierName,
-          // schedule: "ontime", // Dihapus agar trigger database yang menentukan
         }, { onConflict: 'Resi' }); // Specify the unique column for conflict resolution
 
       if (upsertError) {
+        console.error("Supabase upsert to tbl_resi failed:", upsertError); // Detailed error log
         throw new Error(`Gagal menyisipkan/memperbarui resi ke tbl_resi: ${upsertError.message}`);
       }
-      
-      console.log("Successfully upserted into tbl_resi.");
+      console.log("Successfully upserted into tbl_resi. Data:", upsertData);
 
       // 2. Update tbl_expedisi flag to 'YES'
+      console.log(`Attempting to update tbl_expedisi flag to 'YES' for resino: ${currentResi}`);
       const { error: updateExpedisiError } = await supabase
         .from("tbl_expedisi")
         .update({ flag: "YES" })
         .eq("resino", currentResi);
 
       if (updateExpedisiError) {
+        console.error("Supabase update to tbl_expedisi failed:", updateExpedisiError); // Detailed error log
         throw new Error(`Gagal memperbarui flag di tbl_expedisi: ${updateExpedisiError.message}`);
       }
       console.log("Successfully updated tbl_expedisi flag.");
@@ -372,8 +358,8 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       lastOptimisticIdRef.current = null; // Clear the ref after attempting revert
     } finally {
       console.log("Finished handleScanResi for:", currentResi, "at:", new Date().toISOString());
-      setIsProcessing(false);
-      keepFocus();
+      setIsProcessing(false); // Ensure processing state is reset
+      keepFocus(); // Ensure focus is returned to input
     }
   };
 

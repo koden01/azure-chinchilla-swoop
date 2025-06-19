@@ -1,8 +1,8 @@
-import { Persister, PersistedClient } from '@tanstack/query-persist-client-core'; // Corrected import
+import { Persister, PersistedClient } from '@tanstack/query-persist-client-core';
 import { get, set, del } from 'idb-keyval';
 
 // Custom replacer for JSON.stringify to handle Map objects
-function replacer(_key: string, value: any): any { // Added _ to key
+function replacer(_key: string, value: any): any {
   if (value instanceof Map) {
     return {
       dataType: 'Map',
@@ -13,7 +13,7 @@ function replacer(_key: string, value: any): any { // Added _ to key
 }
 
 // Custom reviver for JSON.parse to handle Map objects
-function reviver(_key: string, value: any): any { // Added _ to key
+function reviver(_key: string, value: any): any {
   if (typeof value === 'object' && value !== null && value.dataType === 'Map') {
     return new Map(value.value);
   }
@@ -21,19 +21,34 @@ function reviver(_key: string, value: any): any { // Added _ to key
 }
 
 export const persister: Persister = {
-  persistClient: async (client: PersistedClient) => { // Added PersistedClient type
+  persistClient: async (client: PersistedClient) => {
     console.log('Persisting client...');
     // Use custom replacer when stringifying
     await set('scanresihg-query-cache', JSON.stringify(client, replacer));
+    console.log('Client persisted successfully.');
   },
   restoreClient: async () => {
     console.log('Restoring client...');
     const storedClient = await get('scanresihg-query-cache');
-    // Use custom reviver when parsing
-    return storedClient ? JSON.parse(storedClient, reviver) : undefined;
+    console.log('Raw stored client from IndexedDB:', storedClient ? 'Data exists' : 'No data');
+    if (storedClient) {
+      try {
+        const parsedClient = JSON.parse(storedClient, reviver);
+        console.log('Parsed client:', parsedClient);
+        return parsedClient;
+      } catch (e) {
+        console.error('Error parsing stored client:', e);
+        // If parsing fails, remove the corrupted cache to prevent future errors
+        await del('scanresihg-query-cache');
+        console.log('Corrupted cache removed from IndexedDB.');
+        return undefined; // Return undefined to indicate no valid client was restored
+      }
+    }
+    return undefined;
   },
   removeClient: async () => {
     console.log('Removing client...');
     await del('scanresihg-query-cache');
+    console.log('Client removed successfully.');
   },
 };

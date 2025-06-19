@@ -17,32 +17,11 @@ interface ResiExpedisiData {
   optimisticId?: string;
 }
 
-// Define interface for the RPC return type (no longer used, but kept for reference if needed)
-// interface ResiValidationDetails {
-//   resi_record: {
-//     Resi: string;
-//     nokarung: string;
-//     created: string;
-//     Keterangan: string;
-//     schedule: string;
-//   } | null;
-//   expedisi_record: {
-//     resino: string;
-//     orderno: string;
-//     chanelsales: string;
-//     couriername: string;
-//     created: string;
-//     flag: string;
-//     datetrans: string;
-//     cekfu: boolean;
-//   } | null;
-// }
-
 interface UseResiScannerProps {
   expedition: string;
   selectedKarung: string;
   formattedDate: string;
-  allExpedisiDataUnfiltered: Map<string, any> | undefined; // NEW: Pass allExpedisiDataUnfiltered
+  allExpedisiDataUnfiltered: Map<string, any> | undefined;
 }
 
 export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allExpedisiDataUnfiltered }: UseResiScannerProps) => {

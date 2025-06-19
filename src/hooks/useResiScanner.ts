@@ -39,7 +39,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
   const endOfTodayFormatted = format(today, "yyyy-MM-dd"); // Consistent with allExpedisiDataUnfiltered query key
 
   // Query to fetch tbl_resi data for the last 5 days for local validation
-  const { data: recentResiDataForValidation } = useQuery<ResiExpedisiData[]>({
+  const { data: recentResiDataForValidation, isLoading: isLoadingRecentResiDataForValidation } = useQuery<ResiExpedisiData[]>({
     queryKey: ["recentResiDataForValidation", fiveDaysAgoFormatted, formattedDate],
     queryFn: async () => {
       console.log(`Fetching recentResiDataForValidation from ${fiveDaysAgoFormatted} to ${formattedDate}`);
@@ -60,6 +60,12 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
     gcTime: 1000 * 60 * 60 * 24 * 5, // Garbage collect after 5 days
     enabled: true, // Always enabled for local validation
   });
+
+  // Add this useEffect for debugging recentResiDataForValidation changes
+  React.useEffect(() => {
+    console.log("DEBUG: recentResiDataForValidation updated. Current length:", recentResiDataForValidation?.length);
+    // console.log("DEBUG: recentResiDataForValidation content:", recentResiDataForValidation); // Uncomment for deep inspection if needed
+  }, [recentResiDataForValidation]);
 
   const lastOptimisticIdRef = React.useRef<string | null>(null);
 
@@ -127,26 +133,37 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
 
       // 1. Local Duplicate Check (using recentResiDataForValidation cache)
       console.log(`Performing local duplicate check for resi ${currentResi} using recentResiDataForValidation...`);
+      console.log("DEBUG: currentResi for duplicate check:", currentResi.toLowerCase());
+      console.log("DEBUG: recentResiDataForValidation (state before find):", recentResiDataForValidation?.length, "items.");
+      
       const localDuplicate = recentResiDataForValidation?.find(
-        (item) => item.Resi.toLowerCase() === currentResi.toLowerCase()
+        (item) => {
+          const itemResiLower = item.Resi.toLowerCase();
+          const currentResiLower = currentResi.toLowerCase();
+          console.log(`  Comparing cached item '${itemResiLower}' with input '${currentResiLower}'`);
+          return itemResiLower === currentResiLower;
+        }
       );
 
       if (localDuplicate) {
+        console.log("DEBUG: Duplicate found in cache:", localDuplicate);
         const existingScanDate = new Date(localDuplicate.created);
         validationStatus = 'DUPLICATE_RESI';
         validationMessage = `DOUBLE! Resi ini sudah discan di karung ${localDuplicate.nokarung} pada tanggal ${format(existingScanDate, 'dd/MM/yyyy')} dengan keterangan ${localDuplicate.Keterangan}.`;
+      } else {
+        console.log("DEBUG: No duplicate found in cache.");
       }
 
       if (validationStatus !== 'OK') {
         showError(validationMessage || "Validasi gagal.");
         try {
-          beepDouble.play(); // Tetap beepDouble untuk duplikat
+          beepDouble.play();
         } catch (e) {
           console.error("Error playing beepDouble:", e);
         }
         setIsProcessing(false);
         keepFocus();
-        return; // Exit early if duplicate found locally
+        return;
       }
 
       // 2. Local Expedition Validation (using allExpedisiDataUnfiltered cache, with fallback to direct fetch)
@@ -217,9 +234,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
           // This branch is reached if expedisiRecord was not found in cache AND not found via direct fetch.
           // This means validationStatus is already 'NOT_FOUND_EXPEDISI'.
           // However, for 'ID' expedition, if not found in tbl_expedisi, it can be ID_REKOMENDASI.
-          // This logic needs to be careful not to override a 'NOT_FOUND_EXPEDISI' status if it was set.
-          // If we are here, it means expedisiRecord is null, so it's truly not found.
-          // For 'ID' expedition, if not found, it's considered 'ID_REKOMENDASI'.
           // This is a specific business rule.
           actualCourierName = 'ID_REKOMENDASI';
           console.log(`Resi ${currentResi} not found in tbl_expedisi, but selected expedition is 'ID'. Assuming 'ID_REKOMENDASI'.`);

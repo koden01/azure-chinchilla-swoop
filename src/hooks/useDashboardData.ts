@@ -1,9 +1,10 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, startOfDay, endOfDay, subDays } from "date-fns";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
+import { useDebouncedCallback } from "@/hooks/useDebouncedCallback"; // Import useDebouncedCallback
 
 // Define the return type interface for useDashboardData
 interface DashboardDataReturn {
@@ -439,14 +440,20 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
     console.log("--- useEffect for expeditionSummaries calculation finished ---");
   }, [date, allExpedisiDataUnfiltered, expedisiDataForSelectedDate, allResiData, isLoadingAllExpedisiUnfiltered, isLoadingExpedisiDataForSelectedDate, isLoadingAllResi]);
 
+  // Debounced function to invalidate dashboard queries
+  const debouncedInvalidateDashboardQueries = useDebouncedCallback(() => {
+    console.log("Debounced invalidation triggered from Realtime!");
+    invalidateDashboardQueries(queryClient, date);
+  }, 150); // Debounce for 150ms
+
   // Real-time subscription for dashboard data
   useEffect(() => {
     console.log("Setting up Supabase Realtime subscription for Dashboard data...");
 
     const handleRealtimeEvent = (payload: any) => {
       console.log("Realtime event received for Dashboard:", payload);
-      // Invalidate all relevant dashboard queries to trigger a refetch
-      invalidateDashboardQueries(queryClient, date);
+      // Call the debounced invalidation function
+      debouncedInvalidateDashboardQueries();
     };
 
     const resiChannel = supabase
@@ -464,7 +471,7 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
       supabase.removeChannel(resiChannel);
       supabase.removeChannel(expedisiChannel);
     };
-  }, [queryClient, date]); // Re-subscribe if date changes
+  }, [debouncedInvalidateDashboardQueries]); // Dependency changed to the debounced function
 
   console.log("useDashboardData returning expeditionSummaries:", expeditionSummaries); // Debug log
 

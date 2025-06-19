@@ -1,5 +1,5 @@
 import React from "react";
-import { MadeWithDyad } from "@/components/made-with-dyad";
+// import { MadeWithDyad } from "@/components/made-with-dyad"; // Removed
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
@@ -232,11 +232,13 @@ const HistoryPage = () => {
       return;
     }
 
-    const headers = ["Nomor Resi", "Keterangan", "No Karung", "Schedule", "Tanggal Input"];
+    // Headers without "Aksi"
+    const headers = ["No", "Nomor Resi", "Keterangan", "No Karung", "Schedule", "Tanggal Input"];
     const headerRow = headers.join('\t');
 
-    const rows = filteredHistoryData.map(item => {
+    const rows = filteredHistoryData.map((item, index) => {
       return [
+        (startIndex + index + 1).toString(), // Add row number
         item.Resi || "",
         item.Keterangan || "",
         item.nokarung || "",
@@ -388,17 +390,21 @@ const HistoryPage = () => {
                   <TableHead>No Karung</TableHead>
                   <TableHead>Schedule</TableHead>
                   <TableHead>Tanggal Input</TableHead>
-                  <TableHead>Aksi</TableHead>
+                  {/* <TableHead>Aksi</TableHead> Removed Aksi column */}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoadingHistory ? (
-                  <TableRow><TableCell colSpan={7} className="text-center">Memuat data...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="text-center">Memuat data...</TableCell></TableRow>
                 ) : currentData.length === 0 ? (
-                  <TableRow><TableCell colSpan={7} className="text-center">Tidak ada data.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="text-center">Tidak ada data.</TableCell></TableRow>
                 ) : (
                   currentData.map((data, index) => (
-                    <TableRow key={data.Resi + index} className="hover:bg-gray-100">
+                    <TableRow 
+                      key={data.Resi + index} 
+                      className="hover:bg-gray-100 cursor-pointer" // Added cursor-pointer
+                      onClick={() => handleDeleteClick(data.Resi)} // Added onClick to row
+                    >
                       <TableCell className="font-medium">{startIndex + index + 1}</TableCell>
                       <TableCell className="w-[25%]">{data.Resi}</TableCell>
                       <TableCell>
@@ -415,15 +421,7 @@ const HistoryPage = () => {
                       <TableCell>{data.nokarung}</TableCell>
                       <TableCell>{data.schedule || "-"}</TableCell>
                       <TableCell>{format(new Date(data.created), "dd/MM/yyyy HH:mm")}</TableCell>
-                      <TableCell>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleDeleteClick(data.Resi)}
-                        >
-                          Hapus
-                        </Button>
-                      </TableCell>
+                      {/* Removed Hapus button */}
                     </TableRow>
                   ))
                 )}
@@ -462,7 +460,7 @@ const HistoryPage = () => {
             </Pagination>
           )}
         </div>
-        <MadeWithDyad />
+        {/* <MadeWithDyad /> */}
 
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <AlertDialogContent>

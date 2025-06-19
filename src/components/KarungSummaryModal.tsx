@@ -39,7 +39,7 @@ const KarungSummaryModal: React.FC<KarungSummaryModalProps> = ({
             Detail karung untuk ekspedisi {expedition} pada tanggal {date}.
           </DialogDescription>
         </DialogHeader>
-        <div className="py-4">
+        <div className="py-4 max-h-[60vh] overflow-y-scroll overflow-x-scroll"> {/* Added max-h and overflow classes here */}
           <Table>
             <TableHeader>
               <TableRow>

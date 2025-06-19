@@ -15,13 +15,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input"; // Perbaikan di sini
-import { Checkbox } from "@/components/ui/checkbox"; // Tambahkan import Checkbox
-import { Copy } from "lucide-react"; // Tambahkan import Copy
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Copy } from "lucide-react";
 import { format } from "date-fns";
-import { useDebounce } from "@/hooks/useDebounce"; // Pastikan useDebounce diimpor
-import { showSuccess, showError } from "@/utils/toast"; // Pastikan showSuccess dan showError diimpor
-import { ModalDataItem } from "@/types/data"; // Import ModalDataItem
+import { useDebounce } from "@/hooks/useDebounce";
+import { showSuccess, showError } from "@/utils/toast";
+import { ModalDataItem } from "@/types/data";
 
 interface ResiDetailModalProps {
   isOpen: boolean;
@@ -35,7 +35,7 @@ interface ResiDetailModalProps {
   onCekfuToggle: (resiNumber: string, currentCekfuStatus: boolean) => Promise<void>;
 }
 
-const ITEMS_PER_PAGE = 10; // Define ITEMS_PER_PAGE
+const ITEMS_PER_PAGE = 10;
 
 const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
   isOpen,
@@ -48,24 +48,21 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
   onConfirmResi,
   onCekfuToggle,
 }) => {
-  const [rawSearchTerm, setRawSearchTerm] = useState(""); // State for raw input
-  const debouncedSearchTerm = useDebounce(rawSearchTerm, 300); // Debounced search term for value
+  const [rawSearchTerm, setRawSearchTerm] = useState("");
+  const debouncedSearchTerm = useDebounce(rawSearchTerm, 300);
 
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Log when the data prop changes
   useEffect(() => {
     console.log("ResiDetailModal: data prop changed. New length:", data.length);
-    setCurrentPage(1); // Reset page when data changes
-    setRawSearchTerm(""); // Reset raw search term when data changes
-  }, [data, isOpen, modalType]); // Added data to dependency array
+    setCurrentPage(1);
+    setRawSearchTerm("");
+  }, [data, isOpen, modalType]);
 
   const sortedAndFilteredData = useMemo(() => {
     console.log("ResiDetailModal: Recalculating sortedAndFilteredData. Initial data length:", data.length);
-    // Ensure debouncedSearchTerm is treated as a string
-    const lowerCaseSearchTerm = (debouncedSearchTerm || "").toLowerCase(); // Use debounced term and handle potential null/undefined
+    const lowerCaseSearchTerm = (debouncedSearchTerm || "").toLowerCase();
     let tempFilteredData = data.filter((item) => {
-      // Use item.resino for tbl_expedisi based modals, item.Resi for tbl_resi based modals
       const resiIdentifier = modalType === "followUp" ? item.Resi : item.resino;
       
       if (modalType === "belumKirim" || modalType === "expeditionDetail" || modalType === "transaksiHariIni") {
@@ -102,7 +99,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
     }
     console.log("ResiDetailModal: Filtered data length after search/sort:", tempFilteredData.length);
     return tempFilteredData;
-  }, [debouncedSearchTerm, data, modalType]); // Use debouncedSearchTerm as dependency
+  }, [debouncedSearchTerm, data, modalType]);
 
   const totalPages = Math.ceil(sortedAndFilteredData.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -223,7 +220,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
       showError(`Gagal menyalin data tabel: ${err.message || "Unknown error"}`);
       console.error("Failed to copy table data:", err);
     }
-  }, [sortedAndFilteredData, modalType, getTableHeaders]); // Added getTableHeaders as dependency
+  }, [sortedAndFilteredData, modalType, getTableHeaders]);
 
   const getPaginationPages = useMemo(() => {
     const pages = [];
@@ -257,8 +254,8 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
           <Input
             id="search-term-input"
             placeholder="Cari Resi, No Order, Marketplace, Kurir, atau Tanggal Pembelian..."
-            value={rawSearchTerm} // Bind to rawSearchTerm
-            onChange={(e) => setRawSearchTerm(e.target.value)} // Update rawSearchTerm
+            value={rawSearchTerm}
+            onChange={(e) => setRawSearchTerm(e.target.value)}
             className="w-full"
           />
           <Button
@@ -268,7 +265,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
             <Copy className="mr-2 h-4 w-4" /> Copy Table Data
           </Button>
         </div>
-        <div className="overflow-y-auto flex-grow">
+        <div className="overflow-y-scroll overflow-x-scroll flex-grow"> {/* Changed here */}
           <Table>
             <TableHeader>
               <TableRow>

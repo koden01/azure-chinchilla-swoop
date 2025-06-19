@@ -190,7 +190,7 @@ export const useDashboardData = (date: Date | undefined) => {
     },
     enabled: !!date,
   });
-  console.log("useDashboardData: Follow Up Data - isLoading:", isLoadingFollowUp, "data:", followUpData?.length, "error:", followUpDataError);
+  console.log("useDashboardData: Follow Up Data - isLoading:", isLoadingFollowUp, "data length:", followUpData?.length, "error:", followUpDataError);
 
 
   // Function to fetch all data from a table with pagination
@@ -249,6 +249,8 @@ export const useDashboardData = (date: Date | undefined) => {
       return expedisiMap;
     },
     enabled: true, // Always enabled to get all mappings
+    staleTime: 1000 * 60 * 60, // Keep this data fresh for 1 hour
+    gcTime: 1000 * 60 * 60 * 24, // Garbage collect after 24 hours
   });
   console.log("useDashboardData: All Expedisi Data Unfiltered - isLoading:", isLoadingAllExpedisiUnfiltered, "data size:", allExpedisiDataUnfiltered?.size, "error:", allExpedisiDataUnfilteredError);
 

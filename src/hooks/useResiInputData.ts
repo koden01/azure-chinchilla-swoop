@@ -1,8 +1,8 @@
-import { useQuery, /* useQueryClient */ } from "@tanstack/react-query"; // Menghapus useQueryClient karena tidak digunakan
+import { useQuery, /* useQueryClient */ } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, startOfDay, endOfDay } from "date-fns";
+import { format } from "date-fns"; // Removed startOfDay, endOfDay
 import React from "react";
-import { fetchAllDataPaginated } from "@/utils/supabaseFetch"; // Import the new utility
+import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 
 interface KarungSummaryItem {
   karung_number: string;

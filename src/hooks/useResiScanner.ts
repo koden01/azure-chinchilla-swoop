@@ -39,11 +39,6 @@ interface ResiValidationDetails {
   } | null;
 }
 
-// NEW: Define interface for the RPC arguments
-interface GetResiValidationDetailsArgs {
-  p_resi_number: string;
-}
-
 interface UseResiScannerProps {
   expedition: string;
   selectedKarung: string;
@@ -146,14 +141,18 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
 
       // 2. Server-Side Combined Validation (RPC Call)
       console.log(`Calling RPC get_resi_validation_details for resi ${currentResi}...`);
-      const { data: rpcData, error: rpcError } = await supabase.rpc<ResiValidationDetails, GetResiValidationDetailsArgs>("get_resi_validation_details", { // Apply the new interface here
+      // Remove generic arguments from rpc call and explicitly type `data` later
+      const { data, error: rpcError } = await supabase.rpc("get_resi_validation_details", {
         p_resi_number: currentResi,
-      }).single(); // Use .single() as the RPC returns a single row
+      }).single();
 
       if (rpcError) {
         console.error("Error calling get_resi_validation_details RPC:", rpcError);
         throw rpcError;
       }
+
+      // Explicitly type `rpcData` after the call
+      const rpcData: ResiValidationDetails | null = data;
 
       const resiRecord = rpcData?.resi_record;
       const expedisiRecord = rpcData?.expedisi_record;

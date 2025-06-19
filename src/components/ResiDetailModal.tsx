@@ -242,7 +242,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[800px] lg:max-w-[1000px] max-h-[90vh] flex flex-col overflow-y-scroll overflow-x-hidden"> {/* Added overflow-x-hidden here */}
+      <DialogContent className="sm:max-w-[800px] lg:max-w-[1000px] max-h-[90vh] flex flex-col overflow-y-scroll overflow-x-hidden"> {/* Kept overflow-x-hidden here */}
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
@@ -250,7 +250,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
             {selectedCourier && ` (Kurir: ${selectedCourier})`}
           </DialogDescription>
         </DialogHeader>
-        <div className="my-4 flex flex-col md:flex-row gap-2">
+        <div className="my-4 flex flex-col md:flex-row gap-2 w-full overflow-x-hidden"> {/* Added w-full and overflow-x-hidden here */}
           <Input
             id="search-term-input"
             placeholder="Cari Resi, No Order, Marketplace, Kurir, atau Tanggal Pembelian..."

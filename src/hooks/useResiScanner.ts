@@ -5,8 +5,9 @@ import { beepSuccess, beepFailure, beepDouble } from "@/utils/audio";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { format, subDays } from "date-fns"; // Removed startOfDay, endOfDay
+import { format, subDays } from "date-fns";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
+import { ModalDataItem } from "@/types/data"; // Import ModalDataItem for optimistic update consistency
 
 // Define the type for ResiExpedisiData to match useResiInputData
 interface ResiExpedisiData {
@@ -34,36 +35,35 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
   // Calculate date range for 5 days back for local validation data
   const today = new Date();
   const fiveDaysAgo = subDays(today, 4); // 5 days including today (today, yesterday, -2, -3, -4)
-  // const fiveDaysAgoISO = startOfDay(fiveDaysAgo).toISOString(); // Dihapus karena tidak terpakai
-  // const endOfTodayISO = endOfDay(today).toISOString(); // Dihapus karena tidak terpakai
   const fiveDaysAgoFormatted = format(fiveDaysAgo, "yyyy-MM-dd");
-  const endOfTodayFormatted = format(today, "yyyy-MM-dd"); // Consistent with allExpedisiDataUnfiltered query key
+  const endOfTodayFormatted = format(today, "yyyy-MM-dd");
 
-  // Query to fetch tbl_resi data for the last 5 days for local validation
-  const { data: recentResiDataForValidation, /* isLoading: isLoadingRecentResiDataForValidation */ } = useQuery<ResiExpedisiData[]>({ // Dihapus isLoadingRecentResiDataForValidation
-    queryKey: ["recentResiDataForValidation", fiveDaysAgoFormatted, formattedDate],
+  // Query to fetch tbl_resi data for the last 5 days for local duplicate validation
+  // Now returns a Set<string> for O(1) lookups
+  const { data: recentResiNumbersForValidation, /* isLoading: isLoadingRecentResiDataForValidation */ } = useQuery<Set<string>>({
+    queryKey: ["recentResiNumbersForValidation", fiveDaysAgoFormatted, formattedDate],
     queryFn: async () => {
-      console.log(`Fetching recentResiDataForValidation from ${fiveDaysAgoFormatted} to ${formattedDate} using fetchAllDataPaginated.`);
+      console.log(`Fetching recentResiNumbersForValidation from ${fiveDaysAgoFormatted} to ${formattedDate} using fetchAllDataPaginated.`);
       const data = await fetchAllDataPaginated(
         "tbl_resi",
         "created", // dateFilterColumn
         fiveDaysAgo, // selectedStartDate
         today, // selectedEndDate (use 'today' to include all of today)
-        "Resi, nokarung, created, Keterangan, schedule" // selectColumns
+        "Resi" // Only select the Resi column
       );
-      console.log(`Fetched ${data?.length || 0} recent resi records for validation.`);
-      return data || [];
+      const resiSet = new Set(data.map((item: { Resi: string }) => item.Resi.toLowerCase().trim()));
+      console.log(`Fetched ${resiSet.size} unique recent resi numbers for validation.`);
+      return resiSet;
     },
     staleTime: 1000 * 60 * 10, // Keep this data fresh for 10 minutes
     gcTime: 1000 * 60 * 60 * 24 * 5, // Garbage collect after 5 days
     enabled: true, // Always enabled for local validation
   });
 
-  // Add this useEffect for debugging recentResiDataForValidation changes
+  // Add this useEffect for debugging recentResiNumbersForValidation changes
   React.useEffect(() => {
-    console.log("DEBUG: recentResiDataForValidation updated. Current length:", recentResiDataForValidation?.length);
-    // console.log("DEBUG: recentResiDataForValidation content:", recentResiDataForValidation); // Uncomment for deep inspection if needed
-  }, [recentResiDataForValidation]);
+    console.log("DEBUG: recentResiNumbersForValidation updated. Current size:", recentResiNumbersForValidation?.size);
+  }, [recentResiNumbersForValidation]);
 
   const lastOptimisticIdRef = React.useRef<string | null>(null);
 
@@ -73,8 +73,8 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
     invalidateDashboardQueries(queryClient, new Date(), expedition);
     // Invalidate historyData for the current day to ensure immediate update
     queryClient.invalidateQueries({ queryKey: ["historyData", formattedDate, formattedDate] });
-    // Invalidate the recentResiDataForValidation query
-    queryClient.invalidateQueries({ queryKey: ["recentResiDataForValidation", fiveDaysAgoFormatted, formattedDate] });
+    // Invalidate the recentResiNumbersForValidation query
+    queryClient.invalidateQueries({ queryKey: ["recentResiNumbersForValidation", fiveDaysAgoFormatted, formattedDate] });
   }, 150);
 
   const keepFocus = () => {
@@ -129,27 +129,18 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       let validationMessage: string | null = null;
       let validationStatus: "OK" | "DUPLICATE_RESI" | "MISMATCH_EXPEDISI" | "NOT_FOUND_EXPEDISI" = "OK";
 
-      // 1. Local Duplicate Check (using recentResiDataForValidation cache)
-      console.log(`Performing local duplicate check for resi ${currentResi} using recentResiDataForValidation...`);
-      console.log("DEBUG: currentResi for duplicate check:", currentResi.toLowerCase());
-      console.log("DEBUG: recentResiDataForValidation (state before find):", recentResiDataForValidation?.length, "items.");
+      // 1. Local Duplicate Check (using recentResiNumbersForValidation Set)
+      console.log(`Performing local duplicate check for resi ${currentResi} using recentResiNumbersForValidation Set...`);
+      const normalizedCurrentResi = currentResi.toLowerCase().trim();
       
-      const localDuplicate = recentResiDataForValidation?.find(
-        (item) => {
-          const itemResiLower = item.Resi.toLowerCase();
-          const currentResiLower = currentResi.toLowerCase();
-          console.log(`  Comparing cached item '${itemResiLower}' with input '${currentResiLower}'`);
-          return itemResiLower === currentResiLower;
-        }
-      );
-
-      if (localDuplicate) {
-        console.log("DEBUG: Duplicate found in cache:", localDuplicate);
-        const existingScanDate = new Date(localDuplicate.created);
+      if (recentResiNumbersForValidation?.has(normalizedCurrentResi)) {
+        console.log("DEBUG: Duplicate found in Set.");
+        // To get details of the duplicate, we would need to fetch it or store more data in the Set/Map.
+        // For now, we just know it's a duplicate.
         validationStatus = 'DUPLICATE_RESI';
-        validationMessage = `DOUBLE! Resi ini sudah discan di karung ${localDuplicate.nokarung} pada tanggal ${format(existingScanDate, 'dd/MM/yyyy')} dengan keterangan ${localDuplicate.Keterangan}.`;
+        validationMessage = `DOUBLE! Resi ini sudah discan sebelumnya.`; // Simplified message as we don't have full details from Set
       } else {
-        console.log("DEBUG: No duplicate found in cache.");
+        console.log("DEBUG: No duplicate found in Set.");
       }
 
       if (validationStatus !== 'OK') {
@@ -164,7 +155,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
 
       // 2. Local Expedition Validation (using allExpedisiDataUnfiltered cache, with fallback to direct fetch)
       console.log(`Performing local expedition validation for resi ${currentResi} using allExpedisiDataUnfiltered...`);
-      let expedisiRecord = allExpedisiDataUnfiltered?.get(currentResi.toLowerCase());
+      let expedisiRecord = allExpedisiDataUnfiltered?.get(normalizedCurrentResi);
 
       // If not found in cache, try a direct fetch from tbl_expedisi
       if (!expedisiRecord) {
@@ -187,7 +178,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
                   ["allExpedisiDataUnfiltered", fiveDaysAgoFormatted, endOfTodayFormatted], // Use the correct query key for allExpedisiDataUnfiltered
                   (oldMap: Map<string, any> | undefined) => {
                       const newMap = oldMap ? new Map(oldMap) : new Map();
-                      newMap.set(currentResi.toLowerCase(), directExpedisiData);
+                      newMap.set(normalizedCurrentResi, directExpedisiData);
                       return newMap;
                   }
               );
@@ -277,18 +268,20 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       queryClient.setQueryData(queryKeyForInputPageDisplay, (oldData: ResiExpedisiData[] | undefined) => {
         return [...(oldData || []), newResiEntry]; // Ensure oldData is an array
       });
-      queryClient.setQueryData(["recentResiDataForValidation", fiveDaysAgoFormatted, formattedDate], (oldData: ResiExpedisiData[] | undefined) => {
-        return [...(oldData || []), newResiEntry];
+      // Optimistic update for recentResiNumbersForValidation (Set)
+      queryClient.setQueryData(["recentResiNumbersForValidation", fiveDaysAgoFormatted, formattedDate], (oldSet: Set<string> | undefined) => {
+        const newSet = oldSet ? new Set(oldSet) : new Set();
+        newSet.add(normalizedCurrentResi);
+        return newSet;
       });
 
       // NEW: Optimistic update for allExpedisiDataUnfiltered cache
       queryClient.setQueryData(["allExpedisiDataUnfiltered", fiveDaysAgoFormatted, endOfTodayFormatted], (oldMap: Map<string, any> | undefined) => {
         const newMap = oldMap ? new Map(oldMap) : new Map();
-        const normalizedResiKey = currentResi.toLowerCase();
-        const existingExpedisi = newMap.get(normalizedResiKey);
+        const existingExpedisi = newMap.get(normalizedCurrentResi);
         
         // Create or update the expedisi record in the cache
-        newMap.set(normalizedResiKey, {
+        newMap.set(normalizedCurrentResi, {
           ...existingExpedisi, // Keep existing properties if any
           resino: currentResi,
           couriername: actualCourierName,
@@ -370,14 +363,16 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
           queryClient.setQueryData(queryKeyForInputPageDisplay, (oldData: ResiExpedisiData[] | undefined) => {
               return (oldData || []).filter(item => item.optimisticId !== lastOptimisticIdRef.current);
           });
-          queryClient.setQueryData(["recentResiDataForValidation", fiveDaysAgoFormatted, formattedDate], (oldData: ResiExpedisiData[] | undefined) => {
-            return (oldData || []).filter(item => item.optimisticId !== lastOptimisticIdRef.current);
+          // Revert optimistic update for recentResiNumbersForValidation (Set)
+          queryClient.setQueryData(["recentResiNumbersForValidation", fiveDaysAgoFormatted, formattedDate], (oldSet: Set<string> | undefined) => {
+            const newSet = oldSet ? new Set(oldSet) : new Set();
+            newSet.delete(normalizedCurrentResi); // Remove the optimistically added resi
+            return newSet;
           });
           // Revert optimistic update for allExpedisiDataUnfiltered cache
           queryClient.setQueryData(["allExpedisiDataUnfiltered", fiveDaysAgoFormatted, endOfTodayFormatted], (oldMap: Map<string, any> | undefined) => {
             const newMap = oldMap ? new Map(oldMap) : new Map();
-            const normalizedResiKey = currentResi.toLowerCase();
-            const existingExpedisi = newMap.get(normalizedResiKey);
+            const existingExpedisi = newMap.get(normalizedCurrentResi);
             if (existingExpedisi && existingExpedisi.optimisticId === lastOptimisticIdRef.current) {
               // If this was an optimistic insert, delete it. If it was an update, revert its flag.
               // For simplicity, if it was optimistically added, remove it. If it was an update, we'd need to store its original state.
@@ -388,7 +383,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
               // This requires storing the original flag state in the optimistic update.
               // For now, we assume the flag was 'NO' before the optimistic 'YES'.
               revertedExpedisi.flag = "NO"; // Revert flag to NO
-              newMap.set(normalizedResiKey, revertedExpedisi);
+              newMap.set(normalizedCurrentResi, revertedExpedisi);
             }
             return newMap;
           });

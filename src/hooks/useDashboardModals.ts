@@ -258,29 +258,21 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       const expedisiRecord = allExpedisiData?.get(resiNumber.toLowerCase());
 
       if (!expedisiRecord) {
-        throw new Error(`Gagal mendapatkan data ekspedisi untuk resi ${resiNumber}: Data tidak ditemukan di cache.`);
+        console.error(`Gagal mendapatkan data ekspedisi untuk resi ${resiNumber}: Data tidak ditemukan di cache allExpedisiData. Ini mungkin berarti resi tidak ada di tbl_expedisi atau cache belum dimuat.`);
+        throw new Error(`Gagal mendapatkan data ekspedisi untuk resi ${resiNumber}.`);
       }
 
       const courierNameFromExpedisi = expedisiRecord.couriername;
       const expedisiCreatedTimestamp = expedisiRecord.created; // Get the created timestamp
 
-      console.log(`Updating flag to 'YES' for resi ${resiNumber} in tbl_expedisi.`);
-      const { error: expUpdateError } = await supabase
-        .from("tbl_expedisi")
-        .update({ flag: "YES" })
-        .eq("resino", resiNumber);
-
-      if (expUpdateError) {
-        throw new Error(`Gagal mengkonfirmasi resi ${resiNumber} di tbl_expedisi: ${expUpdateError.message}`);
-      }
-
+      // Check if resi exists in tbl_resi
       const { data: existingResi, error: checkResiError } = await supabase
         .from("tbl_resi")
         .select("Resi")
         .eq("Resi", resiNumber)
         .single();
 
-      if (checkResiError && checkResiError.code !== 'PGRST116') {
+      if (checkResiError && checkResiError.code !== 'PGRST116') { // PGRST116 means "no rows found"
         throw checkResiError;
       }
 
@@ -291,7 +283,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
           .update({
             created: expedisiCreatedTimestamp, // Use created from tbl_expedisi
             Keterangan: courierNameFromExpedisi,
-            nokarung: "0",
+            nokarung: "0", // Set nokarung to 0 for confirmed resi (as per current logic)
             // schedule: "ontime", // Dihapus agar trigger database yang menentukan
           })
           .eq("Resi", resiNumber);
@@ -306,7 +298,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
             Resi: resiNumber,
             created: expedisiCreatedTimestamp, // Use created from tbl_expedisi
             Keterangan: courierNameFromExpedisi,
-            nokarung: "0",
+            nokarung: "0", // Set nokarung to 0 for confirmed resi
             // schedule: "ontime", // Dihapus agar trigger database yang menentukan
           });
 

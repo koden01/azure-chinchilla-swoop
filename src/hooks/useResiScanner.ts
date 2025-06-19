@@ -160,7 +160,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       if (validationStatus !== 'OK') {
         showError(validationMessage || "Validasi gagal.");
         try {
-          beepDouble.play();
+          beepDouble.play(); // Tetap beepDouble untuk duplikat
         } catch (e) {
           console.error("Error playing beepDouble:", e);
         }
@@ -203,9 +203,14 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       if (validationStatus !== 'OK') {
         showError(validationMessage || "Validasi gagal.");
         try {
-          beepDouble.play();
+          // Conditional beep based on validation status
+          if (validationStatus === 'NOT_FOUND_EXPEDISI') {
+            beepFailure.play(); // Play beepFailure for "data tidak ada"
+          } else {
+            beepDouble.play(); // Keep beepDouble for other mismatches
+          }
         } catch (e) {
-          console.error("Error playing beepDouble:", e);
+          console.error("Error playing beep sound:", e);
         }
         setIsProcessing(false);
         keepFocus();

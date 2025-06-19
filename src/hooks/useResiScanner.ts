@@ -4,9 +4,8 @@ import { showSuccess, showError, dismissToast } from "@/utils/toast";
 import { beepSuccess, beepFailure, beepDouble } from "@/utils/audio";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
-import { useQueryClient, useQuery } from "@tanstack/react-query"; // Import useQuery
-import { format, startOfDay, endOfDay, subDays } from "date-fns"; // Import subDays
-import { useResiInputData } from "./useResiInputData";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { format, startOfDay, endOfDay, subDays } from "date-fns";
 
 // Define the type for ResiExpedisiData to match useResiInputData
 interface ResiExpedisiData {
@@ -18,34 +17,35 @@ interface ResiExpedisiData {
   optimisticId?: string;
 }
 
-// Define interface for the RPC return type
-interface ResiValidationDetails {
-  resi_record: {
-    Resi: string;
-    nokarung: string;
-    created: string;
-    Keterangan: string;
-    schedule: string;
-  } | null;
-  expedisi_record: {
-    resino: string;
-    orderno: string;
-    chanelsales: string;
-    couriername: string;
-    created: string;
-    flag: string;
-    datetrans: string;
-    cekfu: boolean;
-  } | null;
-}
+// Define interface for the RPC return type (no longer used, but kept for reference if needed)
+// interface ResiValidationDetails {
+//   resi_record: {
+//     Resi: string;
+//     nokarung: string;
+//     created: string;
+//     Keterangan: string;
+//     schedule: string;
+//   } | null;
+//   expedisi_record: {
+//     resino: string;
+//     orderno: string;
+//     chanelsales: string;
+//     couriername: string;
+//     created: string;
+//     flag: string;
+//     datetrans: string;
+//     cekfu: boolean;
+//   } | null;
+// }
 
 interface UseResiScannerProps {
   expedition: string;
   selectedKarung: string;
   formattedDate: string;
+  allExpedisiDataUnfiltered: Map<string, any> | undefined; // NEW: Pass allExpedisiDataUnfiltered
 }
 
-export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: UseResiScannerProps) => {
+export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allExpedisiDataUnfiltered }: UseResiScannerProps) => {
   const [resiNumber, setResiNumber] = React.useState<string>("");
   const [isProcessing, setIsProcessing] = React.useState<boolean>(false);
   const resiInputRef = React.useRef<HTMLInputElement>(null);
@@ -58,7 +58,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
   const endOfTodayISO = endOfDay(today).toISOString();
   const fiveDaysAgoFormatted = format(fiveDaysAgo, "yyyy-MM-dd");
 
-  // NEW: Query to fetch tbl_resi data for the last 5 days for local validation
+  // Query to fetch tbl_resi data for the last 5 days for local validation
   const { data: recentResiDataForValidation } = useQuery<ResiExpedisiData[]>({
     queryKey: ["recentResiDataForValidation", fiveDaysAgoFormatted, formattedDate],
     queryFn: async () => {
@@ -81,10 +81,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
     enabled: true, // Always enabled for local validation
   });
 
-  // The existing allResiForExpedition from useResiInputData is still useful for the input page's display of current expedition's data.
-  // We will use recentResiDataForValidation for the *duplicate check*.
-  // const { allResiForExpedition } = useResiInputData(expedition, false); // Keep this if needed for other purposes on Input page
-
   const lastOptimisticIdRef = React.useRef<string | null>(null);
 
   // Menggunakan useDebouncedCallback untuk mendebounce pemanggilan fungsi invalidasi
@@ -93,7 +89,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
     invalidateDashboardQueries(queryClient, new Date(), expedition);
     // Invalidate historyData for the current day to ensure immediate update
     queryClient.invalidateQueries({ queryKey: ["historyData", formattedDate, formattedDate] });
-    // NEW: Invalidate the recentResiDataForValidation query
+    // Invalidate the recentResiDataForValidation query
     queryClient.invalidateQueries({ queryKey: ["recentResiDataForValidation", fiveDaysAgoFormatted, formattedDate] });
   }, 150);
 
@@ -140,9 +136,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
     console.log("Starting handleScanResi for:", currentResi, "at:", new Date().toISOString());
     console.log("Supabase Project ID in useResiScanner:", SUPABASE_PROJECT_ID); // Log Supabase Project ID
 
-    // Use the specific query key for the current expedition and date for optimistic update
-    // This is still relevant for the *display* on the input page, even if validation uses a broader set.
-    const queryKeyForInputPageDisplay = ["allResiForExpedition", expedition, formattedDate]; // Keep this as is for the input page's specific display
+    const queryKeyForInputPageDisplay = ["allResiForExpedition", expedition, formattedDate];
 
     const currentOptimisticId = Date.now().toString() + Math.random().toString(36).substring(2, 9);
 
@@ -151,8 +145,8 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
       let validationMessage: string | null = null;
       let validationStatus: "OK" | "DUPLICATE_RESI" | "MISMATCH_EXPEDISI" | "NOT_FOUND_EXPEDISI" = "OK";
 
-      // 1. Quick Local Duplicate Check (using recentResiDataForValidation cache)
-      console.log(`Performing quick local duplicate check for resi ${currentResi} using recentResiDataForValidation...`);
+      // 1. Local Duplicate Check (using recentResiDataForValidation cache)
+      console.log(`Performing local duplicate check for resi ${currentResi} using recentResiDataForValidation...`);
       const localDuplicate = recentResiDataForValidation?.find(
         (item) => item.Resi.toLowerCase() === currentResi.toLowerCase()
       );
@@ -175,67 +169,47 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate }: Us
         return; // Exit early if duplicate found locally
       }
 
-      // 2. Server-Side Combined Validation (RPC Call)
-      console.log(`Calling RPC get_resi_validation_details for resi ${currentResi}...`);
-      const { data, error: rpcError } = await supabase.rpc("get_resi_validation_details", {
-        p_resi_number: currentResi,
-      }).single();
+      // 2. Local Expedition Validation (using allExpedisiDataUnfiltered cache)
+      console.log(`Performing local expedition validation for resi ${currentResi} using allExpedisiDataUnfiltered...`);
+      const expedisiRecord = allExpedisiDataUnfiltered?.get(currentResi.toLowerCase());
 
-      if (rpcError) {
-        console.error("Error calling get_resi_validation_details RPC:", rpcError);
-        throw rpcError;
-      }
-
-      // Menggunakan penegasan tipe ganda untuk mengatasi masalah inferensi
-      const rpcData: ResiValidationDetails | null = data as any as ResiValidationDetails | null;
-
-      const resiRecord = rpcData?.resi_record;
-      const expedisiRecord = rpcData?.expedisi_record;
-
-      console.log("RPC Result - resi_record:", resiRecord);
-      console.log("RPC Result - expedisi_record:", expedisiRecord);
-
-      // Check for global duplicate (if resiRecord exists, it's a duplicate)
-      if (resiRecord) {
-        const existingScanDate = new Date(resiRecord.created);
-        validationStatus = 'DUPLICATE_RESI';
-        validationMessage = `DOUBLE! Resi ini sudah discan di karung ${resiRecord.nokarung} pada tanggal ${format(existingScanDate, 'dd/MM/yyyy')} dengan keterangan ${resiRecord.Keterangan}.`;
-      } else if (expedition === 'ID') {
+      if (expedition === 'ID') {
         if (expedisiRecord) {
-          // Resi found in tbl_expedisi, but current expedition is 'ID'
-          if (expedisiRecord.couriername?.trim().toUpperCase() === 'ID') {
-            actualCourierName = 'ID'; // Store as 'ID' if it's genuinely an 'ID' resi in tbl_expedisi
+          const normalizedExpedisiCourier = expedisiRecord.couriername?.trim().toUpperCase();
+          if (normalizedExpedisiCourier === 'ID' || normalizedExpedisiCourier === 'ID_REKOMENDASI') {
+            actualCourierName = 'ID';
           } else {
-            // Mismatch: found in tbl_expedisi but not 'ID' (e.g., JNE, SPX)
             validationStatus = 'MISMATCH_EXPEDISI';
             validationMessage = `Resi ini bukan milik ekspedisi ${expedition}, melainkan milik ekspedisi ${expedisiRecord.couriername}.`;
           }
         } else {
-          // Resi NOT found in tbl_expedisi at all, and current expedition is 'ID'
-          actualCourierName = 'ID_REKOMENDASI'; // Store as 'ID_REKOMENDASI' if not found in tbl_expedisi
+          actualCourierName = 'ID_REKOMENDASI';
         }
       } else { // For non-ID expeditions
         if (!expedisiRecord) {
           validationStatus = 'NOT_FOUND_EXPEDISI';
           validationMessage = 'Data tidak ada di database ekspedisi.';
-        } else if (expedisiRecord.couriername?.trim().toUpperCase() !== expedition.toUpperCase()) {
-          validationStatus = 'MISMATCH_EXPEDISI';
-          validationMessage = `Resi ini bukan milik ekspedisi ${expedition}, melainkan milik ekspedisi ${expedisiRecord.couriername}.`;
         } else {
-          actualCourierName = expedisiRecord.couriername;
+          const normalizedExpedisiCourier = expedisiRecord.couriername?.trim().toUpperCase();
+          if (normalizedExpedisiCourier !== expedition.toUpperCase()) {
+            validationStatus = 'MISMATCH_EXPEDISI';
+            validationMessage = `Resi ini bukan milik ekspedisi ${expedition}, melainkan milik ekspedisi ${expedisiRecord.couriername}.`;
+          } else {
+            actualCourierName = expedisiRecord.couriername;
+          }
         }
       }
 
       if (validationStatus !== 'OK') {
         showError(validationMessage || "Validasi gagal.");
         try {
-          beepDouble.play(); // Use beepDouble for any validation failure
+          beepDouble.play();
         } catch (e) {
           console.error("Error playing beepDouble:", e);
         }
         setIsProcessing(false);
         keepFocus();
-        return; // Exit early if server-side validation fails
+        return; // Exit early if local expedition validation fails
       }
 
       // --- Optimistic UI Update ---

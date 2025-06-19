@@ -18,14 +18,13 @@ import KarungSummaryModal from "@/components/KarungSummaryModal";
 
 const InputPage = () => {
   const { expedition, setExpedition } = useExpedition();
-  const [selectedKarung, setSelectedKarung] = React.useState<string>("");
+  const [selectedKarung, setSelectedKarung] = React.useState<string>("1"); // Default to "1"
+
   const [isKarungSummaryModalOpen, setIsKarungSummaryModalOpen] = React.useState(false);
 
   const {
     allResiForExpedition,
     isLoadingAllResiForExpedition,
-    // allExpedisiDataUnfiltered, // REMOVED
-    // allResiDataComprehensive, // REMOVED
     currentCount: getCountForSelectedKarung,
     lastKarung,
     highestKarung,
@@ -33,6 +32,7 @@ const InputPage = () => {
     formattedDate,
     karungSummary,
     expeditionOptions,
+    allExpedisiDataUnfiltered, // NEW: Get allExpedisiDataUnfiltered
   } = useResiInputData(expedition, false); // Added false for showAllExpeditionSummary
 
   const {
@@ -45,8 +45,7 @@ const InputPage = () => {
     expedition, 
     selectedKarung, 
     formattedDate,
-    // allResiDataComprehensive, // REMOVED
-    // allExpedisiDataUnfiltered, // REMOVED
+    allExpedisiDataUnfiltered, // NEW: Pass allExpedisiDataUnfiltered
   });
 
   const currentCount = getCountForSelectedKarung(selectedKarung);
@@ -83,6 +82,7 @@ const InputPage = () => {
     isProcessing,
     karungSummary,
     expeditionOptions,
+    allExpedisiDataUnfilteredSize: allExpedisiDataUnfiltered?.size, // Log size
   });
 
   return (

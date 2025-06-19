@@ -6,15 +6,15 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { SummaryCard } from "@/components/SummaryCard";
+import SummaryCard from "@/components/SummaryCard"; // Corrected import
 import { useDashboardData } from "@/hooks/useDashboardData";
-import { DataTable } from "@/components/ui/data-table";
-import { columns as transaksiHariIniColumns } from "@/components/columns/transaksiHariIniColumns";
-import { columns as belumKirimColumns } from "@/components/columns/belumKirimColumns";
-import { columns as followUpColumns } from "@/components/columns/followUpColumns";
-import { columns as flagNoExceptTodayColumns } from "@/components/columns/flagNoExceptTodayColumns";
-import { columns as scanFollowUpColumns } from "@/components/columns/scanFollowUpColumns";
-import { columns as batalColumns } from "@/components/columns/batalColumns";
+import { DataTable } from "@/components/ui/data-table"; // Corrected import
+import { columns as transaksiHariIniColumns, TransaksiHariIniData } from "@/components/columns/transaksiHariIniColumns"; // Added type import
+import { columns as belumKirimColumns, BelumKirimData } from "@/components/columns/belumKirimColumns"; // Added type import
+import { columns as followUpColumns, FollowUpData } from "@/components/columns/followUpColumns"; // Added type import
+import { columns as flagNoExceptTodayColumns, FlagNoExceptTodayData } from "@/components/columns/flagNoExceptTodayColumns"; // Added type import
+import { columns as scanFollowUpColumns, ScanFollowUpData } from "@/components/columns/scanFollowUpColumns"; // Added type import
+import { columns as batalColumns, BatalData } from "@/components/columns/batalColumns"; // Added type import
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
@@ -41,7 +41,9 @@ export default function Dashboard() {
     expeditionSummaries,
     formattedDate,
     expedisiDataForSelectedDate, // Data for Transaksi Hari Ini table
+    isLoadingExpedisiDataForSelectedDate, // Loading state for this data
     allResiData, // Data for Belum Kirim, Scan Follow Up, Batal tables
+    isLoadingAllResi, // Loading state for allResiData
   } = useDashboardData(date);
 
   return (
@@ -82,6 +84,8 @@ export default function Dashboard() {
             // secondaryValue={formattedDate} // Removed secondaryValue
             description="Total transaksi hari ini"
             icon="package"
+            gradientFrom="from-blue-500"
+            gradientTo="to-indigo-600"
           />
           <SummaryCard
             title="Total Scan"
@@ -89,7 +93,9 @@ export default function Dashboard() {
             secondaryTitle="Tanggal"
             secondaryValue={formattedDate}
             description="Total resi yang sudah discan"
-            icon="scan"
+            icon="maximize"
+            gradientFrom="from-green-500"
+            gradientTo="to-teal-600"
           />
           <SummaryCard
             title="ID Rekomendasi"
@@ -97,7 +103,9 @@ export default function Dashboard() {
             secondaryTitle="Tanggal"
             secondaryValue={formattedDate}
             description="Total resi ID Rekomendasi"
-            icon="award"
+            icon="info"
+            gradientFrom="from-purple-500"
+            gradientTo="to-pink-600"
           />
           <SummaryCard
             title="Belum Kirim"
@@ -106,6 +114,8 @@ export default function Dashboard() {
             secondaryValue={formattedDate}
             description="Total resi belum dikirim hari ini"
             icon="truck"
+            gradientFrom="from-orange-500"
+            gradientTo="to-red-600"
           />
           <SummaryCard
             title="Follow Up (Flag NO)"
@@ -114,6 +124,8 @@ export default function Dashboard() {
             secondaryValue={format(new Date(), 'yyyy-MM-dd')} // Always show current date for this card
             description="Total resi flag NO (kecuali hari ini)"
             icon="alertCircle"
+            gradientFrom="from-yellow-500"
+            gradientTo="to-amber-600"
           />
           <SummaryCard
             title="Scan Follow Up"
@@ -122,6 +134,8 @@ export default function Dashboard() {
             secondaryValue={formattedDate}
             description="Total resi scan follow up (late)"
             icon="history"
+            gradientFrom="from-cyan-500"
+            gradientTo="to-blue-700"
           />
           <SummaryCard
             title="Batal"
@@ -129,7 +143,9 @@ export default function Dashboard() {
             secondaryTitle="Tanggal"
             secondaryValue={formattedDate}
             description="Total resi yang dibatalkan"
-            icon="xCircle"
+            icon="warning"
+            gradientFrom="from-gray-500"
+            gradientTo="to-gray-700"
           />
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
@@ -140,7 +156,7 @@ export default function Dashboard() {
             <CardContent>
               <div className="space-y-4">
                 {expeditionSummaries.length > 0 ? (
-                  expeditionSummaries.map((summary, index) => (
+                  expeditionSummaries.map((summary: any) => ( // Added any type for summary
                     <div key={summary.name} className="flex items-center justify-between">
                       <div className="flex-1">
                         <p className="text-sm font-medium leading-none">{summary.name}</p>
@@ -184,7 +200,7 @@ export default function Dashboard() {
               {isLoadingFollowUp ? (
                 <div>Loading Follow Up Data...</div>
               ) : followUpData && followUpData.length > 0 ? (
-                <DataTable columns={followUpColumns} data={followUpData} />
+                <DataTable columns={followUpColumns} data={followUpData as FollowUpData[]} />
               ) : (
                 <p className="text-center text-muted-foreground">Tidak ada data follow up untuk tanggal ini.</p>
               )}
@@ -203,7 +219,7 @@ export default function Dashboard() {
               {isLoadingExpedisiDataForSelectedDate ? (
                 <div>Loading detail transaksi...</div>
               ) : expedisiDataForSelectedDate && expedisiDataForSelectedDate.length > 0 ? (
-                <DataTable columns={transaksiHariIniColumns} data={expedisiDataForSelectedDate} />
+                <DataTable columns={transaksiHariIniColumns} data={expedisiDataForSelectedDate as TransaksiHariIniData[]} />
               ) : (
                 <p className="text-center text-muted-foreground">Tidak ada detail transaksi untuk tanggal ini.</p>
               )}
@@ -219,16 +235,12 @@ export default function Dashboard() {
               <CardTitle>Detail Belum Kirim ({formattedDate})</CardTitle>
             </CardHeader>
             <CardContent>
-              {isLoadingBelumKirim ? ( // Re-using isLoadingBelumKirim as the data comes from the same source
+              {isLoadingBelumKirim ? (
                 <div>Loading detail belum kirim...</div>
-              ) : allResiData && allResiData.filter(resi => {
-                const expedisiRecord = expeditionSummaries.find(exp => exp.name === resi.Keterangan);
-                return expedisiRecord && expedisiRecord.sisa > 0; // This logic needs to be refined if `allResiData` is not directly tied to `belumKirim`
-              }).length > 0 ? (
-                // Filter allResiData to show only 'belum kirim' based on flag 'NO' from expedisiDataForSelectedDate
-                <DataTable 
-                  columns={belumKirimColumns} 
-                  data={expedisiDataForSelectedDate?.filter(item => item.flag === 'NO') || []} 
+              ) : expedisiDataForSelectedDate && expedisiDataForSelectedDate.filter((item: BelumKirimData) => item.flag === 'NO').length > 0 ? (
+                <DataTable
+                  columns={belumKirimColumns}
+                  data={expedisiDataForSelectedDate.filter((item: BelumKirimData) => item.flag === 'NO') as BelumKirimData[]}
                 />
               ) : (
                 <p className="text-center text-muted-foreground">Tidak ada detail belum kirim untuk tanggal ini.</p>
@@ -245,12 +257,12 @@ export default function Dashboard() {
               <CardTitle>Detail Follow Up (Flag NO Kecuali Hari Ini)</CardTitle>
             </CardHeader>
             <CardContent>
-              {isLoadingFollowUpFlagNoCount ? ( // Re-using isLoadingFollowUpFlagNoCount
+              {isLoadingFollowUpFlagNoCount ? (
                 <div>Loading detail follow up...</div>
-              ) : followUpFlagNoCount && followUpFlagNoCount > 0 ? (
-                <DataTable 
-                  columns={flagNoExceptTodayColumns} 
-                  data={expeditionSummaries.filter(summary => summary.name !== 'ID' && summary.sisa > 0)} // This data needs to come from a specific query for "flag NO except today"
+              ) : expeditionSummaries && expeditionSummaries.filter((summary: FlagNoExceptTodayData) => summary.sisa > 0).length > 0 ? (
+                <DataTable
+                  columns={flagNoExceptTodayColumns}
+                  data={expeditionSummaries.filter((summary: FlagNoExceptTodayData) => summary.sisa > 0) as FlagNoExceptTodayData[]}
                 />
               ) : (
                 <p className="text-center text-muted-foreground">Tidak ada detail follow up (flag NO kecuali hari ini).</p>
@@ -267,12 +279,12 @@ export default function Dashboard() {
               <CardTitle>Detail Scan Follow Up ({formattedDate})</CardTitle>
             </CardHeader>
             <CardContent>
-              {isLoadingScanFollowupLateCount ? (
+              {isLoadingScanFollowupLateCount || isLoadingAllResi ? (
                 <div>Loading detail scan follow up...</div>
-              ) : allResiData && allResiData.filter(resi => resi.schedule === 'late').length > 0 ? (
-                <DataTable 
-                  columns={scanFollowUpColumns} 
-                  data={allResiData.filter(resi => resi.schedule === 'late')} 
+              ) : allResiData && allResiData.filter((resi: ScanFollowUpData) => resi.schedule === 'late').length > 0 ? (
+                <DataTable
+                  columns={scanFollowUpColumns}
+                  data={allResiData.filter((resi: ScanFollowUpData) => resi.schedule === 'late') as ScanFollowUpData[]}
                 />
               ) : (
                 <p className="text-center text-muted-foreground">Tidak ada detail scan follow up untuk tanggal ini.</p>
@@ -289,12 +301,12 @@ export default function Dashboard() {
               <CardTitle>Detail Batal ({formattedDate})</CardTitle>
             </CardHeader>
             <CardContent>
-              {isLoadingBatalCount ? (
+              {isLoadingBatalCount || isLoadingAllResi ? (
                 <div>Loading detail batal...</div>
-              ) : allResiData && allResiData.filter(resi => resi.schedule === 'batal').length > 0 ? (
-                <DataTable 
-                  columns={batalColumns} 
-                  data={allResiData.filter(resi => resi.schedule === 'batal')} 
+              ) : allResiData && allResiData.filter((resi: BatalData) => resi.schedule === 'batal').length > 0 ? (
+                <DataTable
+                  columns={batalColumns}
+                  data={allResiData.filter((resi: BatalData) => resi.schedule === 'batal') as BatalData[]}
                 />
               ) : (
                 <p className="text-center text-muted-foreground">Tidak ada detail batal untuk tanggal ini.</p>

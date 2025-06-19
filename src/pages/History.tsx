@@ -1,8 +1,9 @@
 import React from "react";
+// import { MadeWithDyad } from "@/components/made-with-dyad"; // Removed
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon, Copy, CalendarDays, Trash2 } from "lucide-react"; // Import Trash2 icon
+import { CalendarIcon, Copy, CalendarDays } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -36,7 +37,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { showSuccess, showError } from "@/utils/toast";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
-import { useDebounce } from "@/hooks/useDebounce";
+import { useDebounce } from "@/hooks/useDebounce"; // Menggunakan useDebounce untuk nilai
 
 interface HistoryData {
   Resi: string;
@@ -49,11 +50,11 @@ interface HistoryData {
 const HistoryPage = () => {
   const [startDate, setStartDate] = React.useState<Date | undefined>(new Date());
   const [endDate, setEndDate] = React.useState<Date | undefined>(new Date());
-  const [rawSearchQuery, setRawSearchQuery] = React.useState<string>("");
-  const debouncedSearchQuery = useDebounce(rawSearchQuery, 300);
+  const [rawSearchQuery, setRawSearchQuery] = React.useState<string>(""); // State for raw input
+  const debouncedSearchQuery = useDebounce(rawSearchQuery, 300); // Debounced search query for value
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
-  const [selectedResiForDeletion, setSelectedResiForDeletion] = React.useState<string | null>(null); // New state for selected resi
+  const [resiToDelete, setResiToDelete] = React.useState<string | null>(null);
 
   const queryClient = useQueryClient();
 
@@ -129,7 +130,8 @@ const HistoryPage = () => {
 
   const filteredHistoryData = React.useMemo(() => {
     if (!historyData) return [];
-    const lowerCaseSearchQuery = (debouncedSearchQuery || "").toLowerCase();
+    // Ensure debouncedSearchQuery is treated as a string
+    const lowerCaseSearchQuery = (debouncedSearchQuery || "").toLowerCase(); // Use debounced term and handle potential null/undefined
     const filtered = historyData.filter(data =>
       data.Resi.toLowerCase().includes(lowerCaseSearchQuery) ||
       (data.Keterangan?.toLowerCase() || "").includes(lowerCaseSearchQuery) ||
@@ -139,7 +141,7 @@ const HistoryPage = () => {
     );
     console.log("HistoryPage: filteredHistoryData", filtered);
     return filtered;
-  }, [historyData, debouncedSearchQuery]);
+  }, [historyData, debouncedSearchQuery]); // Use debouncedSearchQuery as dependency
 
   const ITEMS_PER_PAGE = 10;
   const [currentPage, setCurrentPage] = React.useState(1);
@@ -159,8 +161,7 @@ const HistoryPage = () => {
 
   React.useEffect(() => {
     setCurrentPage(1);
-    setSelectedResiForDeletion(null); // Clear selection on filter/date change
-  }, [debouncedSearchQuery, startDate, endDate]);
+  }, [debouncedSearchQuery, startDate, endDate]); // Use debouncedSearchQuery here
 
   const getPaginationPages = React.useMemo(() => {
     const pages = [];
@@ -180,41 +181,31 @@ const HistoryPage = () => {
     return pages;
     }, [currentPage, totalPages]);
 
-  // Function to handle row click (first tap)
-  const handleRowClick = (resi: string) => {
-    setSelectedResiForDeletion(resi);
-    console.log(`Resi selected for deletion: ${resi}`);
-  };
-
-  // Function to open delete dialog (second tap action)
-  const openDeleteDialog = () => {
-    if (selectedResiForDeletion) {
-      setIsDeleteDialogOpen(true);
-    } else {
-      showError("Mohon pilih resi yang ingin dihapus terlebih dahulu.");
-    }
+  const handleDeleteClick = (resi: string) => {
+    setResiToDelete(resi);
+    setIsDeleteDialogOpen(true);
   };
 
   const confirmDeleteResi = async () => {
-    if (!selectedResiForDeletion) return;
+    if (!resiToDelete) return;
 
     // Find the item to get its creation date and Keterangan (expedition)
-    const itemToDelete = historyData?.find(item => item.Resi === selectedResiForDeletion);
+    const itemToDelete = historyData?.find(item => item.Resi === resiToDelete);
     const dateOfDeletedResi = itemToDelete ? new Date(itemToDelete.created) : undefined;
     const expeditionOfDeletedResi = itemToDelete?.Keterangan || undefined; // Get expedition name
 
-    console.log(`Attempting to delete resi: ${selectedResiForDeletion}`);
+    console.log(`Attempting to delete resi: ${resiToDelete}`);
     const { error } = await supabase
       .from("tbl_resi")
       .delete()
-      .eq("Resi", selectedResiForDeletion);
+      .eq("Resi", resiToDelete);
 
     if (error) {
-      showError(`Gagal menghapus resi ${selectedResiForDeletion}: ${error.message}`);
+      showError(`Gagal menghapus resi ${resiToDelete}: ${error.message}`);
       console.error("Error deleting resi:", error);
     } else {
-      showSuccess(`Resi ${selectedResiForDeletion} berhasil dihapus.`);
-      console.log(`Successfully deleted resi: ${selectedResiForDeletion}`);
+      showSuccess(`Resi ${resiToDelete} berhasil dihapus.`);
+      console.log(`Successfully deleted resi: ${resiToDelete}`);
 
       // Force refetch history data for the current date range
       await queryClient.refetchQueries({ queryKey: ["historyData", formattedStartDate, formattedEndDate] });
@@ -232,7 +223,7 @@ const HistoryPage = () => {
       invalidateDashboardQueries(queryClient, dateOfDeletedResi, expeditionOfDeletedResi); 
     }
     setIsDeleteDialogOpen(false);
-    setSelectedResiForDeletion(null); // Clear selection after action
+    setResiToDelete(null);
   };
 
   const handleCopyTableData = async () => {
@@ -371,8 +362,8 @@ const HistoryPage = () => {
                   id="search-input"
                   type="text"
                   placeholder="Cari no. resi, keterangan, atau lainnya..."
-                  value={rawSearchQuery}
-                  onChange={(e) => setRawSearchQuery(e.target.value)}
+                  value={rawSearchQuery} // Bind to rawSearchQuery
+                  onChange={(e) => setRawSearchQuery(e.target.value)} // Update rawSearchQuery
                   className="w-full"
                 />
               </div>
@@ -388,17 +379,7 @@ const HistoryPage = () => {
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow-md">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-bold text-gray-800">Data History ({filteredHistoryData.length} records)</h2>
-            <Button
-              variant="destructive"
-              onClick={openDeleteDialog}
-              disabled={!selectedResiForDeletion}
-              className="flex items-center"
-            >
-              <Trash2 className="mr-2 h-4 w-4" /> Hapus Resi Terpilih
-            </Button>
-          </div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Data History ({filteredHistoryData.length} records)</h2>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -409,6 +390,7 @@ const HistoryPage = () => {
                   <TableHead>No Karung</TableHead>
                   <TableHead>Schedule</TableHead>
                   <TableHead>Tanggal Input</TableHead>
+                  {/* <TableHead>Aksi</TableHead> Removed Aksi column */}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -420,11 +402,8 @@ const HistoryPage = () => {
                   currentData.map((data, index) => (
                     <TableRow 
                       key={data.Resi + index} 
-                      className={cn(
-                        "hover:bg-gray-100 cursor-pointer",
-                        selectedResiForDeletion === data.Resi && "bg-blue-100 hover:bg-blue-200" // Highlight selected row
-                      )}
-                      onClick={() => handleRowClick(data.Resi)} // Changed to handleRowClick
+                      className="hover:bg-gray-100 cursor-pointer" // Added cursor-pointer
+                      onClick={() => handleDeleteClick(data.Resi)} // Added onClick to row
                     >
                       <TableCell className="font-medium">{startIndex + index + 1}</TableCell>
                       <TableCell className="w-[25%]">{data.Resi}</TableCell>
@@ -442,6 +421,7 @@ const HistoryPage = () => {
                       <TableCell>{data.nokarung}</TableCell>
                       <TableCell>{data.schedule || "-"}</TableCell>
                       <TableCell>{format(new Date(data.created), "dd/MM/yyyy HH:mm")}</TableCell>
+                      {/* Removed Hapus button */}
                     </TableRow>
                   ))
                 )}
@@ -480,17 +460,18 @@ const HistoryPage = () => {
             </Pagination>
           )}
         </div>
+        {/* <MadeWithDyad /> */}
 
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Konfirmasi Penghapusan</AlertDialogTitle>
               <AlertDialogDescription>
-                Apakah Anda yakin ingin menghapus resi <span className="font-bold">{selectedResiForDeletion}</span>? Tindakan ini tidak dapat dibatalkan.
+                Apakah Anda yakin ingin menghapus resi <span className="font-bold">{resiToDelete}</span>? Tindakan ini tidak dapat dibatalkan.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => { setIsDeleteDialogOpen(false); setSelectedResiForDeletion(null); }}>Batal</AlertDialogCancel>
+              <AlertDialogCancel onClick={() => setIsDeleteDialogOpen(false)}>Batal</AlertDialogCancel>
               <AlertDialogAction onClick={confirmDeleteResi} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
                 Hapus
               </AlertDialogAction>

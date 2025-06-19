@@ -2,6 +2,7 @@ import { useQuery, /* useQueryClient */ } from "@tanstack/react-query"; // Mengh
 import { supabase } from "@/integrations/supabase/client";
 import { format, startOfDay, endOfDay } from "date-fns";
 import React from "react";
+import { fetchAllDataPaginated } from "@/utils/supabaseFetch"; // Import the new utility
 
 interface KarungSummaryItem {
   karung_number: string;
@@ -17,68 +18,12 @@ interface ResiExpedisiData {
   schedule: string | null;
 }
 
-// Menghapus interface ExpedisiData karena tidak lagi digunakan
-// interface ExpedisiData {
-//   resino: string;
-//   orderno: string | null;
-//   chanelsales: string | null;
-//   couriername: string | null;
-//   created: string;
-//   flag: string | null;
-//   datetrans: string | null;
-//   cekfu: boolean | null;
-// }
-
 // NEW: Type for all karung summaries
 interface AllKarungSummaryItem {
   expedition_name: string;
   karung_number: string;
   quantity: number;
 }
-
-// Function to fetch all data from a table with pagination
-// Now accepts an optional queryModifier function to apply additional filters
-const fetchAllDataPaginated = async (
-  tableName: string,
-  dateFilterColumn?: string,
-  startDate?: string,
-  endDate?: string,
-  selectColumns: string = "*", // Added selectColumns parameter
-  queryModifier?: (query: any) => any // New optional parameter
-) => {
-  let allRecords: any[] = [];
-  let offset = 0;
-  const limit = 1000; // Fetch 1000 records at a time
-  let hasMore = true;
-
-  while (hasMore) {
-    let query = supabase.from(tableName).select(selectColumns).range(offset, offset + limit - 1); // Use selectColumns
-
-    if (dateFilterColumn && startDate && endDate) {
-      query = query.gte(dateFilterColumn, startDate).lt(dateFilterColumn, endDate);
-    }
-
-    if (queryModifier) { // Apply custom modifier if provided
-      query = queryModifier(query);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      console.error(`Error fetching paginated data from ${tableName}:`, error);
-      throw error;
-    }
-
-    if (data && data.length > 0) {
-      allRecords = allRecords.concat(data);
-      offset += data.length;
-      hasMore = data.length === limit; // If less than limit, no more data
-    } else {
-      hasMore = false;
-    }
-  }
-  return allRecords;
-};
 
 export const useResiInputData = (expedition: string, showAllExpeditionSummary: boolean) => {
   const today = new Date();
@@ -94,13 +39,13 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     queryFn: async () => {
       if (!expedition) return [];
 
-      console.log(`Fetching allResiForExpedition for ${expedition} on ${formattedDate} (for local validation)`);
+      console.log(`Fetching allResiForExpedition for ${expedition} on ${formattedDate} (for local validation) using fetchAllDataPaginated.`);
       
       const data = await fetchAllDataPaginated(
         "tbl_resi",
         "created", // dateFilterColumn
-        startOfTodayISO,
-        endOfTodayISO,
+        today, // selectedStartDate
+        today, // selectedEndDate
         "Resi, nokarung, created, Keterangan, schedule", // Only select necessary columns
         (baseQuery) => { // Custom filter function
           if (expedition === 'ID') {

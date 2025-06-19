@@ -58,7 +58,6 @@ const DashboardSummaryCards: React.FC<DashboardSummaryCardsProps> = ({
         gradientFrom="from-blue-500"
         gradientTo="to-indigo-600"
         icon="package"
-        // onClick={handleOpenTransaksiHariIniModal} // Dihapus karena sudah tidak ada modal utama
       />
       <SummaryCard
         title="Total Scan"
@@ -69,7 +68,6 @@ const DashboardSummaryCards: React.FC<DashboardSummaryCardsProps> = ({
         gradientTo="to-teal-600"
         icon="maximize"
       />
-      {/* Kartu Sisa (Hari Ini) yang terpisah dihapus */}
       <SummaryCard
         title="Follow Up (Belum Kirim)"
         value={isLoadingFollowUpFlagNoCount ? <Loader2 className="h-5 w-5 animate-spin" /> : followUpFlagNoCount}
@@ -84,7 +82,7 @@ const DashboardSummaryCards: React.FC<DashboardSummaryCardsProps> = ({
         gradientFrom="from-cyan-500"
         gradientTo="to-blue-600"
         icon="clock"
-        onClick={handleOpenScanFollowupModal}
+        // onClick={handleOpenScanFollowupModal} // Dihapus
       />
       <SummaryCard
         title="Batal"

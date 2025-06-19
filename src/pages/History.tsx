@@ -1,3 +1,4 @@
+).">
 import React from "react";
 // import { MadeWithDyad } from "@/components/made-with-dyad"; // Removed
 import { Calendar } from "@/components/ui/calendar";
@@ -263,7 +264,7 @@ const HistoryPage = () => {
   };
 
   return (
-    <React.Fragment>
+    <>
       <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
         <div className="bg-gradient-to-r from-green-500 to-blue-600 p-6 rounded-lg shadow-md">
           <h2 className="text-white text-xl font-semibold mb-4 flex items-center">
@@ -479,7 +480,7 @@ const HistoryPage = () => {
           </AlertDialogContent>
         </AlertDialog>
       </div>
-    </React.Fragment>
+    </>
   );
 };
 

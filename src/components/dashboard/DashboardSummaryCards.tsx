@@ -55,7 +55,7 @@ const DashboardSummaryCards: React.FC<DashboardSummaryCardsProps> = ({
         gradientFrom="from-blue-500"
         gradientTo="to-indigo-600"
         icon="package"
-        onClick={handleOpenTransaksiHariIniModal}
+        // onClick={handleOpenTransaksiHariIniModal} // Dihapus
       />
       <SummaryCard
         title="Total Scan"
@@ -66,7 +66,6 @@ const DashboardSummaryCards: React.FC<DashboardSummaryCardsProps> = ({
         gradientTo="to-teal-600"
         icon="maximize"
       />
-      {/* Kartu ID Rekomendasi yang terpisah dihapus */}
       <SummaryCard
         title="Sisa (Hari Ini)"
         value={isLoadingBelumKirim ? <Loader2 className="h-5 w-5 animate-spin" /> : belumKirim}

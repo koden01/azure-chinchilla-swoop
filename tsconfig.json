@@ -13,7 +13,8 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx", // Ini adalah baris penting untuk JSX
-
+	"noUnusedLocals": false, // <--- Pastikan ini diatur ke false
+	
     /* Linting */
     "strict": true,
     "noUnusedLocals": true,

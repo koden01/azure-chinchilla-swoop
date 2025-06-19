@@ -4,21 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { showSuccess, showError } from "@/utils/toast";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
-
-// Define a common interface for items displayed in the modal
-interface ModalDataItem {
-  Resi?: string; // Used for 'followUp' modal type (from tbl_resi or RPC)
-  resino?: string; // Used for 'belumKirim', 'expeditionDetail', 'transaksiHariIni' (from tbl_expedisi)
-  orderno?: string | null;
-  chanelsales?: string | null;
-  couriername?: string | null;
-  created?: string; // For tbl_resi
-  datetrans?: string | null; // For tbl_expedisi
-  flag?: string | null;
-  cekfu?: boolean | null;
-  created_resi?: string; // For followUp RPC
-  created_expedisi?: string; // For followUp RPC
-}
+import { ModalDataItem } from "@/types/data"; // Import from shared types
 
 interface UseDashboardModalsProps {
   date: Date | undefined;

@@ -58,7 +58,7 @@ const DashboardSummaryCards: React.FC<DashboardSummaryCardsProps> = ({
         gradientFrom="from-blue-500"
         gradientTo="to-indigo-600"
         icon="package"
-        onClick={handleOpenTransaksiHariIniModal} {/* Fixed: Comment wrapped in curly braces */}
+        onClick={handleOpenTransaksiHariIniModal}
       />
       <SummaryCard
         title="Total Scan"

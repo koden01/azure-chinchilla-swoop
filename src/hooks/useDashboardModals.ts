@@ -162,14 +162,30 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
     try {
       console.log(`Attempting to batal resi: ${resiNumber}`);
       
-      // Use allExpedisiData (Map) to get couriername and created timestamp
-      const expedisiRecord = allExpedisiData?.get(resiNumber.toLowerCase());
+      let expedisiRecord = allExpedisiData?.get(resiNumber.toLowerCase());
       
       if (!expedisiRecord) {
-        console.warn(`Resi ${resiNumber} not found in allExpedisiData map. Proceeding with tbl_resi update/insert for 'batal' with default values.`);
+        console.log(`Resi ${resiNumber} not found in allExpedisiData cache. Attempting direct fetch from tbl_expedisi.`);
+        const { data: directExpedisiData, error: directExpedisiError } = await supabase
+            .from("tbl_expedisi")
+            .select("*")
+            .eq("resino", resiNumber)
+            .single();
+
+        if (directExpedisiError && directExpedisiError.code !== 'PGRST116') { // PGRST116 means "no rows found"
+            throw directExpedisiError; // Re-throw other errors
+        }
+        
+        if (directExpedisiData) {
+            expedisiRecord = directExpedisiData;
+            console.log(`Resi ${resiNumber} found via direct fetch from tbl_expedisi.`);
+        } else {
+            console.warn(`Resi ${resiNumber} not found in tbl_expedisi. Proceeding with 'batal' in tbl_resi using default values.`);
+        }
       }
 
       const createdTimestampFromExpedisi = expedisiRecord?.created || new Date().toISOString(); // Default to now if not found
+      const courierNameForBatal = expedisiRecord?.couriername || "UNKNOWN"; // Use UNKNOWN if not found
 
       const { data: existingResi, error: checkError } = await supabase
         .from("tbl_resi")
@@ -240,13 +256,29 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
 
     try {
       console.log(`[handleConfirmResi] Starting confirmation for resi: ${resiNumber}`);
-      // Use allExpedisiData (Map) to get couriername and created timestamp
-      const expedisiRecord = allExpedisiData?.get(resiNumber.toLowerCase());
-      console.log(`[handleConfirmResi] Retrieved expedisiRecord from cache:`, expedisiRecord);
-
+      
+      let expedisiRecord = allExpedisiData?.get(resiNumber.toLowerCase());
+      
       if (!expedisiRecord) {
-        throw new Error(`Gagal mendapatkan data ekspedisi untuk resi ${resiNumber}: Data tidak ditemukan di cache.`);
+        console.log(`[handleConfirmResi] Resi ${resiNumber} not found in allExpedisiData cache. Attempting direct fetch from tbl_expedisi.`);
+        const { data: directExpedisiData, error: directExpedisiError } = await supabase
+            .from("tbl_expedisi")
+            .select("*")
+            .eq("resino", resiNumber)
+            .single();
+
+        if (directExpedisiError && directExpedisiError.code !== 'PGRST116') { // PGRST116 means "no rows found"
+            throw directExpedisiError; // Re-throw other errors
+        }
+        
+        if (directExpedisiData) {
+            expedisiRecord = directExpedisiData;
+            console.log(`[handleConfirmResi] Resi ${resiNumber} found via direct fetch from tbl_expedisi.`);
+        } else {
+            throw new Error(`Gagal mendapatkan data ekspedisi untuk resi ${resiNumber}: Data tidak ditemukan di database.`);
+        }
       }
+      console.log(`[handleConfirmResi] Retrieved expedisiRecord:`, expedisiRecord);
 
       const courierNameFromExpedisi = expedisiRecord.couriername;
       const expedisiCreatedTimestamp = expedisiRecord.created; // Get the created timestamp from tbl_expedisi
@@ -332,6 +364,28 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
     );
 
     try {
+      let expedisiRecord = allExpedisiData?.get(resiNumber.toLowerCase());
+      
+      if (!expedisiRecord) {
+        console.log(`[handleCekfuToggle] Resi ${resiNumber} not found in allExpedisiData cache. Attempting direct fetch from tbl_expedisi.`);
+        const { data: directExpedisiData, error: directExpedisiError } = await supabase
+            .from("tbl_expedisi")
+            .select("*")
+            .eq("resino", resiNumber)
+            .single();
+
+        if (directExpedisiError && directExpedisiError.code !== 'PGRST116') { // PGRST116 means "no rows found"
+            throw directExpedisiError; // Re-throw other errors
+        }
+        
+        if (directExpedisiData) {
+            expedisiRecord = directExpedisiData;
+            console.log(`[handleCekfuToggle] Resi ${resiNumber} found via direct fetch from tbl_expedisi.`);
+        } else {
+            throw new Error(`Gagal memperbarui status CEKFU resi ${resiNumber}: Data ekspedisi tidak ditemukan di database.`);
+        }
+      }
+
       const { error } = await supabase
         .from("tbl_expedisi")
         .update({ cekfu: !currentCekfuStatus })

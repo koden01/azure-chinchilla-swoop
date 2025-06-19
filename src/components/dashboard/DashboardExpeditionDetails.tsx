@@ -28,12 +28,12 @@ const DashboardExpeditionDetails: React.FC<DashboardExpeditionDetailsProps> = ({
   handleOpenExpeditionDetailModal,
 }) => {
   return (
-    <React.Fragment>
-      <h2 className="text-2xl font-bold text-gray-800 mb-4">Detail Ekspedisi</h2>
+    <div className="bg-gradient-to-r from-cyan-500 to-blue-600 p-6 rounded-lg shadow-md"> {/* Wrapper baru dengan gradien */}
+      <h2 className="text-2xl font-bold text-white mb-4">Detail Ekspedisi</h2> {/* Warna teks judul diubah menjadi putih */}
       {isLoadingAny ? (
-        <div className="flex justify-center items-center h-40">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-          <span className="ml-2 text-gray-600">Memuat detail ekspedisi...</span>
+        <div className="flex justify-center items-center h-40 text-white"> {/* Warna teks loader diubah */}
+          <Loader2 className="h-8 w-8 animate-spin text-white" />
+          <span className="ml-2">Memuat detail ekspedisi...</span>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -44,18 +44,7 @@ const DashboardExpeditionDetails: React.FC<DashboardExpeditionDetailsProps> = ({
                 className="relative overflow-hidden rounded-lg shadow-lg transform transition-transform hover:scale-105"
                 onClick={() => handleOpenExpeditionDetailModal(summary.name)}
               >
-                {/* Dynamic gradient based on expedition name or a default */}
-                <div
-                  className={cn(
-                    "absolute inset-0",
-                    summary.name === "ID" && "bg-gradient-to-r from-blue-600 to-purple-700",
-                    summary.name === "JNE" && "bg-gradient-to-r from-red-600 to-red-800",
-                    summary.name === "SPX" && "bg-gradient-to-r from-orange-500 to-orange-700",
-                    summary.name === "INSTAN" && "bg-gradient-to-r from-green-500 to-green-700",
-                    summary.name === "SICEPAT" && "bg-gradient-to-r from-yellow-500 to-yellow-700",
-                    !["ID", "JNE", "SPX", "INSTAN", "SICEPAT"].includes(summary.name) && "bg-gradient-to-r from-gray-400 to-gray-600" // Default for others
-                  )}
-                ></div>
+                {/* Lapisan gradien dinamis dihapus dari sini karena sudah diatur di parent */}
                 <ExpeditionDetailCard
                   name={summary.name}
                   totalTransaksi={summary.totalTransaksi}
@@ -69,11 +58,11 @@ const DashboardExpeditionDetails: React.FC<DashboardExpeditionDetailsProps> = ({
               </div>
             ))
           ) : (
-            <p className="col-span-full text-center text-gray-600">Tidak ada data ekspedisi untuk tanggal ini.</p>
+            <p className="col-span-full text-center text-white opacity-80">Tidak ada data ekspedisi untuk tanggal ini.</p> {/* Warna teks diubah */}
           )}
         </div>
       )}
-    </React.Fragment>
+    </div>
   );
 };
 

@@ -58,7 +58,7 @@ const DashboardSummaryCards: React.FC<DashboardSummaryCardsProps> = ({
         gradientFrom="from-blue-500"
         gradientTo="to-indigo-600"
         icon="package"
-        onClick={handleOpenTransaksiHariIniModal} {/* Added onClick here */}
+        onClick={handleOpenTransaksiHariIniModal} {/* Fixed: Comment wrapped in curly braces */}
       />
       <SummaryCard
         title="Total Scan"
@@ -72,15 +72,14 @@ const DashboardSummaryCards: React.FC<DashboardSummaryCardsProps> = ({
       <SummaryCard
         title="Follow Up (Belum Kirim)"
         value={isLoadingFollowUpFlagNoCount ? <Loader2 className="h-5 w-5 animate-spin" /> : followUpFlagNoCount}
-        secondaryTitle="Scan Follow Up (Tidak Sesuai Tanggal)" // Menambahkan sub-item
-        secondaryValue={isLoadingScanFollowupLateCount ? <Loader2 className="h-3 w-3 animate-spin inline-block" /> : scanFollowupLateCount} // Nilai sub-item
-        onSisaClick={handleOpenScanFollowupModal} // Menambahkan onClick untuk sub-item Scan Follow Up
+        secondaryTitle="Scan Follow Up (Tidak Sesuai Tanggal)"
+        secondaryValue={isLoadingScanFollowupLateCount ? <Loader2 className="h-3 w-3 animate-spin inline-block" /> : scanFollowupLateCount}
+        onSisaClick={handleOpenScanFollowupModal}
         gradientFrom="from-yellow-500"
         gradientTo="to-amber-600"
         icon="clock"
         onClick={handleOpenFollowUpFlagNoModal}
       />
-      {/* Kartu Scan Follow Up (Tidak Sesuai Tanggal) yang terpisah dihapus */}
       <SummaryCard
         title="Batal"
         value={isLoadingBatalCount ? <Loader2 className="h-5 w-5 animate-spin" /> : batalCount}

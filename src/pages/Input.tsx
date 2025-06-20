@@ -33,10 +33,10 @@ const InputPage = () => {
   const { data: allExpedisiDataUnfiltered, isLoading: isLoadingAllExpedisiUnfiltered } = useQuery<Map<string, any>>({
     queryKey: ["allExpedisiDataUnfiltered", twoDaysAgoFormatted, endOfTodayFormatted], // New query key with 2-day range
     queryFn: async () => {
-      console.log("InputPage: QueryFn: allExpedisiDataUnfiltered");
-      console.log(`InputPage: Fetching allExpedisiDataUnfiltered (paginated) for last 3 days: ${twoDaysAgoFormatted} to ${endOfTodayFormatted} using fetchAllDataPaginated.`);
+      // console.log("InputPage: QueryFn: allExpedisiDataUnfiltered"); // Removed
+      // console.log(`InputPage: Fetching allExpedisiDataUnfiltered (paginated) for last 3 days: ${twoDaysAgoFormatted} to ${endOfTodayFormatted} using fetchAllDataPaginated.`); // Removed
       const data = await fetchAllDataPaginated("tbl_expedisi", "created", twoDaysAgo, today);
-      console.log("InputPage: All Expedisi Data (unfiltered, paginated, 3-day range):", data.length, "items");
+      // console.log("InputPage: All Expedisi Data (unfiltered, paginated, 3-day range):", data.length, "items"); // Removed
       const expedisiMap = new Map<string, any>();
       data.forEach(item => {
         if (item.resino) {
@@ -99,18 +99,6 @@ const InputPage = () => {
       return () => clearTimeout(timer);
     }
   }, [expedition, selectedKarung, isProcessing]);
-
-  // console.log("InputPage State:", { // Removed this log
-  //   expedition,
-  //   selectedKarung,
-  //   isLoadingAllResiForExpedition,
-  //   currentCount,
-  //   isProcessing,
-  //   karungSummary,
-  //   expeditionOptions,
-  //   allExpedisiDataUnfilteredSize: allExpedisiDataUnfiltered?.size,
-  //   isLoadingAllExpedisiUnfiltered,
-  // });
 
   return (
     <React.Fragment>

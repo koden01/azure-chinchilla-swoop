@@ -2,7 +2,6 @@ import React from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, showError, dismissToast } from "@/utils/toast";
 import { beepSuccess, beepFailure, beepDouble } from "@/utils/audio";
-import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { format, subDays } from "date-fns";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";

@@ -64,10 +64,10 @@ const HistoryPage = () => {
   const formattedStartDate = startDate ? format(startDate, "yyyy-MM-dd") : "";
   const formattedEndDate = endDate ? format(endDate, "yyyy-MM-dd") : "";
 
-  console.log("HistoryPage: startDate (state)", startDate);
-  console.log("HistoryPage: endDate (state)", endDate);
-  console.log("HistoryPage: formattedStartDate", formattedStartDate);
-  console.log("HistoryPage: formattedEndDate", formattedEndDate);
+  // console.log("HistoryPage: startDate (state)", startDate); // Removed
+  // console.log("HistoryPage: endDate (state)", endDate); // Removed
+  // console.log("HistoryPage: formattedStartDate", formattedStartDate); // Removed
+  // console.log("HistoryPage: formattedEndDate", formattedEndDate); // Removed
 
   // Function to fetch all data from tbl_resi with pagination for a given date range
   const fetchAllResiDataPaginated = useCallback(async (startIso: string, endIso: string) => {
@@ -104,9 +104,9 @@ const HistoryPage = () => {
   const { data: historyData, isLoading: isLoadingHistory, error: historyError } = useQuery<HistoryData[]>({
     queryKey: ["historyData", formattedStartDate, formattedEndDate],
     queryFn: async () => {
-      console.log("QueryFn: historyData"); // Log for debugging
+      // console.log("QueryFn: historyData"); // Removed
       if (!startDate || !endDate) {
-        console.log("HistoryPage: Skipping query, startDate or endDate is undefined.");
+        // console.log("HistoryPage: Skipping query, startDate or endDate is undefined."); // Removed
         return [];
       }
 
@@ -119,18 +119,18 @@ const HistoryPage = () => {
       const startIso = startOfSelectedStartDate.toISOString();
       const endIso = endOfSelectedEndDate.toISOString();
 
-      console.log("HistoryPage: Querying Supabase with range (ISO) using pagination:", startIso, "to", endIso);
+      // console.log("HistoryPage: Querying Supabase with range (ISO) using pagination:", startIso, "to", endIso); // Removed
       
       const data = await fetchAllResiDataPaginated(startIso, endIso);
-      console.log("HistoryPage: Fetched all history data (paginated):", data.length, "records.");
+      // console.log("HistoryPage: Fetched all history data (paginated):", data.length, "records."); // Removed
       return data || [];
     },
     enabled: !!startDate && !!endDate,
   });
 
-  console.log("HistoryPage: isLoadingHistory", isLoadingHistory);
-  console.log("HistoryPage: historyData (from query)", historyData);
-  console.log("HistoryPage: historyError", historyError);
+  // console.log("HistoryPage: isLoadingHistory", isLoadingHistory); // Removed
+  // console.log("HistoryPage: historyData (from query)", historyData); // Removed
+  // console.log("HistoryPage: historyError", historyError); // Removed
 
   const filteredHistoryData = useMemo(() => {
     if (!historyData) return [];
@@ -143,7 +143,7 @@ const HistoryPage = () => {
       (data.schedule?.toLowerCase() || "").includes(lowerCaseSearchQuery) ||
       format(new Date(data.created), "dd/MM/yyyy").includes(lowerCaseSearchQuery)
     );
-    console.log("HistoryPage: filteredHistoryData", filtered);
+    // console.log("HistoryPage: filteredHistoryData", filtered); // Removed
     return filtered;
   }, [historyData, debouncedSearchQuery]); // Use debouncedSearchQuery as dependency
 
@@ -155,7 +155,7 @@ const HistoryPage = () => {
   const endIndex = startIndex + ITEMS_PER_PAGE;
   const currentData = filteredHistoryData.slice(startIndex, endIndex);
 
-  console.log("HistoryPage: currentData (for table)", currentData);
+  // console.log("HistoryPage: currentData (for table)", currentData); // Removed
 
   const handlePageChange = useCallback((page: number) => {
     if (page >= 1 && page <= totalPages) {

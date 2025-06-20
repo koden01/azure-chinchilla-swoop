@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useRef } from "react";
+import React, { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
@@ -37,7 +37,20 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { showSuccess, showError } from "@/utils/toast";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
 import { useDebounce } from "@/hooks/useDebounce";
-import { getKeteranganBadgeClasses } from "@/utils/expeditionUtils"; // Import new utility
+import { getKeteranganBadgeClasses } from "@/utils/expeditionUtils";
+
+import {
+  ColumnDef,
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+  SortingState,
+  ColumnFiltersState,
+  VisibilityState,
+} from "@tanstack/react-table";
 
 interface HistoryData {
   Resi: string;
@@ -50,8 +63,8 @@ interface HistoryData {
 const HistoryPage = () => {
   const [startDate, setStartDate] = useState<Date | undefined>(new Date());
   const [endDate, setEndDate] = useState<Date | undefined>(new Date());
-  const [rawSearchQuery, setRawSearchQuery] = useState<string>("");
-  const debouncedSearchQuery = useDebounce(rawSearchQuery, 300);
+  const [globalFilter, setGlobalFilter] = useState<string>("");
+  const debouncedGlobalFilter = useDebounce(globalFilter, 300);
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [resiToDelete, setResiToDelete] = useState<string | null>(null);
@@ -95,7 +108,7 @@ const HistoryPage = () => {
       }
     }
     return allRecords;
-  }, []); // No dependencies, as it's a pure fetch function
+  }, []);
 
   const { data: historyData, isLoading: isLoadingHistory, error: historyError } = useQuery<HistoryData[]>({
     queryKey: ["historyData", formattedStartDate, formattedEndDate],
@@ -119,60 +132,82 @@ const HistoryPage = () => {
     enabled: !!startDate && !!endDate,
   });
 
-  const filteredHistoryData = useMemo(() => {
-    if (!historyData) return [];
-    // Ensure debouncedSearchQuery is treated as a string
-    const lowerCaseSearchQuery = (debouncedSearchQuery || "").toLowerCase(); // Use debounced term and handle potential null/undefined
-    const filtered = historyData.filter(data =>
-      data.Resi.toLowerCase().includes(lowerCaseSearchQuery) ||
-      (data.Keterangan?.toLowerCase() || "").includes(lowerCaseSearchQuery) ||
-      (data.nokarung?.toLowerCase() || "").includes(lowerCaseSearchQuery) ||
-      (data.schedule?.toLowerCase() || "").includes(lowerCaseSearchQuery) ||
-      format(new Date(data.created), "dd/MM/yyyy").includes(lowerCaseSearchQuery)
-    );
-    return filtered;
-  }, [historyData, debouncedSearchQuery]); // Use debouncedSearchQuery as dependency
+  const columns = useMemo<ColumnDef<HistoryData>[]>(() => [
+    {
+      accessorKey: "rowNumber",
+      header: "No",
+      cell: ({ row }) => row.index + 1 + table.getState().pagination.pageIndex * table.getState().pagination.pageSize,
+      enableSorting: false,
+      enableColumnFilter: false,
+    },
+    {
+      accessorKey: "Resi",
+      header: "Nomor Resi",
+    },
+    {
+      accessorKey: "Keterangan",
+      header: "Keterangan",
+      cell: ({ row }) => (
+        <span className={cn(
+          "px-2 py-1 rounded-full text-xs font-semibold",
+          getKeteranganBadgeClasses(row.original.Keterangan)
+        )}>
+          {row.original.Keterangan}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "nokarung",
+      header: "No Karung",
+    },
+    {
+      accessorKey: "schedule",
+      header: "Schedule",
+      cell: ({ row }) => row.original.schedule || "-",
+    },
+    {
+      accessorKey: "created",
+      header: "Tanggal Input",
+      cell: ({ row }) => format(new Date(row.original.created), "dd/MM/yyyy HH:mm"),
+    },
+  ], []);
 
-  const ITEMS_PER_PAGE = 10;
-  const [currentPage, setCurrentPage] = useState(1);
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
 
-  const totalPages = Math.ceil(filteredHistoryData.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = startIndex + ITEMS_PER_PAGE;
-  const currentData = filteredHistoryData.slice(startIndex, endIndex);
+  const table = useReactTable({
+    data: historyData || [],
+    columns,
+    state: {
+      sorting,
+      columnFilters,
+      globalFilter: debouncedGlobalFilter,
+      columnVisibility,
+    },
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    onGlobalFilterChange: setGlobalFilter,
+    onColumnVisibilityChange: setColumnVisibility,
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    initialState: {
+      pagination: {
+        pageSize: 10, // Default page size
+      },
+    },
+  });
 
-  const handlePageChange = useCallback((page: number) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
-    }
-  }, [totalPages]); // totalPages is a dependency
-
-  React.useEffect(() => {
-    setCurrentPage(1);
-  }, [debouncedSearchQuery, startDate, endDate]); // Use debouncedSearchQuery here
-
-  const getPaginationPages = useMemo(() => {
-    const pages = [];
-    if (totalPages <= 3) {
-      for (let i = 1; i <= totalPages; i++) {
-        pages.push(i);
-      }
-    } else {
-      if (currentPage <= 2) {
-        pages.push(1, 2, 3);
-      } else if (currentPage >= totalPages - 1) {
-        pages.push(totalPages - 2, totalPages - 1, totalPages);
-      } else {
-        pages.push(currentPage - 1, currentPage, currentPage + 1);
-      }
-    }
-    return pages;
-    }, [currentPage, totalPages]);
+  useEffect(() => {
+    table.setPageIndex(0); // Reset to first page when filters or dates change
+  }, [debouncedGlobalFilter, startDate, endDate, table]);
 
   const handleDeleteClick = useCallback((resi: string) => {
     setResiToDelete(resi);
     setIsDeleteDialogOpen(true);
-  }, []); // No dependencies
+  }, []);
 
   // New handler for row clicks to detect double-click
   const handleRowClick = useCallback((resi: string) => {
@@ -196,7 +231,7 @@ const HistoryPage = () => {
         setLastClickInfo(null); // Clear after timeout if no second click
       }, 300);
     }
-  }, [lastClickInfo, handleDeleteClick]); // lastClickInfo and handleDeleteClick are dependencies
+  }, [lastClickInfo, handleDeleteClick]);
 
   const confirmDeleteResi = useCallback(async () => {
     if (!resiToDelete) return;
@@ -236,43 +271,68 @@ const HistoryPage = () => {
     }
     setIsDeleteDialogOpen(false);
     setResiToDelete(null);
-  }, [resiToDelete, historyData, formattedStartDate, formattedEndDate, queryClient]); // Dependencies
+  }, [resiToDelete, historyData, formattedStartDate, formattedEndDate, queryClient]);
 
   const handleCopyTableData = useCallback(async () => {
-    if (filteredHistoryData.length === 0) {
+    const rowsToCopy = table.getFilteredRowModel().rows;
+    if (rowsToCopy.length === 0) {
       showError("Tidak ada data untuk disalin.");
       return;
     }
 
-    // Headers without "Aksi"
-    const headers = ["No", "Nomor Resi", "Keterangan", "No Karung", "Schedule", "Tanggal Input"];
+    // Headers without "Aksi" (which is not present in History table anyway)
+    const headers = table.getHeaderGroups()[0].headers
+      .filter(header => header.column.id !== "rowNumber") // Exclude the "No" column
+      .map(header => flexRender(header.column.columnDef.header, header.getContext()));
     const headerRow = headers.join('\t');
 
-    const rows = filteredHistoryData.map((item, index) => {
-      return [
-        (startIndex + index + 1).toString(), // Add row number
-        item.Resi || "",
-        item.Keterangan || "",
-        item.nokarung || "",
-        item.schedule || "",
-        format(new Date(item.created), "dd/MM/yyyy HH:mm"),
-      ];
-    });
+    const dataRows = rowsToCopy.map(row => {
+      const rowValues = row.getVisibleCells()
+        .filter(cell => cell.column.id !== "rowNumber") // Exclude the "No" column from cell values
+        .map(cell => {
+          if (cell.column.id === "created") {
+            const dateValue = cell.getValue() as string;
+            return format(new Date(dateValue), "dd/MM/yyyy HH:mm");
+          }
+          return String(cell.getValue() || "");
+        });
+      return rowValues.join('\t');
+    }).join('\n');
 
-    const dataRows = rows.map(row => row.join('\t')).join('\n');
     const textToCopy = `${headerRow}\n${dataRows}`;
 
     console.log("Attempting to copy data:", textToCopy);
 
     try {
       await navigator.clipboard.writeText(textToCopy);
-      showSuccess(`Berhasil menyalin ${filteredHistoryData.length} baris data!`);
+      showSuccess(`Berhasil menyalin ${rowsToCopy.length} baris data!`);
       console.log("Data copied successfully!");
     } catch (err: any) {
       showError(`Gagal menyalin data tabel: ${err.message || "Unknown error"}`);
       console.error("Failed to copy table data:", err);
     }
-  }, [filteredHistoryData, startIndex]); // Dependencies
+  }, [table]);
+
+  const getPaginationPages = useMemo(() => {
+    const pages = [];
+    const totalPages = table.getPageCount();
+    const currentPage = table.getState().pagination.pageIndex + 1;
+
+    if (totalPages <= 3) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (currentPage <= 2) {
+        pages.push(1, 2, 3);
+      } else if (currentPage >= totalPages - 1) {
+        pages.push(totalPages - 2, totalPages - 1, totalPages);
+      } else {
+        pages.push(currentPage - 1, currentPage, currentPage + 1);
+      }
+    }
+    return pages;
+  }, [table.getPageCount(), table.getState().pagination.pageIndex]);
 
   return (
     <React.Fragment>
@@ -281,36 +341,9 @@ const HistoryPage = () => {
           <h2 className="text-white text-xl font-semibold mb-4 flex items-center">
             <CalendarDays className="mr-2 h-6 w-6" /> Filter Tanggal
           </h2>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                id="start-date-picker"
-                variant={"outline"}
-                className={cn(
-                  "w-full justify-start text-left font-normal",
-                  !startDate && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {startDate ? format(startDate, "dd/MM/yyyy") : <span>Pilih tanggal</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <Calendar
-                mode="single"
-                selected={startDate}
-                onSelect={setStartDate}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
-        </div>
-
-        <div className="bg-white p-4 rounded-md shadow-sm">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Filter & Search</h3>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label htmlFor="start-date-picker" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="start-date-picker" className="block text-left text-sm font-medium text-white mb-1">
                 Tanggal Mulai
               </label>
               <Popover>
@@ -319,7 +352,7 @@ const HistoryPage = () => {
                     id="start-date-picker"
                     variant={"outline"}
                     className={cn(
-                      "w-full justify-start text-left font-normal",
+                      "w-full justify-start text-left font-normal bg-white text-gray-800",
                       !startDate && "text-muted-foreground"
                     )}
                   >
@@ -338,7 +371,7 @@ const HistoryPage = () => {
               </Popover>
             </div>
             <div>
-              <label htmlFor="end-date-picker" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="end-date-picker" className="block text-left text-sm font-medium text-white mb-1">
                 Tanggal Selesai
               </label>
               <Popover>
@@ -347,7 +380,7 @@ const HistoryPage = () => {
                     id="end-date-picker"
                     variant={"outline"}
                     className={cn(
-                      "w-full justify-start text-left font-normal",
+                      "w-full justify-start text-left font-normal bg-white text-gray-800",
                       !endDate && "text-muted-foreground"
                     )}
                   >
@@ -365,92 +398,114 @@ const HistoryPage = () => {
                 </PopoverContent>
               </Popover>
             </div>
-            <div className="md:col-span-2 flex items-end space-x-2">
-              <div className="flex-grow">
-                <label htmlFor="search-input" className="block text-sm font-medium text-gray-700 mb-1">
-                  Cari
-                </label>
-                <Input
-                  id="search-input"
-                  type="text"
-                  placeholder="Cari no. resi, keterangan, atau lainnya..."
-                  value={rawSearchQuery}
-                  onChange={(e) => setRawSearchQuery(e.target.value)}
-                  className="w-full"
-                />
-              </div>
-              <Button
-                className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap"
-                onClick={handleCopyTableData}
-                disabled={filteredHistoryData.length === 0}
-              >
-                <Copy className="mr-2 h-4 w-4" /> Copy Table Data ({filteredHistoryData.length} records)
-              </Button>
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-md shadow-sm">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Filter & Search</h3>
+          <div className="flex flex-col md:flex-row gap-4 items-end">
+            <div className="flex-grow w-full">
+              <label htmlFor="search-input" className="block text-sm font-medium text-gray-700 mb-1">
+                Cari
+              </label>
+              <Input
+                id="search-input"
+                type="text"
+                placeholder="Cari no. resi, keterangan, atau lainnya..."
+                value={globalFilter}
+                onChange={(e) => setGlobalFilter(e.target.value)}
+                className="w-full"
+              />
             </div>
+            <Button
+              className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap w-full md:w-auto"
+              onClick={handleCopyTableData}
+              disabled={table.getFilteredRowModel().rows.length === 0}
+            >
+              <Copy className="mr-2 h-4 w-4" /> Copy Table Data ({table.getFilteredRowModel().rows.length} records)
+            </Button>
           </div>
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">Data History ({filteredHistoryData.length} records)</h2>
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Data History ({table.getFilteredRowModel().rows.length} records)</h2>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[50px]">No</TableHead>
-                  <TableHead className="w-[25%]">Nomor Resi</TableHead>
-                  <TableHead>Keterangan</TableHead>
-                  <TableHead>No Karung</TableHead>
-                  <TableHead>Schedule</TableHead>
-                  <TableHead>Tanggal Input</TableHead>
-                </TableRow>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => {
+                      return (
+                        <TableHead key={header.id} colSpan={header.colSpan}>
+                          {header.isPlaceholder ? null : (
+                            <div
+                              {...{
+                                className: header.column.getCanSort()
+                                  ? "cursor-pointer select-none"
+                                  : "",
+                                onClick: header.column.getToggleSortingHandler(),
+                              }}
+                            >
+                              {flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                              {{
+                                asc: " 🔼",
+                                desc: " 🔽",
+                              }[header.column.getIsSorted() as string] ?? null}
+                            </div>
+                          )}
+                        </TableHead>
+                      );
+                    })}
+                  </TableRow>
+                ))}
               </TableHeader>
               <TableBody>
                 {isLoadingHistory ? (
-                  <TableRow><TableCell colSpan={6} className="text-center">Memuat data...</TableCell></TableRow>
-                ) : currentData.length === 0 ? (
-                  <TableRow><TableCell colSpan={6} className="text-center">Tidak ada data.</TableCell></TableRow>
-                ) : (
-                  currentData.map((data, index) => (
+                  <TableRow><TableCell colSpan={columns.length} className="h-24 text-center">Memuat data...</TableCell></TableRow>
+                ) : table.getRowModel().rows?.length ? (
+                  table.getRowModel().rows.map((row) => (
                     <TableRow 
-                      key={data.Resi + index} 
+                      key={row.id} 
+                      data-state={row.getIsSelected() && "selected"}
                       className="hover:bg-gray-100 cursor-pointer"
-                      onClick={() => handleRowClick(data.Resi)} // Menggunakan handler double-click
+                      onClick={() => handleRowClick(row.original.Resi)}
                     >
-                      <TableCell className="font-medium">{startIndex + index + 1}</TableCell>
-                      <TableCell className="w-[25%]">{data.Resi}</TableCell>
-                      <TableCell>
-                        <span className={cn(
-                          "px-2 py-1 rounded-full text-xs font-semibold",
-                          getKeteranganBadgeClasses(data.Keterangan) // Use the new utility function
-                        )}>
-                          {data.Keterangan}
-                        </span>
-                      </TableCell>
-                      <TableCell>{data.nokarung}</TableCell>
-                      <TableCell>{data.schedule || "-"}</TableCell>
-                      <TableCell>{format(new Date(data.created), "dd/MM/yyyy HH:mm")}</TableCell>
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id}>
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </TableCell>
+                      ))}
                     </TableRow>
                   ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={columns.length} className="h-24 text-center">
+                      Tidak ada data.
+                    </TableCell>
+                  </TableRow>
                 )}
               </TableBody>
             </Table>
           </div>
-          {totalPages > 1 && (
+          {table.getPageCount() > 1 && (
             <Pagination className="mt-4">
               <PaginationContent>
                 <PaginationItem>
                   <PaginationPrevious
                     href="#"
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+                    onClick={() => table.previousPage()}
+                    className={!table.getCanPreviousPage() ? "pointer-events-none opacity-50" : ""}
                   />
                 </PaginationItem>
                 {getPaginationPages.map((pageNumber) => (
                   <PaginationItem key={pageNumber}>
                     <PaginationLink
                       href="#"
-                      isActive={pageNumber === currentPage}
-                      onClick={() => handlePageChange(pageNumber)}
+                      isActive={pageNumber === table.getState().pagination.pageIndex + 1}
+                      onClick={() => table.setPageIndex(pageNumber - 1)}
                     >
                       {pageNumber}
                     </PaginationLink>
@@ -459,8 +514,8 @@ const HistoryPage = () => {
                 <PaginationItem>
                   <PaginationNext
                     href="#"
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
+                    onClick={() => table.nextPage()}
+                    className={!table.getCanNextPage() ? "pointer-events-none opacity-50" : ""}
                   />
                 </PaginationItem>
               </PaginationContent>

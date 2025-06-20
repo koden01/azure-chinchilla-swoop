@@ -48,8 +48,8 @@ const DashboardPage: React.FC = () => {
     handleOpenExpeditionDetailModal,
     handleCloseModal,
     handleBatalResi,
-    handleConfirmResi,
-    handleCekfuToggle,
+    onConfirmResi, // Corrected: Destructure as onConfirmResi
+    onCekfuToggle, // Corrected: Destructure as onCekfuToggle
   } = useDashboardModals({ date: selectedDate, formattedDate, allExpedisiData });
 
   const isLoadingAny =
@@ -119,8 +119,8 @@ const DashboardPage: React.FC = () => {
         modalType={modalType}
         selectedCourier={selectedCourier}
         onBatalResi={handleBatalResi}
-        onConfirmResi={handleConfirmResi}
-        onCekfuToggle={handleCekfuToggle}
+        onConfirmResi={onConfirmResi}
+        onCekfuToggle={onCekfuToggle}
       />
     </React.Fragment>
   );

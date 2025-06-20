@@ -7,6 +7,7 @@ import { persister } from "@/lib/queryClientPersister";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ExpeditionProvider } from "./context/ExpeditionContext";
 import Layout from "./components/Layout";
+import { useBackgroundSync } from "./hooks/useBackgroundSync"; // NEW IMPORT
 
 // Menggunakan React.lazy untuk memuat komponen secara dinamis
 const DashboardPage = React.lazy(() => import("./pages/DashboardPage"));
@@ -36,11 +37,14 @@ persistQueryClient({
       query.queryHash.includes("lastKarung") || // Persist last karung
       query.queryHash.includes("allExpedisiDataUnfiltered") || // Persist allExpedisiDataUnfiltered
       query.queryHash.includes("expedisiDataForSelectedDate") || // Persist expedisi data for selected date
-      query.queryHash.includes("recentResiDataForValidation"), // NEW: Persist recentResiDataForValidation
+      query.queryHash.includes("recentResiDataForValidation") || // Persist recentResiDataForValidation
+      query.queryHash.includes("allFlagNoExpedisiData"), // NEW: Persist allFlagNoExpedisiData
   },
 });
 
 const App = () => {
+  useBackgroundSync(); // Initialize background sync
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>

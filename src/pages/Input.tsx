@@ -25,7 +25,7 @@ const InputPage = () => {
 
   // Calculate date range for 2 days back for allExpedisiDataUnfiltered
   const today = new Date();
-  const twoDaysAgo = subDays(today, 1); // Covers today and yesterday
+  const twoDaysAgo = subDays(today, 2); // Covers today, yesterday, and the day before yesterday
   const twoDaysAgoFormatted = format(twoDaysAgo, "yyyy-MM-dd");
   const endOfTodayFormatted = format(today, "yyyy-MM-dd"); // For the end of the range key
 
@@ -34,9 +34,9 @@ const InputPage = () => {
     queryKey: ["allExpedisiDataUnfiltered", twoDaysAgoFormatted, endOfTodayFormatted], // New query key with 2-day range
     queryFn: async () => {
       console.log("InputPage: QueryFn: allExpedisiDataUnfiltered");
-      console.log(`InputPage: Fetching allExpedisiDataUnfiltered (paginated) for last 2 days: ${twoDaysAgoFormatted} to ${endOfTodayFormatted} using fetchAllDataPaginated.`);
+      console.log(`InputPage: Fetching allExpedisiDataUnfiltered (paginated) for last 3 days: ${twoDaysAgoFormatted} to ${endOfTodayFormatted} using fetchAllDataPaginated.`);
       const data = await fetchAllDataPaginated("tbl_expedisi", "created", twoDaysAgo, today);
-      console.log("InputPage: All Expedisi Data (unfiltered, paginated, 2-day range):", data.length, "items");
+      console.log("InputPage: All Expedisi Data (unfiltered, paginated, 3-day range):", data.length, "items");
       const expedisiMap = new Map<string, any>();
       data.forEach(item => {
         if (item.resino) {
@@ -47,7 +47,7 @@ const InputPage = () => {
     },
     enabled: true, // Always enabled for local validation
     staleTime: 1000 * 60 * 5, // Keep this data fresh for 5 minutes
-    gcTime: 1000 * 60 * 60 * 24 * 2, // Garbage collect after 2 days (changed from 5 days)
+    gcTime: 1000 * 60 * 60 * 24 * 2, // Garbage collect after 2 days
   });
 
   const {

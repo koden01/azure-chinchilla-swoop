@@ -34,7 +34,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
 
   // Calculate date range for 2 days back for local validation data
   const today = new Date();
-  const twoDaysAgo = subDays(today, 1); // Covers today and yesterday
+  const twoDaysAgo = subDays(today, 2); // Covers today, yesterday, and the day before yesterday
   const twoDaysAgoFormatted = format(twoDaysAgo, "yyyy-MM-dd");
   const endOfTodayFormatted = format(today, "yyyy-MM-dd");
 
@@ -56,7 +56,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       return resiSet;
     },
     staleTime: 1000 * 60 * 10, // Keep this data fresh for 10 minutes
-    gcTime: 1000 * 60 * 60 * 24 * 2, // Garbage collect after 2 days (changed from 5 days)
+    gcTime: 1000 * 60 * 60 * 24 * 2, // Garbage collect after 2 days
     enabled: true, // Always enabled for local validation
   });
 

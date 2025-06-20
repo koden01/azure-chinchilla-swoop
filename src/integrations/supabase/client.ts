@@ -17,13 +17,13 @@
         const SUPABASE_PROJECT_ID = SUPABASE_URL.split('//')[1].split('.')[0];
 
         // Log untuk debugging: Pastikan kunci API dimuat dengan benar
-        console.log("Supabase Client Init: VITE_SUPABASE_URL:", SUPABASE_URL ? "Loaded" : "NOT LOADED");
-        console.log("Supabase Client Init: VITE_SUPABASE_ANON_KEY:", SUPABASE_PUBLISHABLE_KEY ? "Loaded" : "NOT LOADED");
-        console.log("Supabase Client Init: Project ID:", SUPABASE_PROJECT_ID);
+        // console.log("Supabase Client Init: VITE_SUPABASE_URL:", SUPABASE_URL ? "Loaded" : "NOT LOADED"); // Removed
+        // console.log("Supabase Client Init: VITE_SUPABASE_ANON_KEY:", SUPABASE_PUBLISHABLE_KEY ? "Loaded" : "NOT LOADED"); // Removed
+        // console.log("Supabase Client Init: Project ID:", SUPABASE_PROJECT_ID); // Removed
 
         // NEW: Log the actual values being used
-        console.log("Supabase Client: Actual URL used:", SUPABASE_URL);
-        console.log("Supabase Client: Actual Anon Key used (first 5 chars):", SUPABASE_PUBLISHABLE_KEY ? SUPABASE_PUBLISHABLE_KEY.substring(0, 5) + '...' : 'N/A');
+        // console.log("Supabase Client: Actual URL used:", SUPABASE_URL); // Removed
+        // console.log("Supabase Client: Actual Anon Key used (first 5 chars):", SUPABASE_PUBLISHABLE_KEY ? SUPABASE_PUBLISHABLE_KEY.substring(0, 5) + '...' : 'N/A'); // Removed
 
 
         // Import the supabase client like this:

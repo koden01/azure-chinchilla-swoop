@@ -33,10 +33,7 @@ const InputPage = () => {
   const { data: allExpedisiDataUnfiltered, isLoading: isLoadingAllExpedisiUnfiltered } = useQuery<Map<string, any>>({
     queryKey: ["allExpedisiDataUnfiltered", twoDaysAgoFormatted, endOfTodayFormatted], // New query key with 2-day range
     queryFn: async () => {
-      // console.log("InputPage: QueryFn: allExpedisiDataUnfiltered"); // Removed
-      // console.log(`InputPage: Fetching allExpedisiDataUnfiltered (paginated) for last 3 days: ${twoDaysAgoFormatted} to ${endOfTodayFormatted} using fetchAllDataPaginated.`); // Removed
       const data = await fetchAllDataPaginated("tbl_expedisi", "created", twoDaysAgo, today);
-      // console.log("InputPage: All Expedisi Data (unfiltered, paginated, 3-day range):", data.length, "items"); // Removed
       const expedisiMap = new Map<string, any>();
       data.forEach(item => {
         if (item.resino) {
@@ -51,7 +48,6 @@ const InputPage = () => {
   });
 
   const {
-    // allResiForExpedition, // Dihapus karena tidak digunakan langsung di komponen ini
     isLoadingAllResiForExpedition,
     currentCount: getCountForSelectedKarung,
     lastKarung,

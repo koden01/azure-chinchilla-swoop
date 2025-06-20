@@ -22,18 +22,18 @@ function reviver(_key: string, value: any): any { // Added _ to key
 
 export const persister: Persister = {
   persistClient: async (client: PersistedClient) => { // Added PersistedClient type
-    // console.log('Persisting client...'); // Dihapus untuk mengurangi log
+    // console.log('Persisting client...'); // Removed
     // Use custom replacer when stringifying
     await set('scanresihg-query-cache', JSON.stringify(client, replacer));
   },
   restoreClient: async () => {
-    console.log('Restoring client...');
+    // console.log('Restoring client...'); // Removed
     const storedClient = await get('scanresihg-query-cache');
     // Use custom reviver when parsing
     return storedClient ? JSON.parse(storedClient, reviver) : undefined;
   },
   removeClient: async () => {
-    console.log('Removing client...');
+    // console.log('Removing client...'); // Removed
     await del('scanresihg-query-cache');
   },
 };

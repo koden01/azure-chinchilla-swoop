@@ -67,22 +67,14 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
 
   // Process data to create expedition summaries
   useEffect(() => {
-    if (isLoadingAllExpedisiUnfiltered || isLoadingExpedisiDataForSelectedDate || isLoadingAllResi || !allExpedisiDataUnfiltered || !expedisiDataForSelectedDate || !allResiData || !date) {
+    if (isLoadingAllExpedisiUnfiltered || isLoadingExpedisiDataForSelectedDate || isLoadingAllRes || !allExpedisiDataUnfiltered || !expedisiDataForSelectedDate || !allResiData || !date) {
       setExpeditionSummaries([]);
       return;
     }
 
-    const resiToExpeditionMap = new Map<string, string>();
-    allExpedisiDataUnfiltered.forEach(exp => {
-      const normalizedResino = exp.resino?.trim().toLowerCase();
-      if (normalizedResino) {
-        resiToExpeditionMap.set(normalizedResino, normalizeExpeditionName(exp.couriername) || "");
-      }
-    });
-
     const summaries: { [key: string]: any } = {};
 
-    const uniqueCourierNames = new Set(Array.from(allExpedisiDataUnfiltered.values()).map(e => normalizeExpeditionName(e.couriername)).filter(Boolean));
+    // Initialize summaries for all known expeditions
     KNOWN_EXPEDITIONS.forEach(name => {
       summaries[name] = {
         name,
@@ -96,6 +88,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
       };
     });
 
+    // Populate totalTransaksi and sisa from expedisiDataForSelectedDate (already filtered by date)
     expedisiDataForSelectedDate.forEach(exp => {
       const normalizedCourierName = normalizeExpeditionName(exp.couriername);
       
@@ -109,36 +102,56 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
       }
     });
 
+    // Populate totalScan, idRekomendasi, totalBatal, totalScanFollowUp, jumlahKarung from allResiData (already filtered by date)
     allResiData.forEach(resi => {
       const normalizedResi = resi.Resi?.trim().toLowerCase();
-      let targetCourierName = null;
+      let originalExpeditionName: string | null = null;
 
+      // Try to get the original courier name from tbl_expedisi first
       if (normalizedResi) {
-        targetCourierName = resiToExpeditionMap.get(normalizedResi);
+        const expedisiRecord = allExpedisiDataUnfiltered.get(normalizedResi);
+        if (expedisiRecord && expedisiRecord.couriername) {
+          originalExpeditionName = normalizeExpeditionName(expedisiRecord.couriername);
+        }
       }
 
-      if (!targetCourierName) {
-        targetCourierName = normalizeExpeditionName(resi.Keterangan);
+      // Handle ID_REKOMENDASI special case for 'ID' expedition
+      if (resi.Keterangan === "ID_REKOMENDASI") {
+        if (summaries["ID"]) {
+          summaries["ID"].idRekomendasi++;
+          if (resi.nokarung) {
+            summaries["ID"].jumlahKarung.add(resi.nokarung);
+          }
+          if (resi.schedule === "ontime") {
+            summaries["ID"].totalScan++;
+          }
+          if (resi.schedule === "late") {
+            summaries["ID"].totalScanFollowUp++;
+          }
+        }
       }
-
-      if (targetCourierName && summaries[targetCourierName]) {
+      // Handle BATAL special case
+      else if (resi.schedule === "batal") {
+        // Attribute 'batal' to the original expedition if known, otherwise it's a global count
+        if (originalExpeditionName && summaries[originalExpeditionName]) {
+          summaries[originalExpeditionName].totalBatal++;
+        } else {
+          console.warn(`Resi ${resi.Resi} is 'batal' but original expedition could not be determined. Not counted in per-expedition 'totalBatal'.`);
+        }
+      }
+      // Handle regular 'ontime' or 'late' scans for known original expeditions
+      else if (originalExpeditionName && summaries[originalExpeditionName]) {
         if (resi.schedule === "ontime") {
-          summaries[targetCourierName].totalScan++;
+          summaries[originalExpeditionName].totalScan++;
         }
-        if (resi.Keterangan === "ID_REKOMENDASI") { 
-          summaries[targetCourierName].idRekomendasi++;
-        }
-        if (resi.schedule === "batal") { 
-          summaries[targetCourierName].totalBatal++;
-        }
-        if (resi.schedule === "late") { 
-          summaries[targetCourierName].totalScanFollowUp++;
+        if (resi.schedule === "late") {
+          summaries[originalExpeditionName].totalScanFollowUp++;
         }
         if (resi.nokarung) {
-          summaries[targetCourierName].jumlahKarung.add(resi.nokarung);
+          summaries[originalExpeditionName].jumlahKarung.add(resi.nokarung);
         }
       } else {
-        console.warn(`Resi ${resi.Resi} has no matching courier in summaries or targetCourierName is null/undefined. Keterangan: ${resi.Keterangan}. This resi will not be counted in expedition summaries.`);
+        console.warn(`Resi ${resi.Resi} (Keterangan: ${resi.Keterangan}, Schedule: ${resi.schedule}) not attributed to any known expedition summary.`);
       }
     });
 
@@ -148,16 +161,16 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
     }));
 
     setExpeditionSummaries(finalSummaries);
-  }, [date, allExpedisiDataUnfiltered, expedisiDataForSelectedDate, allResiData, isLoadingAllExpedisiUnfiltered, isLoadingExpedisiDataForSelectedDate, isLoadingAllResi]);
+  }, [date, allExpedisiDataUnfiltered, expedisiDataForSelectedDate, allResiData, isLoadingAllExpedisiUnfiltered, isLoadingExpedisiDataForSelectedDate, isLoadingAllRes]);
 
   const debouncedInvalidateDashboardQueries = useDebouncedCallback(() => {
-    console.log("Debounced invalidation triggered from Realtime!");
+    // console.log("Realtime event triggered dashboard data invalidation."); // Removed
     invalidateDashboardQueries(queryClient, new Date(), undefined); 
   }, 150);
 
   useEffect(() => {
     const handleRealtimeEvent = (payload: any) => {
-      console.log("Realtime event received for Dashboard:", payload);
+      // console.log("Realtime event received for Dashboard:", payload); // Removed
       debouncedInvalidateDashboardQueries();
     };
 
@@ -172,7 +185,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
       .subscribe();
 
     return () => {
-      console.log("Unsubscribing Supabase Realtime channels for Dashboard data.");
+      // console.log("Unsubscribing Supabase Realtime channels for Dashboard data."); // Removed
       supabase.removeChannel(resiChannel);
       supabase.removeChannel(expedisiChannel);
     };

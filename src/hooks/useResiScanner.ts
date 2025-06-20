@@ -8,6 +8,7 @@ import { format, subDays } from "date-fns";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 import { normalizeExpeditionName } from "@/utils/expeditionUtils";
 import { addPendingOperation } from "@/integrations/indexeddb/pendingOperations";
+import { useBackgroundSync } from "./useBackgroundSync"; // Import useBackgroundSync
 
 // Define the type for ResiExpedisiData to match useResiInputData
 interface ResiExpedisiData {
@@ -31,6 +32,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
   const [isProcessing, setIsProcessing] = React.useState<boolean>(false);
   const resiInputRef = React.useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
+  const { triggerSync } = useBackgroundSync(); // Get the triggerSync function
 
   // Calculate date range for 2 days back for local validation data
   const today = new Date();
@@ -383,6 +385,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       lastOptimisticIdRef.current = null;
       
       invalidateAndRefetch(); // Invalidate dashboard queries and history immediately
+      triggerSync(); // Manually trigger background sync immediately
 
     } catch (error: any) {
       console.error("Error during resi input (before IndexedDB save or during optimistic update):", error); // Log the full error object

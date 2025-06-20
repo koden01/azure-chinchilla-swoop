@@ -51,6 +51,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         "Resi" // Only select the Resi column
       );
       const resiSet = new Set(data.map((item: { Resi: string }) => item.Resi.toLowerCase().trim()));
+      console.log(`[useResiScanner] Fetched recentResiNumbersForValidation (initial/refetch):`, resiSet);
       return resiSet;
     },
     staleTime: 1000 * 60 * 10, // Keep this data fresh for 10 minutes
@@ -76,6 +77,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
           expedisiMap.set(item.resino.toLowerCase(), item);
         }
       });
+      console.log(`[useResiScanner] Fetched allFlagNoExpedisiData (initial/refetch):`, expedisiMap);
       return expedisiMap;
     },
     staleTime: 1000 * 60 * 60, // Changed to 60 minutes
@@ -155,6 +157,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
     try {
       // 1. Local Duplicate Check
       console.log(`[handleScanResi] Checking for local duplicate: ${normalizedCurrentResi}`);
+      console.log(`[handleScanResi] recentResiNumbersForValidation current state:`, recentResiNumbersForValidation);
       if (recentResiNumbersForValidation?.has(normalizedCurrentResi)) {
         validationStatus = 'DUPLICATE_RESI';
         validationMessage = `DOUBLE! Resi ini sudah discan sebelumnya.`;
@@ -296,12 +299,15 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
 
       // Optimistic UI update for the input page's display
       queryClient.setQueryData(queryKeyForInputPageDisplay, (oldData: ResiExpedisiData[] | undefined) => {
-        return [...(oldData || []), newResiEntry]; // Ensure oldData is an array
+        const newData = [...(oldData || []), newResiEntry]; // Ensure oldData is an array
+        console.log(`[handleScanResi] Optimistic allResiForExpedition Update:`, newData);
+        return newData;
       });
       // Optimistic update for recentResiNumbersForValidation (Set)
       queryClient.setQueryData(["recentResiNumbersForValidation", twoDaysAgoFormatted, formattedDate], (oldSet: Set<string> | undefined) => {
         const newSet = oldSet ? new Set(oldSet) : new Set();
         newSet.add(normalizedCurrentResi);
+        console.log(`[handleScanResi] Optimistic recentResiNumbersForValidation Update:`, newSet);
         return newSet;
       });
       // Optimistic update for allExpedisiDataUnfiltered cache
@@ -319,12 +325,14 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
           cekfu: existingExpedisi?.cekfu || false, // Keep existing cekfu or default
           optimisticId: currentOptimisticId, // Add optimistic ID for potential rollback
         });
+        console.log(`[handleScanResi] Optimistic allExpedisiDataUnfiltered Update:`, newMap);
         return newMap;
       });
       // Optimistic update for allFlagNoExpedisiData cache (remove if flag becomes YES)
       queryClient.setQueryData(["allFlagNoExpedisiData"], (oldMap: Map<string, any> | undefined) => {
         const newMap = oldMap ? new Map(oldMap) : new Map();
         newMap.delete(normalizedCurrentResi); // Remove from flag NO cache as it's now 'YES'
+        console.log(`[handleScanResi] Optimistic allFlagNoExpedisiData Update (removed ${normalizedCurrentResi}):`, newMap);
         return newMap;
       });
 
@@ -397,12 +405,15 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       // Revert optimistic update on error
       if (lastOptimisticIdRef.current) {
           queryClient.setQueryData(queryKeyForInputPageDisplay, (oldData: ResiExpedisiData[] | undefined) => {
-              return (oldData || []).filter(item => item.optimisticId !== lastOptimisticIdRef.current);
+              const revertedData = (oldData || []).filter(item => item.optimisticId !== lastOptimisticIdRef.current);
+              console.log(`[handleScanResi] Reverted allResiForExpedition Update:`, revertedData);
+              return revertedData;
           });
           // Revert optimistic update for recentResiNumbersForValidation (Set)
           queryClient.setQueryData(["recentResiNumbersForValidation", twoDaysAgoFormatted, formattedDate], (oldSet: Set<string> | undefined) => {
             const newSet = oldSet ? new Set(oldSet) : new Set();
             newSet.delete(normalizedCurrentResi); // Remove the optimistically added resi
+            console.log(`[handleScanResi] Reverted recentResiNumbersForValidation Update:`, newSet);
             return newSet;
           });
           // Revert optimistic update for allExpedisiDataUnfiltered cache
@@ -415,12 +426,14 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
               revertedExpedisi.flag = "NO"; // Revert flag to NO
               newMap.set(normalizedCurrentResi, revertedExpedisi);
             }
+            console.log(`[handleScanResi] Reverted allExpedisiDataUnfiltered Update:`, newMap);
             return newMap;
           });
           // Revert optimistic update for allFlagNoExpedisiData cache (add back if flag was 'NO')
           queryClient.setQueryData(["allFlagNoExpedisiData"], (oldMap: Map<string, any> | undefined) => {
             const newMap = oldMap ? new Map(oldMap) : new Map();
             queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] }); // Force re-fetch for consistency
+            console.log(`[handleScanResi] Reverted allFlagNoExpedisiData Update (forced refetch).`);
             return newMap; 
           });
           // REVERT OPTIMISTIC UPDATE FOR KARUNG SUMMARY

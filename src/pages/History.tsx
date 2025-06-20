@@ -114,6 +114,7 @@ const HistoryPage = () => {
     queryKey: ["historyData", formattedStartDate, formattedEndDate],
     queryFn: async () => {
       if (!startDate || !endDate) {
+        console.log("HistoryPage: Skipping fetch, startDate or endDate is undefined."); // Added log
         return [];
       }
 
@@ -126,11 +127,18 @@ const HistoryPage = () => {
       const startIso = startOfSelectedStartDate.toISOString();
       const endIso = endOfSelectedEndDate.toISOString();
       
+      console.log(`HistoryPage: Fetching data for range ${startIso} to ${endIso}`); // Added log
       const data = await fetchAllResiDataPaginated(startIso, endIso);
+      console.log(`HistoryPage: Fetched ${data.length} records.`); // Added log
       return data || [];
     },
     enabled: !!startDate && !!endDate,
   });
+
+  // Added useEffect to log historyData changes
+  useEffect(() => {
+    console.log("HistoryPage: historyData updated:", historyData);
+  }, [historyData]);
 
   const columns = useMemo<ColumnDef<HistoryData>[]>(() => [
     {

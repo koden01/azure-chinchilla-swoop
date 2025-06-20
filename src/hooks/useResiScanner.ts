@@ -82,7 +82,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       console.log(`Fetched ${expedisiMap.size} 'flag NO' expedisi records for validation.`);
       return expedisiMap;
     },
-    staleTime: 1000 * 60 * 5, // Keep this data fresh for 5 minutes
+    staleTime: 1000 * 60 * 60, // Changed to 60 minutes
     gcTime: 1000 * 60 * 60 * 24, // Garbage collect after 24 hours
     enabled: true, // Always enabled
   });

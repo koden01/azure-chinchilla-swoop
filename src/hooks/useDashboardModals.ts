@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { showSuccess, showError } from "@/utils/toast";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
 import { ModalDataItem } from "@/types/data"; // Import from shared types
+import { normalizeExpeditionName } from "@/utils/expeditionUtils"; // Import new utility
 
 interface UseDashboardModalsProps {
   date: Date | undefined;
@@ -34,7 +35,6 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
     setModalType(type);
     setSelectedCourier(courier);
     setIsModalOpen(true);
-    // console.log(`Modal opened: ${title}, Data length: ${data.length}, Type: ${type}`); // Removed
   };
 
   const handleOpenTransaksiHariIniModal = async () => {
@@ -42,7 +42,6 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       showError("Mohon pilih tanggal terlebih dahulu.");
       return;
     }
-    // console.log(`Fetching data for 'Transaksi Hari Ini' modal for date: ${formattedDate} using RPC.`); // Removed
 
     const { data, error } = await supabase.rpc("get_transaksi_hari_ini_records", {
       p_selected_date: formattedDate,
@@ -53,7 +52,6 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       console.error("Error fetching Transaksi Hari Ini data:", error);
       return;
     }
-    // console.log("Data for 'Transaksi Hari Ini' modal:", data); // Removed
     openResiModal("Transaksi Hari Ini", data || [], "transaksiHariIni");
   };
 
@@ -62,7 +60,6 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       showError("Mohon pilih tanggal terlebih dahulu.");
       return;
     }
-    // console.log(`Fetching data for 'Belum Kirim (Hari Ini)' modal for date: ${formattedDate} using RPC.`); // Removed
 
     const { data, error } = await supabase.rpc("get_belum_kirim_records", {
       p_selected_date: formattedDate,
@@ -73,16 +70,12 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       console.error("Error fetching Belum Kirim data:", error);
       return;
     }
-    // console.log("Data for 'Belum Kirim (Hari Ini)' modal:", data); // Removed
     openResiModal("Belum Kirim (Hari Ini)", data || [], "belumKirim");
   };
 
   const handleOpenFollowUpFlagNoModal = async () => {
     const actualCurrentDate = new Date();
     const actualCurrentFormattedDate = format(actualCurrentDate, 'yyyy-MM-dd');
-
-    // console.log("Fetching data for 'Follow Up (Belum Kirim)' modal using RPC..."); // Removed
-    // console.log("Excluding records created on:", actualCurrentFormattedDate); // Removed
 
     const { data, error } = await supabase.rpc("get_flag_no_expedisi_records_except_today", {
       p_selected_date: actualCurrentFormattedDate,
@@ -93,7 +86,6 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       console.error("Error fetching Follow Up (Belum Kirim) data via RPC:", error);
       return;
     }
-    // console.log("Data for 'Follow Up (Belum Kirim)' modal (from RPC):", data?.length, "records."); // Removed
     openResiModal("Follow Up (Belum Kirim)", data || [], "belumKirim");
   };
 
@@ -102,8 +94,6 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       showError("Mohon pilih tanggal terlebih dahulu.");
       return;
     }
-    // console.log("Fetching data for 'Follow Up (Scan Tidak Sesuai Tanggal)' modal..."); // Removed
-    // console.log("Using selected dashboard date:", formattedDate); // Removed
 
     const { data, error } = await supabase.rpc("get_scan_follow_up", {
       selected_date: formattedDate,
@@ -113,7 +103,6 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       console.error("Error fetching Scan Follow Up:", error);
       return;
     }
-    // console.log("Data for 'Follow Up (Scan Tidak Sesuai Tanggal)' modal:", data); // Removed
     openResiModal("Follow Up (Scan Tidak Sesuai Tanggal)", data || [], "followUp");
   };
 
@@ -122,8 +111,6 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       showError("Mohon pilih tanggal terlebih dahulu.");
       return;
     }
-
-    // console.log(`Fetching detail data for '${courierName}' (Belum Kirim) for date: ${formattedDate} using RPC.`); // Removed
 
     const { data, error } = await supabase.rpc("get_expedition_detail_records", {
       p_couriername: courierName,
@@ -135,7 +122,6 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       console.error(`Error fetching expedition detail data for ${courierName}:`, error);
       return;
     }
-    // console.log(`Data for 'Detail Resi ${courierName} (Belum Kirim)' modal:`, data); // Removed
     openResiModal(`Detail Resi ${courierName} (Belum Kirim)`, data || [], "expeditionDetail", courierName);
   };
 
@@ -155,17 +141,13 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         const itemResi = item.Resi || item.resino;
         return itemResi !== resiNumber;
       });
-      // console.log(`Optimistically removed ${resiNumber} from modal data. New length: ${newData.length}`); // Removed
       return newData;
     });
 
     try {
-      // console.log(`Attempting to batal resi: ${resiNumber}`); // Removed
-      
       let expedisiRecord = allExpedisiData?.get(resiNumber.toLowerCase());
       
       if (!expedisiRecord) {
-        // console.log(`Resi ${resiNumber} not found in allExpedisiData cache. Attempting direct fetch from tbl_expedisi.`); // Removed
         const { data: directExpedisiData, error: directExpedisiError } = await supabase
             .from("tbl_expedisi")
             .select("*")
@@ -178,14 +160,12 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         
         if (directExpedisiData) {
             expedisiRecord = directExpedisiData;
-            // console.log(`Resi ${resiNumber} found via direct fetch from tbl_expedisi.`); // Removed
         } else {
             console.warn(`Resi ${resiNumber} not found in tbl_expedisi. Proceeding with 'batal' in tbl_resi using default values.`);
         }
       }
 
       const createdTimestampFromExpedisi = expedisiRecord?.created || new Date().toISOString(); // Default to now if not found
-      // const courierNameForBatal = expedisiRecord?.couriername || "UNKNOWN"; // Dihapus karena tidak digunakan
 
       const { data: existingResi, error: checkError } = await supabase
         .from("tbl_resi")
@@ -198,7 +178,6 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       }
 
       if (existingResi) {
-        // console.log(`Resi ${resiNumber} found in tbl_resi, updating schedule to 'batal' and created date.`); // Removed
         const { error: updateError } = await supabase
           .from("tbl_resi")
           .update({ 
@@ -212,7 +191,6 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         if (updateError) throw updateError;
         showSuccess(`Resi ${resiNumber} berhasil dibatalkan.`);
       } else {
-        // console.log(`Resi ${resiNumber} not found in tbl_resi, inserting as 'batal'.`); // Removed
         const { error: insertError } = await supabase
           .from("tbl_resi")
           .insert({
@@ -234,7 +212,6 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       // Revert optimistic update on error
       if (itemToBatal) {
         setModalData(originalModalData); // Revert to original data
-        // console.log(`Reverted optimistic update for ${resiNumber} due to error.`); // Removed
       }
       showError(`Gagal membatalkan resi ${resiNumber}. ${error.message || "Silakan coba lagi."}`);
       console.error("Error batal resi:", error);
@@ -250,17 +227,13 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         const itemResi = item.Resi || item.resino;
         return itemResi !== resiNumber;
       });
-      // console.log(`Optimistically removed ${resiNumber} from modal data. New length: ${newData.length}`); // Removed
       return newData;
     });
 
     try {
-      // console.log(`[handleConfirmResi] Starting confirmation for resi: ${resiNumber}`); // Removed
-      
       let expedisiRecord = allExpedisiData?.get(resiNumber.toLowerCase());
       
       if (!expedisiRecord) {
-        // console.log(`[handleConfirmResi] Resi ${resiNumber} not found in allExpedisiData cache. Attempting direct fetch from tbl_expedisi.`); // Removed
         const { data: directExpedisiData, error: directExpedisiError } = await supabase
             .from("tbl_expedisi")
             .select("*")
@@ -273,18 +246,14 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         
         if (directExpedisiData) {
             expedisiRecord = directExpedisiData;
-            // console.log(`[handleConfirmResi] Resi ${resiNumber} found via direct fetch from tbl_expedisi.`); // Removed
         } else {
             throw new Error(`Gagal mendapatkan data ekspedisi untuk resi ${resiNumber}: Data tidak ditemukan di database.`);
         }
       }
-      // console.log(`[handleConfirmResi] Retrieved expedisiRecord:`, expedisiRecord); // Removed
 
-      const courierNameFromExpedisi = expedisiRecord.couriername;
+      const courierNameFromExpedisi = normalizeExpeditionName(expedisiRecord.couriername); // Use normalized name
       const expedisiCreatedTimestamp = expedisiRecord.created; // Get the created timestamp from tbl_expedisi
-      // console.log(`[handleConfirmResi] Extracted courierNameFromExpedisi: ${courierNameFromExpedisi}, expedisiCreatedTimestamp: ${expedisiCreatedTimestamp}`); // Removed
 
-      // console.log(`[handleConfirmResi] Updating flag to 'YES' for resi ${resiNumber} in tbl_expedisi.`); // Removed
       const { error: expUpdateError } = await supabase
         .from("tbl_expedisi")
         .update({ flag: "YES" })
@@ -293,7 +262,6 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       if (expUpdateError) {
         throw new Error(`Gagal mengkonfirmasi resi ${resiNumber} di tbl_expedisi: ${expUpdateError.message}`);
       }
-      // console.log(`[handleConfirmResi] Successfully updated tbl_expedisi flag to 'YES' for ${resiNumber}.`); // Removed
 
       const { data: existingResi, error: checkResiError } = await supabase
         .from("tbl_resi")
@@ -310,13 +278,9 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         created: expedisiCreatedTimestamp, // Use created from tbl_expedisi
         Keterangan: courierNameFromExpedisi,
         nokarung: "0", // Default to "0" for confirmed resi from dashboard
-        // schedule: "ontime", // Dihapus agar trigger database yang menentukan
       };
-      // console.log(`[handleConfirmResi] Data to upsert into tbl_resi:`, resiDataToUpsert); // Removed
-
 
       if (existingResi) {
-        // console.log(`[handleConfirmResi] Resi ${resiNumber} found in tbl_resi, updating details.`); // Removed
         const { error: updateResiError } = await supabase
           .from("tbl_resi")
           .update(resiDataToUpsert)
@@ -324,27 +288,22 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
 
         if (updateResiError) throw updateResiError;
         showSuccess(`Resi ${resiNumber} berhasil dikonfirmasi.`);
-        // console.log(`[handleConfirmResi] Successfully updated tbl_resi for ${resiNumber}.`); // Removed
       } else {
-        // console.log(`[handleConfirmResi] Resi ${resiNumber} not found in tbl_resi, inserting new record.`); // Removed
         const { error: insertResiError } = await supabase
           .from("tbl_resi")
           .insert(resiDataToUpsert);
 
         if (insertResiError) throw insertResiError;
         showSuccess(`Resi ${resiNumber} berhasil dikonfirmasi.`);
-        // console.log(`[handleConfirmResi] Successfully inserted new record into tbl_resi for ${resiNumber}.`); // Removed
       }
 
       // Invalidate queries to trigger refetch for dashboard summaries
-      // console.log(`[handleConfirmResi] Invalidating dashboard queries for date: ${date?.toISOString() || 'N/A'}.`); // Removed
       invalidateDashboardQueries(queryClient, date);
 
     } catch (error: any) {
       // Revert optimistic update on error
       if (itemToConfirm) {
         setModalData(originalModalData); // Revert to original data
-        // console.log(`[handleConfirmResi] Reverted optimistic update for ${resiNumber} due to error.`); // Removed
       }
       showError(`Gagal mengkonfirmasi resi ${resiNumber}. ${error.message || "Silakan coba lagi."}`);
       console.error("[handleConfirmResi] Error confirming resi:", error);
@@ -352,7 +311,6 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
   };
 
   const handleCekfuToggle = async (resiNumber: string, currentCekfuStatus: boolean) => {
-    // console.log(`Toggling CEKFU for resi ${resiNumber} from ${currentCekfuStatus} to ${!currentCekfuStatus}`); // Removed
     // Optimistic UI update for CEKFU toggle
     setModalData(prevData =>
       prevData.map(item => {
@@ -367,7 +325,6 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       let expedisiRecord = allExpedisiData?.get(resiNumber.toLowerCase());
       
       if (!expedisiRecord) {
-        // console.log(`[handleCekfuToggle] Resi ${resiNumber} not found in allExpedisiData cache. Attempting direct fetch from tbl_expedisi.`); // Removed
         const { data: directExpedisiData, error: directExpedisiError } = await supabase
             .from("tbl_expedisi")
             .select("*")
@@ -380,7 +337,6 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         
         if (directExpedisiData) {
             expedisiRecord = directExpedisiData;
-            // console.log(`[handleCekfuToggle] Resi ${resiNumber} found via direct fetch from tbl_expedisi.`); // Removed
         } else {
             throw new Error(`Gagal memperbarui status CEKFU resi ${resiNumber}: Data ekspedisi tidak ditemukan di database.`);
         }

@@ -1,5 +1,6 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { normalizeExpeditionName } from "@/utils/expeditionUtils"; // Import new utility
 
 interface ExpeditionDetailCardProps {
   name: string;
@@ -26,18 +27,8 @@ const ExpeditionDetailCard: React.FC<ExpeditionDetailCardProps> = React.memo(({
   totalBatal,
   totalScanFollowUp,
 }) => {
-  // CRITICAL DEBUG LOG: Check exact props received by this card
-  // console.log(`--- ExpeditionDetailCard DEBUG for ${name} ---`); // Removed
-  // console.log(`  totalTransaksi: ${totalTransaksi}`); // Removed
-  // console.log(`  totalScan: ${totalScan}`); // Removed
-  // console.log(`  sisa: ${sisa}`); // Removed
-  // console.log(`  jumlahKarung: ${jumlahKarung}`); // Removed
-  // console.log(`  idRekomendasi: ${idRekomendasi}`); // Removed
-  // console.log(`  totalBatal: ${totalBatal}`); // Removed
-  // console.log(`  totalScanFollowUp: ${totalScanFollowUp}`); // Removed
-  // console.log(`---------------------------------------------`); // Removed
-
-  const showIdRekomendasi = name === "ID" && idRekomendasi !== undefined;
+  const normalizedName = normalizeExpeditionName(name);
+  const showIdRekomendasi = normalizedName === "ID" && idRekomendasi !== undefined;
 
   return (
     <Card

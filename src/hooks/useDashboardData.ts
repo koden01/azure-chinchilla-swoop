@@ -363,14 +363,14 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
     expedisiDataForSelectedDate.forEach(exp => {
       const normalizedCourierName = exp.couriername?.trim().toUpperCase(); // Normalize here
 
-      console.log(`  Processing expedisiDataForSelectedDate record: Resi=${exp.resino}, Courier (raw)=${exp.couriername} (Normalized: ${normalizedCourierName}), Created (raw): ${exp.created}`);
+      // console.log(`  Processing expedisiDataForSelectedDate record: Resi=${exp.resino}, Courier (raw)=${exp.couriername} (Normalized: ${normalizedCourierName}), Created (raw): ${exp.created}`); // REMOVED
       
       if (normalizedCourierName && summaries[normalizedCourierName]) {
         summaries[normalizedCourierName].totalTransaksi++;
         if (exp.flag === "NO") {
           summaries[normalizedCourierName].sisa++;
         }
-        console.log(`    -> Matched courier for ${normalizedCourierName}. Current totalTransaksi: ${summaries[normalizedCourierName].totalTransaksi}, sisa: ${summaries[normalizedCourierName].sisa}`);
+        // console.log(`    -> Matched courier for ${normalizedCourierName}. Current totalTransaksi: ${summaries[normalizedCourierName].totalTransaksi}, sisa: ${summaries[normalizedCourierName].sisa}`); // REMOVED
       } else {
         console.warn(`    -> expedisiDataForSelectedDate: Normalized Courier name '${normalizedCourierName}' not found in summaries or is null/empty for resino: ${exp.resino}. This record will not be counted in expedition summaries.`);
         uncountedExpedisiRecords.push(exp); // Add to uncounted list
@@ -397,40 +397,40 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
         // *** PERBAIKAN DI SINI: Tambahkan 'JNT' ke daftar ekspedisi yang dikenali ***
         if (normalizedKeterangan === "ID" || normalizedKeterangan === "ID_REKOMENDASI") {
           targetCourierName = "ID";
-          console.log(`  [Resi Attr] Resi ${resi.Resi} with Keterangan '${resi.Keterangan}' attributed to ID expedition (not found in tbl_expedisi map).`);
+          // console.log(`  [Resi Attr] Resi ${resi.Resi} with Keterangan '${resi.Keterangan}' attributed to ID expedition (not found in tbl_expedisi map).`); // REMOVED
         } else if (normalizedKeterangan && ["JNE", "SPX", "INSTAN", "SICEPAT", "JNT"].includes(normalizedKeterangan)) { // Added JNT
           targetCourierName = normalizedKeterangan;
-          console.log(`  [Resi Attr] Resi ${resi.Resi} with Keterangan '${resi.Keterangan}' attributed to ${targetCourierName} expedition (not found in tbl_expedisi map).`);
+          // console.log(`  [Resi Attr] Resi ${resi.Resi} with Keterangan '${resi.Keterangan}' attributed to ${targetCourierName} expedition (not found in tbl_expedisi map).`); // REMOVED
         } else {
           console.warn(`  [Resi Attr] Resi ${resi.Resi} with Keterangan '${resi.Keterangan}' could not be attributed to any known expedition. Skipping.`);
         }
       } else {
-        console.log(`  [Resi Attr] Resi ${resi.Resi} attributed to ${targetCourierName} expedition (found in tbl_expedisi map).`);
+        // console.log(`  [Resi Attr] Resi ${resi.Resi} attributed to ${targetCourierName} expedition (found in tbl_expedisi map).`); // REMOVED
       }
 
       if (targetCourierName && summaries[targetCourierName]) {
-        console.log(`  Processing Resi: ${resi.Resi}, Target Courier: ${targetCourierName}, Schedule: ${resi.schedule}, Keterangan: ${resi.Keterangan}, Nokarung: ${resi.nokarung}`); 
+        // console.log(`  Processing Resi: ${resi.Resi}, Target Courier: ${targetCourierName}, Schedule: ${resi.schedule}, Keterangan: ${resi.Keterangan}, Nokarung: ${resi.nokarung}`); // REMOVED
         
         if (resi.schedule === "ontime") {
           summaries[targetCourierName].totalScan++;
-          console.log(`    -> Incremented totalScan for ${targetCourierName}. Current: ${summaries[targetCourierName].totalScan}`);
+          // console.log(`    -> Incremented totalScan for ${targetCourierName}. Current: ${summaries[targetCourierName].totalScan}`); // REMOVED
         }
         // Count ID Rekomendasi based on Keterangan
         if (resi.Keterangan === "ID_REKOMENDASI") { // Keterangan itself is "ID_REKOMENDASI", no need to normalize here
           summaries[targetCourierName].idRekomendasi++;
-          console.log(`    -> Incremented ID Rekomendasi for ${targetCourierName}. Current: ${summaries[targetCourierName].idRekomendasi}`); 
+          // console.log(`    -> Incremented ID Rekomendasi for ${targetCourierName}. Current: ${summaries[targetCourierName].idRekomendasi}`); // REMOVED
         }
         if (resi.schedule === "batal") { 
           summaries[targetCourierName].totalBatal++;
-          console.log(`    -> Incremented totalBatal for ${targetCourierName}. Current: ${summaries[targetCourierName].totalBatal}`);
+          // console.log(`    -> Incremented totalBatal for ${targetCourierName}. Current: ${summaries[targetCourierName].totalBatal}`); // REMOVED
         }
         if (resi.schedule === "late") { 
           summaries[targetCourierName].totalScanFollowUp++;
-          console.log(`    -> Incremented Scan Follow Up for ${targetCourierName}. Current: ${summaries[targetCourierName].totalScanFollowUp}`); 
+          // console.log(`    -> Incremented Scan Follow Up for ${targetCourierName}. Current: ${summaries[targetCourierName].totalScanFollowUp}`); // REMOVED
         }
         if (resi.nokarung) {
           summaries[targetCourierName].jumlahKarung.add(resi.nokarung);
-          console.log(`    -> Added karung ${resi.nokarung} to ${targetCourierName}. Current unique karungs: ${summaries[targetCourierName].jumlahKarung.size}`);
+          // console.log(`    -> Added karung ${resi.nokarung} to ${targetCourierName}. Current unique karungs: ${summaries[targetCourierName].jumlahKarung.size}`); // REMOVED
         }
       } else {
         console.warn(`Resi ${resi.Resi} has no matching courier in summaries or targetCourierName is null/undefined. Keterangan: ${resi.Keterangan}. This resi will not be counted in expedition summaries.`);

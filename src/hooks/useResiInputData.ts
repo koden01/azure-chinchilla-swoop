@@ -129,14 +129,15 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       console.log("Fetching unique expedition names from tbl_expedisi.");
       const { data, error } = await supabase
         .from("tbl_expedisi")
-        .select("couriername"); 
+        .select("couriername", { distinct: true }); // Added distinct: true
 
       if (error) {
         console.error("Error fetching unique expedition names:", error);
         throw error;
       }
       
-      console.log("Raw data from tbl_expedisi.select('couriername'):", data); // NEW LOG
+      console.log("Raw distinct couriername data from tbl_expedisi:", data); // NEW LOG
+      console.log("Number of raw distinct couriername entries:", data?.length); // NEW LOG
 
       // Buat Set baru dan tambahkan 'ID' terlebih dahulu, lalu tambahkan nama kurir dari data
       const namesSet = new Set<string>();

@@ -241,7 +241,6 @@ const HistoryPage = () => {
     const dateOfDeletedResi = itemToDelete ? new Date(itemToDelete.created) : undefined;
     const expeditionOfDeletedResi = itemToDelete?.Keterangan || undefined; // Get expedition name
 
-    console.log(`Attempting to delete resi: ${resiToDelete}`);
     const { error } = await supabase
       .from("tbl_resi")
       .delete()
@@ -252,7 +251,6 @@ const HistoryPage = () => {
       console.error("Error deleting resi:", error);
     } else {
       showSuccess(`Resi ${resiToDelete} berhasil dihapus.`);
-      console.log(`Successfully deleted resi: ${resiToDelete}`);
 
       // Force refetch history data for the current date range
       await queryClient.refetchQueries({ queryKey: ["historyData", formattedStartDate, formattedEndDate] });
@@ -301,12 +299,9 @@ const HistoryPage = () => {
 
     const textToCopy = `${headerRow}\n${dataRows}`;
 
-    console.log("Attempting to copy data:", textToCopy);
-
     try {
       await navigator.clipboard.writeText(textToCopy);
       showSuccess(`Berhasil menyalin ${rowsToCopy.length} baris data!`);
-      console.log("Data copied successfully!");
     } catch (err: any) {
       showError(`Gagal menyalin data tabel: ${err.message || "Unknown error"}`);
       console.error("Failed to copy table data:", err);

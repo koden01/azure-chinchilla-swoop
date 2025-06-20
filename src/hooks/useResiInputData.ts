@@ -136,15 +136,22 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
         throw error;
       }
       
+      console.log("Raw data from tbl_expedisi.select('couriername'):", data); // NEW LOG
+
       // Buat Set baru dan tambahkan 'ID' terlebih dahulu, lalu tambahkan nama kurir dari data
       const namesSet = new Set<string>();
       namesSet.add("ID"); // Pastikan 'ID' selalu ada dan hanya sekali
       data.forEach((item: { couriername: string | null }) => {
         if (item.couriername) {
-          namesSet.add(item.couriername.trim().toUpperCase());
+          const normalizedName = item.couriername.trim().toUpperCase(); // Store normalized name
+          namesSet.add(normalizedName);
+          console.log(`Added '${normalizedName}' to set. Current set size: ${namesSet.size}`); // NEW LOG
+        } else {
+          console.log("Skipping null/empty couriername."); // NEW LOG
         }
       });
       
+      console.log("Final namesSet before converting to array:", Array.from(namesSet)); // NEW LOG
       const names = Array.from(namesSet);
       return names.sort((a, b) => a.localeCompare(b));
     },

@@ -2,7 +2,7 @@ import React from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, showError, dismissToast } from "@/utils/toast";
 import { beepSuccess, beepFailure, beepDouble } from "@/utils/audio";
-import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
+// import { useDebouncedCallback } from "@/hooks/useDebouncedCallback"; // DIHAPUS
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { format, subDays } from "date-fns";
@@ -92,8 +92,9 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
   const lastOptimisticIdRef = React.useRef<string | null>(null);
 
   // Menggunakan useDebouncedCallback untuk mendebounce pemanggilan fungsi invalidasi
-  const debouncedInvalidate = useDebouncedCallback(() => {
-    // console.log("Debounced invalidation triggered!"); // Removed
+  // const debouncedInvalidate = useDebouncedCallback(() => { // DIHAPUS
+  const invalidateAndRefetch = () => { // DIGANTI
+    console.log("Invalidating and refetching queries..."); // Added log
     invalidateDashboardQueries(queryClient, new Date(), expedition);
     // Invalidate historyData for the current day to ensure immediate update
     queryClient.invalidateQueries({ queryKey: ["historyData", formattedDate, formattedDate] });
@@ -101,7 +102,8 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
     queryClient.invalidateQueries({ queryKey: ["recentResiNumbersForValidation", twoDaysAgoFormatted, formattedDate] });
     // Invalidate the new allFlagNoExpedisiData query
     queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] });
-  }, 150);
+  };
+  // }, 150); // DIHAPUS
 
   const keepFocus = () => {
     setTimeout(() => {
@@ -361,7 +363,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       // Clear the optimistic ref as the operation was successfully added to IndexedDB
       lastOptimisticIdRef.current = null;
       
-      debouncedInvalidate(); // Invalidate dashboard queries and history in the background
+      invalidateAndRefetch(); // Invalidate dashboard queries and history immediately
 
     } catch (error: any) {
       console.error("Error during resi input (before IndexedDB save or during optimistic update):", error); // Log the full error object

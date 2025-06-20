@@ -135,7 +135,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
   const handleScanResi = async () => {
     dismissToast(); // Memanggil dismissToast tanpa argumen untuk menutup semua toast
     const currentResi = resiNumber.trim();
-    // Deklarasikan normalizedCurrentResi di sini agar dapat diakses di blok catch
     const normalizedCurrentResi = currentResi.toLowerCase().trim(); 
     setResiNumber("");
 
@@ -149,145 +148,106 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
 
     const currentOptimisticId = Date.now().toString() + Math.random().toString(36).substring(2, 9);
 
-    try {
-      let actualCourierName: string | null = null;
-      let validationMessage: string | null = null;
-      let validationStatus: "OK" | "DUPLICATE_RESI" | "MISMATCH_EXPEDISI" | "NOT_FOUND_EXPEDISI" = "OK";
+    let validationStatus: "OK" | "DUPLICATE_RESI" | "MISMATCH_EXPEDISI" | "NOT_FOUND_EXPEDISI" = "OK";
+    let validationMessage: string | null = null;
+    let actualCourierName: string | null = null;
+    let expedisiRecord: any = null;
 
-      // 1. Local Duplicate Check (using recentResiNumbersForValidation Set)
+    try {
+      // 1. Local Duplicate Check
       if (recentResiNumbersForValidation?.has(normalizedCurrentResi)) {
         validationStatus = 'DUPLICATE_RESI';
-        validationMessage = `DOUBLE! Resi ini sudah discan sebelumnya.`; // Simplified message as we don't have full details from Set
+        validationMessage = `DOUBLE! Resi ini sudah discan sebelumnya.`;
       }
 
-      if (validationStatus !== 'OK') {
-        showError(validationMessage || "Validasi gagal.");
-        try {
-          switch (validationStatus) {
-            case 'NOT_FOUND_EXPEDISI':
-            case 'MISMATCH_EXPEDISI':
-              beepFailure.play();
-              break;
-            case 'DUPLICATE_RESI':
-              beepDouble.play();
-              break;
-            default:
-              // Should not happen if validationStatus is correctly typed
-              beepFailure.play(); // Fallback
-              break;
-          }
-        } catch (e) {
-          console.error("Error playing beep sound:", e);
-        }
-        return; // Exit early if validation fails
-      }
+      // Only proceed with further checks if not already a duplicate
+      if (validationStatus === 'OK') {
+        // 2. Local Expedition Validation (and direct fetch fallback)
+        expedisiRecord = allExpedisiDataUnfiltered?.get(normalizedCurrentResi);
 
-      // 2. Local Expedition Validation (using allExpedisiDataUnfiltered cache, with fallback to allFlagNoExpedisiData, then direct fetch)
-      let expedisiRecord = allExpedisiDataUnfiltered?.get(normalizedCurrentResi);
-
-      // If not found in 3-day cache, try the comprehensive 'flag NO' cache
-      if (!expedisiRecord) {
-        expedisiRecord = allFlagNoExpedisiData?.get(normalizedCurrentResi);
-      }
-
-      // If still not found in any local cache, try a direct fetch from tbl_expedisi
-      if (!expedisiRecord) {
-          const { data: directExpedisiData, error: directExpedisiError } = await supabase
-              .from("tbl_expedisi")
-              .select("*")
-              .eq("resino", currentResi)
-              .single();
-
-          if (directExpedisiError && directExpedisiError.code !== 'PGRST116') { // PGRST116 means "no rows found"
-              throw directExpedisiError; // Re-throw other errors
-          }
-          
-          if (directExpedisiData) {
-              expedisiRecord = directExpedisiData;
-              // Optionally, update the cache with this fresh data to prevent future direct fetches for this item
-              // Update both 3-day cache and flag NO cache if applicable
-              queryClient.setQueryData(
-                  ["allExpedisiDataUnfiltered", twoDaysAgoFormatted, endOfTodayFormatted],
-                  (oldMap: Map<string, any> | undefined) => {
-                      const newMap = oldMap ? new Map(oldMap) : new Map();
-                      newMap.set(normalizedCurrentResi, directExpedisiData);
-                      return newMap;
-                  }
-              );
-              if (directExpedisiData.flag === 'NO') {
-                queryClient.setQueryData(
-                  ["allFlagNoExpedisiData"],
-                  (oldMap: Map<string, any> | undefined) => {
-                      const newMap = oldMap ? new Map(oldMap) : new Map();
-                      newMap.set(normalizedCurrentResi, directExpedisiData);
-                      return newMap;
-                  }
-                );
-              }
-          } else {
-              // console.log(`Resi ${currentResi} NOT found via direct fetch from tbl_expedisi.`); // Removed
-              validationStatus = 'NOT_FOUND_EXPEDISI';
-              validationMessage = 'Data tidak ada di database ekspedisi.';
-          }
-      }
-
-      if (validationStatus !== 'OK') {
-        showError(validationMessage || "Validasi gagal.");
-        try {
-          switch (validationStatus) {
-            case 'NOT_FOUND_EXPEDISI':
-            case 'MISMATCH_EXPEDISI':
-              beepFailure.play();
-              break;
-            case 'DUPLICATE_RESI':
-              beepDouble.play();
-              break;
-            default:
-              // Should not happen if validationStatus is correctly typed
-              beepFailure.play(); // Fallback
-              break;
-          }
-        } catch (e) {
-          console.error("Error playing beep sound:", e);
-        }
-        return; // Exit early if local expedition validation fails
-      }
-
-      // If expedisiRecord is still null here, it means NOT_FOUND_EXPEDISI was set.
-      // If it's not null, proceed with courier name validation.
-      if (expedition === 'ID') {
-        if (expedisiRecord) {
-          const normalizedExpedisiCourier = normalizeExpeditionName(expedisiRecord.couriername);
-          if (normalizedExpedisiCourier === 'ID') { // Use normalized name for comparison
-            actualCourierName = 'ID';
-          } else {
-            validationStatus = 'MISMATCH_EXPEDISI';
-            validationMessage = `Resi ini bukan milik ekspedisi ${expedition}, melainkan milik ekspedisi ${expedisiRecord.couriername}.`;
-          }
-        } else {
-          // This branch is reached if expedisiRecord was not found in cache AND not found via direct fetch.
-          // This means validationStatus is already 'NOT_FOUND_EXPEDISI'.
-          // However, for 'ID' expedition, if not found in tbl_expedisi, it can be ID_REKOMENDASI.
-          // This is a specific business rule.
-          actualCourierName = 'ID_REKOMENDASI';
-        }
-      } else { // For non-ID expeditions
+        // If not found in 3-day cache, try the comprehensive 'flag NO' cache
         if (!expedisiRecord) {
-          // This case should ideally be caught by the earlier direct fetch logic.
-          // If we reach here and expedisiRecord is null, it means it was truly not found.
-          validationStatus = 'NOT_FOUND_EXPEDISI';
-          validationMessage = 'Data tidak ada di database ekspedisi.';
-        } else {
-          const normalizedExpedisiCourier = normalizeExpeditionName(expedisiRecord.couriername);
-          if (normalizedExpedisiCourier !== expedition.toUpperCase()) { // Compare with normalized expedition
-            validationStatus = 'MISMATCH_EXPEDISI';
-            validationMessage = `Resi ini bukan milik ekspedisi ${expedition}, melainkan milik ekspedisi ${expedisiRecord.couriername}.`;
+          expedisiRecord = allFlagNoExpedisiData?.get(normalizedCurrentResi);
+        }
+
+        // If still not found in any local cache, try a direct fetch from tbl_expedisi
+        if (!expedisiRecord) {
+            const { data: directExpedisiData, error: directExpedisiError } = await supabase
+                .from("tbl_expedisi")
+                .select("*")
+                .eq("resino", currentResi)
+                .single();
+
+            if (directExpedisiError && directExpedisiError.code !== 'PGRST116') { // PGRST116 means "no rows found"
+                throw directExpedisiError; // Re-throw other errors
+            }
+            
+            if (directExpedisiData) {
+                expedisiRecord = directExpedisiData;
+                // Optionally, update the cache with this fresh data to prevent future direct fetches for this item
+                // Update both 3-day cache and flag NO cache if applicable
+                queryClient.setQueryData(
+                    ["allExpedisiDataUnfiltered", twoDaysAgoFormatted, endOfTodayFormatted],
+                    (oldMap: Map<string, any> | undefined) => {
+                        const newMap = oldMap ? new Map(oldMap) : new Map();
+                        newMap.set(normalizedCurrentResi, directExpedisiData);
+                        return newMap;
+                    }
+                );
+                if (directExpedisiData.flag === 'NO') {
+                  queryClient.setQueryData(
+                    ["allFlagNoExpedisiData"],
+                    (oldMap: Map<string, any> | undefined) => {
+                        const newMap = oldMap ? new Map(oldMap) : new Map();
+                        newMap.set(normalizedCurrentResi, directExpedisiData);
+                        return newMap;
+                    }
+                  );
+                }
+            } else {
+                validationStatus = 'NOT_FOUND_EXPEDISI';
+                validationMessage = 'Data tidak ada di database ekspedisi.';
+            }
+        }
+      }
+
+      // Only proceed with courier name check if previous checks passed
+      if (validationStatus === 'OK') {
+        if (expedition === 'ID') {
+          if (expedisiRecord) {
+            const normalizedExpedisiCourier = normalizeExpeditionName(expedisiRecord.couriername);
+            if (normalizedExpedisiCourier === 'ID') { // Use normalized name for comparison
+              actualCourierName = 'ID';
+            } else {
+              validationStatus = 'MISMATCH_EXPEDISI';
+              validationMessage = `Resi ini bukan milik ekspedisi ${expedition}, melainkan milik ekspedisi ${expedisiRecord.couriername}.`;
+            }
           } else {
-            actualCourierName = expedisiRecord.couriername;
+            // This branch is reached if expedisiRecord was not found in cache AND not found via direct fetch.
+            // This means validationStatus is already 'NOT_FOUND_EXPEDISI'.
+            // However, for 'ID' expedition, if not found in tbl_expedisi, it can be ID_REKOMENDASI.
+            // This is a specific business rule.
+            actualCourierName = 'ID_REKOMENDASI';
+          }
+        } else { // For non-ID expeditions
+          if (!expedisiRecord) {
+            // This case should ideally be caught by the earlier direct fetch logic.
+            // If we reach here and expedisiRecord is null, it means it was truly not found.
+            validationStatus = 'NOT_FOUND_EXPEDISI';
+            validationMessage = 'Data tidak ada di database ekspedisi.';
+          } else {
+            const normalizedExpedisiCourier = normalizeExpeditionName(expedisiRecord.couriername);
+            if (normalizedExpedisiCourier !== expedition.toUpperCase()) { // Compare with normalized expedition
+              validationStatus = 'MISMATCH_EXPEDISI';
+              validationMessage = `Resi ini bukan milik ekspedisi ${expedition}, melainkan milik ekspedisi ${expedisiRecord.couriername}.`;
+            } else {
+              actualCourierName = expedisiRecord.couriername;
+            }
           }
         }
       }
 
+      // --- FINAL ERROR HANDLING BLOCK ---
       if (validationStatus !== 'OK') {
         showError(validationMessage || "Validasi gagal.");
         try {
@@ -307,10 +267,10 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         } catch (e) {
           console.error("Error playing beep sound:", e);
         }
-        return; // Exit early if local expedition validation fails
+        return; // Exit after handling error
       }
 
-      // --- Optimistic UI Update ---
+      // --- If all OK, proceed with optimistic update and Supabase calls ---
       const newResiEntry: ResiExpedisiData = {
         Resi: currentResi,
         nokarung: selectedKarung,

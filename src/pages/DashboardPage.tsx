@@ -5,7 +5,7 @@ import ResiDetailModal from "@/components/ResiDetailModal";
 import DashboardDatePicker from "@/components/dashboard/DashboardDatePicker";
 import DashboardSummaryCards from "@/components/dashboard/DashboardSummaryCards";
 import DashboardExpeditionDetails from "@/components/dashboard/DashboardExpeditionDetails";
-import { useDashboardData } from "@/hooks/useDashboardData";
+import { useCombinedDashboardData } from "@/hooks/dashboard/useCombinedDashboardData"; // Updated import
 import { useDashboardModals } from "@/hooks/useDashboardModals";
 
 const DashboardPage: React.FC = () => {
@@ -31,7 +31,7 @@ const DashboardPage: React.FC = () => {
     expeditionSummaries,
     formattedDate,
     allExpedisiData,
-  } = useDashboardData(selectedDate);
+  } = useCombinedDashboardData(selectedDate); // Updated hook call
 
   const {
     isModalOpen,

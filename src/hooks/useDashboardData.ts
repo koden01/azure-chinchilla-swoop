@@ -65,7 +65,7 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
     },
     enabled: !!date,
   });
-  console.log("useDashboardData: Transaksi Hari Ini - isLoading:", isLoadingTransaksiHariIni, "data:", transaksiHariIni, "error:", transaksiHariIniError);
+  // console.log("useDashboardData: Transaksi Hari Ini - isLoading:", isLoadingTransaksiHariIni, "data:", transaksiHariIni, "error:", transaksiHariIniError);
 
 
   // Query for Total Scan (tbl_resi count where schedule = 'ontime' for selected date)
@@ -90,7 +90,7 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
     },
     enabled: !!date,
   });
-  console.log("useDashboardData: Total Scan - isLoading:", isLoadingTotalScan, "data:", totalScan, "error:", totalScanError);
+  // console.log("useDashboardData: Total Scan - isLoading:", isLoadingTotalScan, "data:", totalScan, "error:", totalScanError);
 
 
   // Query for ID Rekomendasi (tbl_resi count where Keterangan = 'ID_REKOMENDASI' for selected date)
@@ -115,7 +115,7 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
     },
     enabled: !!date,
   });
-  console.log("useDashboardData: ID Rekomendasi - isLoading:", isLoadingIdRekCount, "data:", idRekCount, "error:", idRekCountError);
+  // console.log("useDashboardData: ID Rekomendasi - isLoading:", isLoadingIdRekCount, "data:", idRekCount, "error:", idRekCountError);
 
 
   // Query for Belum Kirim (tbl_expedisi count where flag = 'NO' for selected date) using RPC
@@ -137,7 +137,7 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
     },
     enabled: !!date,
   });
-  console.log("useDashboardData: Belum Kirim - isLoading:", isLoadingBelumKirim, "data:", belumKirim, "error:", belumKirimError);
+  // console.log("useDashboardData: Belum Kirim - isLoading:", isLoadingBelumKirim, "data:", belumKirim, "error:", belumKirimError);
 
 
   // Query for Follow Up (tbl_expedisi count where flag = 'NO' and created date is NOT actual current date)
@@ -161,7 +161,7 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
     // This query should always be enabled as it's independent of the dashboard's selected date filter
     enabled: true,
   });
-  console.log("useDashboardData: Follow Up Flag No Count - isLoading:", isLoadingFollowUpFlagNoCount, "data:", followUpFlagNoCount, "error:", followUpFlagNoCountError);
+  // console.log("useDashboardData: Follow Up Flag No Count - isLoading:", isLoadingFollowUpFlagNoCount, "data:", followUpFlagNoCount, "error:", followUpFlagNoCountError);
 
 
   // Query for Scan Followup (tbl_resi count where schedule = 'late' for selected date)
@@ -186,7 +186,7 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
     },
     enabled: !!date,
   });
-  console.log("useDashboardData: Scan Followup Late Count - isLoading:", isLoadingScanFollowupLateCount, "data:", scanFollowupLateCount, "error:", scanFollowupLateCountError);
+  // console.log("useDashboardData: Scan Followup Late Count - isLoading:", isLoadingScanFollowupLateCount, "data:", scanFollowupLateCount, "error:", scanFollowupLateCountError);
 
 
   // Query for Batal (tbl_resi count where schedule = 'batal' for selected date)
@@ -211,7 +211,7 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
     },
     enabled: !!date,
   });
-  console.log("useDashboardData: Batal Count - isLoading:", isLoadingBatalCount, "data:", batalCount, "error:", batalCountError);
+  // console.log("useDashboardData: Batal Count - isLoading:", isLoadingBatalCount, "data:", batalCount, "error:", batalCountError);
 
 
   // Query for Follow Up Data (RPC call)
@@ -233,7 +233,7 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
     },
     enabled: !!date,
   });
-  console.log("useDashboardData: Follow Up Data - isLoading:", isLoadingFollowUp, "data length:", followUpData?.length, "error:", followUpDataError);
+  // console.log("useDashboardData: Follow Up Data - isLoading:", isLoadingFollowUp, "data length:", followUpData?.length, "error:", followUpDataError);
 
 
   // Fetch tbl_expedisi data for the last 3 days to build a comprehensive resi-to-courier map for local validation
@@ -258,7 +258,7 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
     staleTime: 1000 * 60 * 60, // Changed to 60 minutes
     gcTime: 1000 * 60 * 60 * 24 * 2, // Garbage collect after 2 days
   });
-  console.log("useDashboardData: All Expedisi Data Unfiltered - isLoading:", isLoadingAllExpedisiUnfiltered, "data size:", allExpedisiDataUnfiltered?.size, "error:", allExpedisiDataUnfilteredError);
+  // console.log("useDashboardData: All Expedisi Data Unfiltered - isLoading:", isLoadingAllExpedisiUnfiltered, "data size:", allExpedisiDataUnfiltered?.size, "error:", allExpedisiDataUnfilteredError);
 
 
   // NEW: Fetch tbl_expedisi data specifically for the selected date using RPC
@@ -280,7 +280,7 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
     },
     enabled: !!date,
   });
-  console.log("useDashboardData: Expedisi Data For Selected Date - isLoading:", isLoadingExpedisiDataForSelectedDate, "data length:", expedisiDataForSelectedDate?.length, "error:", expedisiDataForSelectedDateError);
+  // console.log("useDashboardData: Expedisi Data For Selected Date - isLoading:", isLoadingExpedisiDataForSelectedDate, "data length:", expedisiDataForSelectedDate?.length, "error:", expedisiDataForSelectedDateError);
 
 
   // Fetch tbl_resi data for the selected date range (paginated)
@@ -296,7 +296,7 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
     },
     enabled: !!date,
   });
-  console.log("useDashboardData: All Resi Data - isLoading:", isLoadingAllResi, "data length:", allResiData?.length, "error:", allResiDataError);
+  // console.log("useDashboardData: All Resi Data - isLoading:", isLoadingAllResi, "data length:", allResiData?.length, "error:", allResiDataError);
 
 
   // Process data to create expedition summaries

@@ -42,7 +42,7 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
 
   // Calculate date range for 2 days back for allExpedisiDataUnfiltered
   const today = new Date();
-  const twoDaysAgo = subDays(today, 1); // Covers today and yesterday
+  const twoDaysAgo = subDays(today, 2); // Covers today, yesterday, and the day before yesterday
   const twoDaysAgoFormatted = format(twoDaysAgo, "yyyy-MM-dd");
   const endOfTodayFormatted = format(today, "yyyy-MM-dd"); // For the end of the range key
 
@@ -236,15 +236,15 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
   console.log("useDashboardData: Follow Up Data - isLoading:", isLoadingFollowUp, "data length:", followUpData?.length, "error:", followUpDataError);
 
 
-  // Fetch tbl_expedisi data for the last 2 days to build a comprehensive resi-to-courier map for local validation
+  // Fetch tbl_expedisi data for the last 3 days to build a comprehensive resi-to-courier map for local validation
   const { data: allExpedisiDataUnfiltered, isLoading: isLoadingAllExpedisiUnfiltered, error: allExpedisiDataUnfilteredError } = useQuery<Map<string, any>>({ // Changed type to Map
-    queryKey: ["allExpedisiDataUnfiltered", twoDaysAgoFormatted, endOfTodayFormatted], // New query key with 2-day range
+    queryKey: ["allExpedisiDataUnfiltered", twoDaysAgoFormatted, endOfTodayFormatted], // New query key with 3-day range
     queryFn: async () => {
       console.log("QueryFn: allExpedisiDataUnfiltered");
-      console.log(`Fetching allExpedisiDataUnfiltered (paginated) for last 2 days: ${twoDaysAgoFormatted} to ${endOfTodayFormatted} using fetchAllDataPaginated.`);
-      // Pass the 2-day range to fetchAllDataPaginated
+      console.log(`Fetching allExpedisiDataUnfiltered (paginated) for last 3 days: ${twoDaysAgoFormatted} to ${endOfTodayFormatted} using fetchAllDataPaginated.`);
+      // Pass the 3-day range to fetchAllDataPaginated
       const data = await fetchAllDataPaginated("tbl_expedisi", "created", twoDaysAgo, today);
-      console.log("All Expedisi Data (unfiltered, paginated, 2-day range):", data.length, "items");
+      console.log("All Expedisi Data (unfiltered, paginated, 3-day range):", data.length, "items");
       // Convert array to Map for faster lookups
       const expedisiMap = new Map<string, any>();
       data.forEach(item => {
@@ -255,7 +255,7 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
       return expedisiMap;
     },
     enabled: true, // Always enabled for local validation
-    staleTime: 1000 * 60 * 5, // Changed to 5 minutes as requested
+    staleTime: 1000 * 60 * 5, // Keep this data fresh for 5 minutes
     gcTime: 1000 * 60 * 60 * 24 * 2, // Garbage collect after 2 days
   });
   console.log("useDashboardData: All Expedisi Data Unfiltered - isLoading:", isLoadingAllExpedisiUnfiltered, "data size:", allExpedisiDataUnfiltered?.size, "error:", allExpedisiDataUnfilteredError);

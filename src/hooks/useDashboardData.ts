@@ -50,9 +50,9 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
   const { data: transaksiHariIni, isLoading: isLoadingTransaksiHariIni, error: transaksiHariIniError } = useQuery<number>({
     queryKey: ["transaksiHariIni", formattedDate],
     queryFn: async () => {
-      console.log("QueryFn: transaksiHariIni");
+      // console.log("QueryFn: transaksiHariIni"); // Removed
       if (!date) return 0;
-      console.log(`Fetching transaksiHariIni count for date: ${formattedDate} using RPC.`);
+      // console.log(`Fetching transaksiHariIni count for date: ${formattedDate} using RPC.`); // Removed
       const { data: countData, error } = await supabase.rpc("get_transaksi_hari_ini_count", {
         p_selected_date: formattedDate,
       });
@@ -71,9 +71,9 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
   const { data: totalScan, isLoading: isLoadingTotalScan, error: totalScanError } = useQuery<number>({
     queryKey: ["totalScan", formattedDate],
     queryFn: async () => {
-      console.log("QueryFn: totalScan");
+      // console.log("QueryFn: totalScan"); // Removed
       if (!date) return 0;
-      console.log(`Fetching totalScan for date: ${formattedDate}`);
+      // console.log(`Fetching totalScan for date: ${formattedDate}`); // Removed
       const { count, error } = await supabase
         .from("tbl_resi")
         .select("*", { count: "exact" })
@@ -95,9 +95,9 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
   const { data: idRekCount, isLoading: isLoadingIdRekCount, error: idRekCountError } = useQuery<number>({
     queryKey: ["idRekCount", formattedDate],
     queryFn: async () => {
-      console.log("QueryFn: idRekCount");
+      // console.log("QueryFn: idRekCount"); // Removed
       if (!date) return 0;
-      console.log(`Fetching idRekCount for date: ${formattedDate}`);
+      // console.log(`Fetching idRekCount for date: ${formattedDate}`); // Removed
       const { count, error } = await supabase
         .from("tbl_resi")
         .select("*", { count: "exact" })
@@ -119,9 +119,9 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
   const { data: belumKirim, isLoading: isLoadingBelumKirim, error: belumKirimError } = useQuery<number>({
     queryKey: ["belumKirim", formattedDate],
     queryFn: async () => {
-      console.log("QueryFn: belumKirim");
+      // console.log("QueryFn: belumKirim"); // Removed
       if (!date) return 0;
-      console.log(`Fetching belumKirim count for date: ${formattedDate} using RPC.`);
+      // console.log(`Fetching belumKirim count for date: ${formattedDate} using RPC.`); // Removed
       const { data: countData, error } = await supabase.rpc("get_belum_kirim_count", {
         p_selected_date: formattedDate,
       });
@@ -140,10 +140,10 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
   const { data: followUpFlagNoCount, isLoading: isLoadingFollowUpFlagNoCount, error: followUpFlagNoCountError } = useQuery<number>({
     queryKey: ["followUpFlagNoCount", format(new Date(), 'yyyy-MM-dd')], // Query key based on actual current date
     queryFn: async () => {
-      console.log("QueryFn: followUpFlagNoCount");
+      // console.log("QueryFn: followUpFlagNoCount"); // Removed
       // Always use the actual current date for this specific query
       const actualCurrentFormattedDate = format(new Date(), 'yyyy-MM-dd');
-      console.log(`Fetching followUpFlagNoCount for actual current date: ${actualCurrentFormattedDate}`);
+      // console.log(`Fetching followUpFlagNoCount for actual current date: ${actualCurrentFormattedDate}`); // Removed
       const { data: countData, error: rpcError } = await supabase.rpc("get_flag_no_except_today_count", {
         p_selected_date: actualCurrentFormattedDate,
       });
@@ -163,9 +163,9 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
   const { data: scanFollowupLateCount, isLoading: isLoadingScanFollowupLateCount, error: scanFollowupLateCountError } = useQuery<number>({
     queryKey: ["scanFollowupLateCount", formattedDate],
     queryFn: async () => {
-      console.log("QueryFn: scanFollowupLateCount");
+      // console.log("QueryFn: scanFollowupLateCount"); // Removed
       if (!date) return 0;
-      console.log(`Fetching scanFollowupLateCount for date: ${formattedDate}`);
+      // console.log(`Fetching scanFollowupLateCount for date: ${formattedDate}`); // Removed
       const { count, error } = await supabase
         .from("tbl_resi")
         .select("*", { count: "exact" })
@@ -187,9 +187,9 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
   const { data: batalCount, isLoading: isLoadingBatalCount, error: batalCountError } = useQuery<number>({
     queryKey: ["batalCount", formattedDate],
     queryFn: async () => {
-      console.log("QueryFn: batalCount");
+      // console.log("QueryFn: batalCount"); // Removed
       if (!date) return 0;
-      console.log(`Fetching batalCount for date: ${formattedDate}`);
+      // console.log(`Fetching batalCount for date: ${formattedDate}`); // Removed
       const { count, error } = await supabase
         .from("tbl_resi")
         .select("*", { count: "exact" })
@@ -211,9 +211,9 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
   const { data: followUpData, isLoading: isLoadingFollowUp, error: followUpDataError } = useQuery<any[]>({
     queryKey: ["followUpData", formattedDate],
     queryFn: async () => {
-      console.log("QueryFn: followUpData");
+      // console.log("QueryFn: followUpData"); // Removed
       if (!date) return [];
-      console.log(`Fetching followUpData for date: ${formattedDate}`);
+      // console.log(`Fetching followUpData for date: ${formattedDate}`); // Removed
       const { data, error } = await supabase.rpc("get_scan_follow_up", {
         selected_date: formattedDate,
       });
@@ -232,8 +232,8 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
   const { data: allExpedisiDataUnfiltered, isLoading: isLoadingAllExpedisiUnfiltered, error: allExpedisiDataUnfilteredError } = useQuery<Map<string, any>>({ // Changed type to Map
     queryKey: ["allExpedisiDataUnfiltered", twoDaysAgoFormatted, endOfTodayFormatted], // New query key with 3-day range
     queryFn: async () => {
-      console.log("QueryFn: allExpedisiDataUnfiltered");
-      console.log(`Fetching allExpedisiDataUnfiltered (paginated) for last 3 days: ${twoDaysAgoFormatted} to ${endOfTodayFormatted} using fetchAllDataPaginated.`);
+      // console.log("QueryFn: allExpedisiDataUnfiltered"); // Removed
+      // console.log(`Fetching allExpedisiDataUnfiltered (paginated) for last 3 days: ${twoDaysAgoFormatted} to ${endOfTodayFormatted} using fetchAllDataPaginated.`); // Removed
       // Pass the 3-day range to fetchAllDataPaginated
       const data = await fetchAllDataPaginated("tbl_expedisi", "created", twoDaysAgo, today);
       console.log("All Expedisi Data (unfiltered, paginated, 3-day range):", data.length, "items");
@@ -256,9 +256,9 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
   const { data: expedisiDataForSelectedDate, isLoading: isLoadingExpedisiDataForSelectedDate, error: expedisiDataForSelectedDateError } = useQuery<any[]>({
     queryKey: ["expedisiDataForSelectedDate", formattedDate],
     queryFn: async () => {
-      console.log("QueryFn: expedisiDataForSelectedDate");
+      // console.log("QueryFn: expedisiDataForSelectedDate"); // Removed
       if (!date) return [];
-      console.log(`RPC Call: get_transaksi_hari_ini_records for date: ${formattedDate}`);
+      // console.log(`RPC Call: get_transaksi_hari_ini_records for date: ${formattedDate}`); // Removed
       const { data, error } = await supabase.rpc("get_transaksi_hari_ini_records", {
         p_selected_date: formattedDate,
       });
@@ -277,9 +277,9 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
   const { data: allResiData, isLoading: isLoadingAllResi, error: allResiDataError } = useQuery<any[]>({
     queryKey: ["allResiData", formattedDate],
     queryFn: async () => {
-      console.log("QueryFn: allResiData");
+      // console.log("QueryFn: allResiData"); // Removed
       if (!date) return [];
-      console.log(`Fetching allResiData for date (paginated): ${formattedDate} using fetchAllDataPaginated.`);
+      // console.log(`Fetching allResiData for date (paginated): ${formattedDate} using fetchAllDataPaginated.`); // Removed
       const data = await fetchAllDataPaginated("tbl_resi", "created", date, date); // Use the new date filtering logic
       console.log("All Resi Data (filtered by selected date, paginated):", data.length, "items");
       return data;

@@ -27,15 +27,15 @@ const ExpeditionDetailCard: React.FC<ExpeditionDetailCardProps> = React.memo(({
   totalScanFollowUp,
 }) => {
   // CRITICAL DEBUG LOG: Check exact props received by this card
-  console.log(`--- ExpeditionDetailCard DEBUG for ${name} ---`);
-  console.log(`  totalTransaksi: ${totalTransaksi}`);
-  console.log(`  totalScan: ${totalScan}`);
-  console.log(`  sisa: ${sisa}`);
-  console.log(`  jumlahKarung: ${jumlahKarung}`);
-  console.log(`  idRekomendasi: ${idRekomendasi}`);
-  console.log(`  totalBatal: ${totalBatal}`);
-  console.log(`  totalScanFollowUp: ${totalScanFollowUp}`);
-  console.log(`---------------------------------------------`);
+  // console.log(`--- ExpeditionDetailCard DEBUG for ${name} ---`); // Removed
+  // console.log(`  totalTransaksi: ${totalTransaksi}`); // Removed
+  // console.log(`  totalScan: ${totalScan}`); // Removed
+  // console.log(`  sisa: ${sisa}`); // Removed
+  // console.log(`  jumlahKarung: ${jumlahKarung}`); // Removed
+  // console.log(`  idRekomendasi: ${idRekomendasi}`); // Removed
+  // console.log(`  totalBatal: ${totalBatal}`); // Removed
+  // console.log(`  totalScanFollowUp: ${totalScanFollowUp}`); // Removed
+  // console.log(`---------------------------------------------`); // Removed
 
   const showIdRekomendasi = name === "ID" && idRekomendasi !== undefined;
 

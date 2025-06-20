@@ -232,7 +232,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
             .single();
 
         if (directExpedisiError && directExpedisiError.code !== 'PGRST116') { // PGRST116 means "no rows found"
-            throw directGExpedisiError; // Re-throw other errors
+            throw directExpedisiError; // Re-throw other errors
         }
         
         if (directExpedisiData) {

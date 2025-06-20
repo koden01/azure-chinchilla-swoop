@@ -1,5 +1,5 @@
 import React from "react";
-import { supabase } from "@/integrations/supabase/client"; // Removed SUPABASE_PROJECT_ID
+import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, showError, dismissToast } from "@/utils/toast";
 import { beepSuccess, beepFailure, beepDouble } from "@/utils/audio";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
@@ -7,7 +7,7 @@ import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { format, subDays } from "date-fns";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
-import { normalizeExpeditionName } from "@/utils/expeditionUtils"; // Import new utility
+import { normalizeExpeditionName } from "@/utils/expeditionUtils";
 
 // Define the type for ResiExpedisiData to match useResiInputData
 interface ResiExpedisiData {
@@ -40,7 +40,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
 
   // Query to fetch tbl_resi data for the last 2 days for local duplicate validation
   // Now returns a Set<string> for O(1) lookups
-  const { data: recentResiNumbersForValidation } } = useQuery<Set<string>>({ // Removed unused isLoading: isLoadingRecentResiDataForValidation
+  const { data: recentResiNumbersForValidation } = useQuery<Set<string>>({ // Fixed: Removed extra '}' here
     queryKey: ["recentResiNumbersForValidation", twoDaysAgoFormatted, formattedDate],
     queryFn: async () => {
       const data = await fetchAllDataPaginated(
@@ -59,7 +59,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
   });
 
   // NEW: Query to fetch ALL tbl_expedisi data with flag = 'NO' for comprehensive local validation
-  const { data: allFlagNoExpedisiData } = useQuery<Map<string, any>>({ // Renamed isLoading: _isLoadingAllFlagNoExpedisiData
+  const { data: allFlagNoExpedisiData } = useQuery<Map<string, any>>({
     queryKey: ["allFlagNoExpedisiData"],
     queryFn: async () => {
       const data = await fetchAllDataPaginated(
@@ -331,7 +331,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       // --- End Optimistic UI Update ---
 
       // --- Direct Supabase Insert/Update using upsert ---
-      const { data: _upsertData, error: upsertError } = await supabase // Renamed upsertData to _upsertData
+      const { data: _upsertData, error: upsertError } = await supabase
         .from("tbl_resi")
         .upsert({
           Resi: currentResi,

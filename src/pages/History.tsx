@@ -37,6 +37,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { showSuccess, showError } from "@/utils/toast";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
 import { useDebounce } from "@/hooks/useDebounce";
+import { getKeteranganBadgeClasses } from "@/utils/expeditionUtils"; // Import new utility
 
 interface HistoryData {
   Resi: string;
@@ -420,10 +421,7 @@ const HistoryPage = () => {
                       <TableCell>
                         <span className={cn(
                           "px-2 py-1 rounded-full text-xs font-semibold",
-                          data.Keterangan === "DATA" && "bg-blue-100 text-blue-800",
-                          data.Keterangan === "MASUK" && "bg-green-100 text-green-800",
-                          data.Keterangan === "BATAL" && "bg-orange-100 text-orange-800",
-                          !["DATA", "MASUK", "BATAL"].includes(data.Keterangan || "") && "bg-gray-100 text-gray-800"
+                          getKeteranganBadgeClasses(data.Keterangan) // Use the new utility function
                         )}>
                           {data.Keterangan}
                         </span>

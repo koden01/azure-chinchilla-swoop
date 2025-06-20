@@ -148,7 +148,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       const names = Array.from(namesSet);
       return names.sort((a, b) => a.localeCompare(b));
     },
-    staleTime: 1000 * 60 * 60, // Cache for 1 hour, these don't change often
+    staleTime: 1000 * 60 * 60 * 24, // Changed to 24 hours
     gcTime: 1000 * 60 * 60 * 24, // Garbage collect after 24 hours
   });
 

@@ -92,7 +92,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
 
   // Menggunakan useDebouncedCallback untuk mendebounce pemanggilan fungsi invalidasi
   const debouncedInvalidate = useDebouncedCallback(() => {
-    console.log("Debounced invalidation triggered!");
+    // console.log("Debounced invalidation triggered!"); // Removed
     invalidateDashboardQueries(queryClient, new Date(), expedition);
     // Invalidate historyData for the current day to ensure immediate update
     queryClient.invalidateQueries({ queryKey: ["historyData", formattedDate, formattedDate] });
@@ -213,7 +213,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
                 );
               }
           } else {
-              console.log(`Resi ${currentResi} NOT found via direct fetch from tbl_expedisi.`);
+              // console.log(`Resi ${currentResi} NOT found via direct fetch from tbl_expedisi.`); // Removed
               validationStatus = 'NOT_FOUND_EXPEDISI';
               validationMessage = 'Data tidak ada di database ekspedisi.';
           }

@@ -65,7 +65,6 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
     },
     enabled: !!date,
   });
-  // console.log("useDashboardData: Transaksi Hari Ini - isLoading:", isLoadingTransaksiHariIni, "data:", transaksiHariIni, "error:", transaksiHariIniError);
 
 
   // Query for Total Scan (tbl_resi count where schedule = 'ontime' for selected date)
@@ -90,7 +89,6 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
     },
     enabled: !!date,
   });
-  // console.log("useDashboardData: Total Scan - isLoading:", isLoadingTotalScan, "data:", totalScan, "error:", totalScanError);
 
 
   // Query for ID Rekomendasi (tbl_resi count where Keterangan = 'ID_REKOMENDASI' for selected date)
@@ -115,7 +113,6 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
     },
     enabled: !!date,
   });
-  // console.log("useDashboardData: ID Rekomendasi - isLoading:", isLoadingIdRekCount, "data:", idRekCount, "error:", idRekCountError);
 
 
   // Query for Belum Kirim (tbl_expedisi count where flag = 'NO' for selected date) using RPC
@@ -137,7 +134,6 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
     },
     enabled: !!date,
   });
-  // console.log("useDashboardData: Belum Kirim - isLoading:", isLoadingBelumKirim, "data:", belumKirim, "error:", belumKirimError);
 
 
   // Query for Follow Up (tbl_expedisi count where flag = 'NO' and created date is NOT actual current date)
@@ -161,7 +157,6 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
     // This query should always be enabled as it's independent of the dashboard's selected date filter
     enabled: true,
   });
-  // console.log("useDashboardData: Follow Up Flag No Count - isLoading:", isLoadingFollowUpFlagNoCount, "data:", followUpFlagNoCount, "error:", followUpFlagNoCountError);
 
 
   // Query for Scan Followup (tbl_resi count where schedule = 'late' for selected date)
@@ -186,7 +181,6 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
     },
     enabled: !!date,
   });
-  // console.log("useDashboardData: Scan Followup Late Count - isLoading:", isLoadingScanFollowupLateCount, "data:", scanFollowupLateCount, "error:", scanFollowupLateCountError);
 
 
   // Query for Batal (tbl_resi count where schedule = 'batal' for selected date)
@@ -211,7 +205,6 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
     },
     enabled: !!date,
   });
-  // console.log("useDashboardData: Batal Count - isLoading:", isLoadingBatalCount, "data:", batalCount, "error:", batalCountError);
 
 
   // Query for Follow Up Data (RPC call)
@@ -233,7 +226,6 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
     },
     enabled: !!date,
   });
-  // console.log("useDashboardData: Follow Up Data - isLoading:", isLoadingFollowUp, "data length:", followUpData?.length, "error:", followUpDataError);
 
 
   // Fetch tbl_expedisi data for the last 3 days to build a comprehensive resi-to-courier map for local validation
@@ -258,7 +250,6 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
     staleTime: 1000 * 60 * 60, // Changed to 60 minutes
     gcTime: 1000 * 60 * 60 * 24 * 2, // Garbage collect after 2 days
   });
-  // console.log("useDashboardData: All Expedisi Data Unfiltered - isLoading:", isLoadingAllExpedisiUnfiltered, "data size:", allExpedisiDataUnfiltered?.size, "error:", allExpedisiDataUnfilteredError);
 
 
   // NEW: Fetch tbl_expedisi data specifically for the selected date using RPC
@@ -280,7 +271,6 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
     },
     enabled: !!date,
   });
-  // console.log("useDashboardData: Expedisi Data For Selected Date - isLoading:", isLoadingExpedisiDataForSelectedDate, "data length:", expedisiDataForSelectedDate?.length, "error:", expedisiDataForSelectedDateError);
 
 
   // Fetch tbl_resi data for the selected date range (paginated)
@@ -296,32 +286,31 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
     },
     enabled: !!date,
   });
-  // console.log("useDashboardData: All Resi Data - isLoading:", isLoadingAllResi, "data length:", allResiData?.length, "error:", allResiDataError);
 
 
   // Process data to create expedition summaries
   useEffect(() => {
-    console.log("--- useEffect for expeditionSummaries calculation started ---");
-    console.log("Dependencies status:");
-    console.log(`  isLoadingAllExpedisiUnfiltered: ${isLoadingAllExpedisiUnfiltered}`);
-    console.log(`  isLoadingExpedisiDataForSelectedDate: ${isLoadingExpedisiDataForSelectedDate}`);
-    console.log(`  isLoadingAllResi: ${isLoadingAllResi}`);
-    console.log(`  allExpedisiDataUnfiltered: ${allExpedisiDataUnfiltered ? 'Loaded (' + allExpedisiDataUnfiltered.size + ' items)' : 'Not Loaded'}`); // Changed .length to .size
-    console.log(`  expedisiDataForSelectedDate: ${expedisiDataForSelectedDate ? 'Loaded (' + expedisiDataForSelectedDate.length + ' items)' : 'Not Loaded'}`);
-    console.log(`  allResiData: ${allResiData ? 'Loaded (' + allResiData.length + ' items)' : 'Not Loaded'}`);
-    console.log(`  date: ${date ? date.toISOString() : 'null'}`);
+    // console.log("--- useEffect for expeditionSummaries calculation started ---"); // Removed
+    // console.log("Dependencies status:"); // Removed
+    // console.log(`  isLoadingAllExpedisiUnfiltered: ${isLoadingAllExpedisiUnfiltered}`); // Removed
+    // console.log(`  isLoadingExpedisiDataForSelectedDate: ${isLoadingExpedisiDataForSelectedDate}`); // Removed
+    // console.log(`  isLoadingAllResi: ${isLoadingAllResi}`); // Removed
+    // console.log(`  allExpedisiDataUnfiltered: ${allExpedisiDataUnfiltered ? 'Loaded (' + allExpedisiDataUnfiltered.size + ' items)' : 'Not Loaded'}`); // Removed
+    // console.log(`  expedisiDataForSelectedDate: ${expedisiDataForSelectedDate ? 'Loaded (' + expedisiDataForSelectedDate.length + ' items)' : 'Not Loaded'}`); // Removed
+    // console.log(`  allResiData: ${allResiData ? 'Loaded (' + allResiData.length + ' items)' : 'Not Loaded'}`); // Removed
+    // console.log(`  date: ${date ? date.toISOString() : 'null'}`); // Removed
 
 
     if (isLoadingAllExpedisiUnfiltered || isLoadingExpedisiDataForSelectedDate || isLoadingAllResi || !allExpedisiDataUnfiltered || !expedisiDataForSelectedDate || !allResiData || !date) {
       setExpeditionSummaries([]);
-      console.log("Expedition summaries: Dependencies not ready or date is null. Setting summaries to empty.");
+      // console.log("Expedition summaries: Dependencies not ready or date is null. Setting summaries to empty."); // Removed
       return;
     }
 
-    console.log("Starting detailed expedition summaries calculation...");
-    console.log("allExpedisiDataUnfiltered for resiToExpeditionMap (size):", allExpedisiDataUnfiltered.size); // Changed .length to .size
-    console.log("expedisiDataForSelectedDate for totalTransaksi/sisa (count):", expedisiDataForSelectedDate.length);
-    console.log("allResiData for other counts (count, already date-filtered):", allResiData.length);
+    // console.log("Starting detailed expedition summaries calculation..."); // Removed
+    // console.log("allExpedisiDataUnfiltered for resiToExpeditionMap (size):", allExpedisiDataUnfiltered.size); // Removed
+    // console.log("expedisiDataForSelectedDate for totalTransaksi/sisa (count):", expedisiDataForSelectedDate.length); // Removed
+    // console.log("allResiData for other counts (count, already date-filtered):", allResiData.length); // Removed
 
     // Build a comprehensive map from all expedisi data (unfiltered)
     const resiToExpeditionMap = new Map<string, string>();
@@ -332,7 +321,7 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
         resiToExpeditionMap.set(normalizedResino, exp.couriername?.trim().toUpperCase() || ""); // Normalize couriername here too
       }
     });
-    console.log("resiToExpeditionMap (comprehensive, size):", resiToExpeditionMap.size);
+    // console.log("resiToExpeditionMap (comprehensive, size):", resiToExpeditionMap.size); // Removed
 
     const summaries: { [key: string]: any } = {};
 
@@ -352,7 +341,7 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
         totalScanFollowUp: 0, 
       };
     });
-    console.log("Initial summaries structure (keys):", Object.keys(summaries));
+    // console.log("Initial summaries structure (keys):", Object.keys(summaries)); // Removed
 
     // --- START: Debugging for discrepancy ---
     const uncountedExpedisiRecords: any[] = [];
@@ -376,8 +365,8 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
         uncountedExpedisiRecords.push(exp); // Add to uncounted list
       }
     });
-    console.log("Summaries after processing expedisiDataForSelectedDate:", summaries);
-    console.log("Uncounted expedisi records (due to missing/unrecognized couriername):", uncountedExpedisiRecords);
+    // console.log("Summaries after processing expedisiDataForSelectedDate:", summaries); // Removed
+    // console.log("Uncounted expedisi records (due to missing/unrecognized couriername):", uncountedExpedisiRecords); // Removed
 
 
     // Process tbl_resi data (already filtered by selected date)
@@ -444,8 +433,8 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
     }));
 
     setExpeditionSummaries(finalSummaries);
-    console.log("Final Expedition Summaries:", finalSummaries);
-    console.log("--- useEffect for expeditionSummaries calculation finished ---");
+    // console.log("Final Expedition Summaries:", finalSummaries); // Removed
+    // console.log("--- useEffect for expeditionSummaries calculation finished ---"); // Removed
   }, [date, allExpedisiDataUnfiltered, expedisiDataForSelectedDate, allResiData, isLoadingAllExpedisiUnfiltered, isLoadingExpedisiDataForSelectedDate, isLoadingAllResi]);
 
   // Debounced function to invalidate dashboard queries
@@ -456,7 +445,7 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
 
   // Real-time subscription for dashboard data
   useEffect(() => {
-    console.log("Setting up Supabase Realtime subscription for Dashboard data...");
+    // console.log("Setting up Supabase Realtime subscription for Dashboard data..."); // Removed
 
     const handleRealtimeEvent = (payload: any) => {
       console.log("Realtime event received for Dashboard:", payload);
@@ -481,7 +470,7 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
     };
   }, [debouncedInvalidateDashboardQueries]);
 
-  console.log("useDashboardData returning expeditionSummaries:", expeditionSummaries); // Debug log
+  // console.log("useDashboardData returning expeditionSummaries:", expeditionSummaries); // Removed
 
   return {
     transaksiHariIni,

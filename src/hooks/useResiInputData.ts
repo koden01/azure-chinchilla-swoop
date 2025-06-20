@@ -118,8 +118,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tbl_expedisi")
-        .select("couriername")
-        .distinct(); // Corrected: Call distinct as a method
+        .select("couriername"); // Fetch all couriername values, then process distinctness in JS
 
       if (error) {
         console.error("Error fetching unique expedition names:", error);

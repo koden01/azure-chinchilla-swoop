@@ -1,12 +1,10 @@
 import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getPendingOperations, deletePendingOperation, updatePendingOperation } from '@/integrations/indexeddb/pendingOperations';
-// import type { PendingOperation } from '@/integrations/indexeddb/pendingOperations'; // Dihapus karena tidak digunakan secara langsung di sini
 import { supabase } from '@/integrations/supabase/client';
 import { showError, showSuccess } from '@/utils/toast';
 import { invalidateDashboardQueries } from '@/utils/dashboardQueryInvalidation';
 import { format } from 'date-fns';
-// import { normalizeExpeditionName } from '@/utils/expeditionUtils'; // Import normalizeExpeditionName - DIHAPUS
 
 const SYNC_INTERVAL_MS = 1000 * 60; // Sync every 1 minute
 const MAX_RETRIES = 5; // Max attempts before giving up on an operation
@@ -162,6 +160,11 @@ export const useBackgroundSync = () => {
         queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] }); // Invalidate the flag NO cache
         queryClient.invalidateQueries({ queryKey: ["allExpedisiDataUnfiltered"] }); // Invalidate the 3-day expedisi cache
         queryClient.invalidateQueries({ queryKey: ["recentResiNumbersForValidation"] }); // Invalidate recent resi numbers
+        
+        // Manually refetch karungSummary and lastKarung for the current expedition and date
+        // This ensures the Input page updates immediately after a successful scan sync
+        queryClient.refetchQueries({ queryKey: ["karungSummary"] });
+        queryClient.refetchQueries({ queryKey: ["lastKarung"] });
       }
       if (operationsFailed > 0) {
         showError(`Gagal menyinkronkan ${operationsFailed} operasi. Akan mencoba lagi nanti.`);

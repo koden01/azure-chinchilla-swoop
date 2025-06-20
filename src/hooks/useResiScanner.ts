@@ -89,16 +89,14 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
 
   const lastOptimisticIdRef = React.useRef<string | null>(null);
 
-  const invalidateAndRefetch = () => {
-    console.log("Invalidating and refetching queries...");
-    invalidateDashboardQueries(queryClient, new Date(), expedition);
-    // Invalidate historyData for the current day to ensure immediate update
-    queryClient.invalidateQueries({ queryKey: ["historyData", formattedDate, formattedDate] });
-    // Invalidate the recentResiNumbersForValidation query
-    queryClient.invalidateQueries({ queryKey: ["recentResiNumbersForValidation", twoDaysAgoFormatted, formattedDate] });
-    // Invalidate the new allFlagNoExpedisiData query
-    queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] });
-  };
+  // Removed invalidateAndRefetch function as it will be handled by useBackgroundSync
+  // const invalidateAndRefetch = () => {
+  //   console.log("Invalidating and refetching queries...");
+  //   invalidateDashboardQueries(queryClient, new Date(), expedition);
+  //   queryClient.invalidateQueries({ queryKey: ["historyData", formattedDate, formattedDate] });
+  //   queryClient.invalidateQueries({ queryKey: ["recentResiNumbersForValidation", twoDaysAgoFormatted, formattedDate] });
+  //   queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] });
+  // };
 
   const keepFocus = () => {
     setTimeout(() => {
@@ -384,7 +382,8 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       // Clear the optimistic ref as the operation was successfully added to IndexedDB
       lastOptimisticIdRef.current = null;
       
-      invalidateAndRefetch(); // Invalidate dashboard queries and history immediately
+      // Removed immediate invalidation. Rely on useBackgroundSync to invalidate after DB write.
+      // invalidateAndRefetch(); 
       triggerSync(); // Manually trigger background sync immediately
 
     } catch (error: any) {

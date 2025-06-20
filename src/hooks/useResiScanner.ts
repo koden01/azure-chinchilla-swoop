@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, showError, dismissToast } from "@/utils/toast";
 import { beepSuccess, beepFailure, beepDouble } from "@/utils/audio";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { format, subDays, startOfDay, endOfDay } from "date-fns";
+import { format, subDays } from "date-fns";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 import { normalizeExpeditionName } from "@/utils/expeditionUtils";
 import { addPendingOperation } from "@/integrations/indexeddb/pendingOperations";
@@ -88,6 +88,15 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
 
   const lastOptimisticIdRef = React.useRef<string | null>(null);
 
+  // Removed invalidateAndRefetch function as it will be handled by useBackgroundSync
+  // const invalidateAndRefetch = () => {
+  //   console.log("Invalidating and refetching queries...");
+  //   invalidateDashboardQueries(queryClient, new Date(), expedition);
+  //   queryClient.invalidateQueries({ queryKey: ["historyData", formattedDate, formattedDate] });
+  //   queryClient.invalidateQueries({ queryKey: ["recentResiNumbersForValidation", twoDaysAgoFormatted, formattedDate] });
+  //   queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] });
+  // };
+
   const keepFocus = () => {
     setTimeout(() => {
       if (resiInputRef.current) {
@@ -166,37 +175,38 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
           expedisiRecord = allFlagNoExpedisiData?.get(normalizedCurrentResi);
         }
 
-        // If still not found in any local cache, try a direct fetch from tbl_expedisi using RPC
+        // If still not found in any local cache, try a direct fetch from tbl_expedisi
         if (!expedisiRecord) {
-            console.log(`[handleScanResi] Not found in local caches. Attempting direct fetch from tbl_expedisi using RPC for ${currentResi}.`);
-            const { data: directExpedisiDataArray, error: directExpedisiError } = await supabase.rpc("get_expedisi_by_resino_case_insensitive", {
-              p_resino: currentResi,
-            });
+            console.log(`[handleScanResi] Not found in local caches. Attempting direct fetch from tbl_expedisi for ${currentResi}.`);
+            const { data: directExpedisiData, error: directExpedisiError } = await supabase
+                .from("tbl_expedisi")
+                .select("*")
+                .eq("resino", currentResi)
+                .single();
 
-            if (directExpedisiError) {
-                console.error(`[handleScanResi] Error during direct fetch via RPC:`, directExpedisiError);
+            if (directExpedisiError && directExpedisiError.code !== 'PGRST116') { // PGRST116 means "no rows found"
                 throw directExpedisiError; // Re-throw other errors
             }
             
-            if (directExpedisiDataArray && directExpedisiDataArray.length > 0) {
-                expedisiRecord = directExpedisiDataArray[0]; // Take the first one if multiple
-                console.log(`[handleScanResi] Found via direct fetch (RPC). Data:`, expedisiRecord);
+            if (directExpedisiData) {
+                expedisiRecord = directExpedisiData;
+                console.log(`[handleScanResi] Found via direct fetch. Updating caches.`);
                 // Optionally, update the cache with this fresh data to prevent future direct fetches for this item
                 // Update both 3-day cache and flag NO cache if applicable
                 queryClient.setQueryData(
                     ["allExpedisiDataUnfiltered", twoDaysAgoFormatted, endOfTodayFormatted],
                     (oldMap: Map<string, any> | undefined) => {
                         const newMap = oldMap ? new Map(oldMap) : new Map();
-                        newMap.set(normalizedCurrentResi, expedisiRecord);
+                        newMap.set(normalizedCurrentResi, directExpedisiData);
                         return newMap;
                     }
                 );
-                if (expedisiRecord.flag === 'NO') {
+                if (directExpedisiData.flag === 'NO') {
                   queryClient.setQueryData(
                     ["allFlagNoExpedisiData"],
                     (oldMap: Map<string, any> | undefined) => {
                         const newMap = oldMap ? new Map(oldMap) : new Map();
-                        newMap.set(normalizedCurrentResi, expedisiRecord);
+                        newMap.set(normalizedCurrentResi, directExpedisiData);
                         return newMap;
                     }
                   );
@@ -371,6 +381,8 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       // Clear the optimistic ref as the operation was successfully added to IndexedDB
       lastOptimisticIdRef.current = null;
       
+      // Removed immediate invalidation. Rely on useBackgroundSync to invalidate after DB write.
+      // invalidateAndRefetch(); 
       triggerSync(); // Manually trigger background sync immediately
 
     } catch (error: any) {

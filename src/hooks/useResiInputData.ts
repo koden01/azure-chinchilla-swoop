@@ -50,9 +50,11 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
           }
         }
       );
+      console.log(`[useResiInputData] Fetched allResiForExpedition for ${expedition} on ${formattedDate}:`, data);
       return data || [];
     },
     enabled: !!expedition,
+    staleTime: 1000 * 10, // Keep data fresh for 10 seconds to allow optimistic updates to persist
   });
 
   // Query to fetch lastKarung directly from database using RPC
@@ -70,9 +72,11 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
         console.error("Error fetching last karung:", error);
         throw error;
       }
+      console.log(`[useResiInputData] Fetched lastKarungData for ${expedition} on ${formattedDate}:`, data);
       return data || null;
     },
     enabled: !!expedition && !showAllExpeditionSummary, // Only enabled if not showing all summaries
+    staleTime: 1000 * 10, // Keep data fresh for 10 seconds
   });
 
   // Query to fetch karung summary directly from database using RPC (for specific expedition)
@@ -90,9 +94,11 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
         console.error("Error fetching karung summary:", error);
         throw error;
       }
+      console.log(`[useResiInputData] Fetched karungSummaryData for ${expedition} on ${formattedDate}:`, data); // ADDED LOG
       return data || [];
     },
     enabled: !!expedition && !showAllExpeditionSummary, // Only enabled if not showing all summaries
+    staleTime: 1000 * 10, // Keep data fresh for 10 seconds to allow optimistic updates to persist
   });
 
   // NEW: Query to fetch ALL karung summaries directly from database using new RPC
@@ -107,9 +113,11 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
         console.error("Error fetching all karung summaries:", error);
         throw error;
       }
+      console.log(`[useResiInputData] Fetched allKarungSummariesData for ${formattedDate}:`, data);
       return data || [];
     },
     enabled: showAllExpeditionSummary, // Only enabled when explicitly requested
+    staleTime: 1000 * 10, // Keep data fresh for 10 seconds
   });
 
   // Query to fetch unique expedition names
@@ -137,6 +145,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       });
       
       const names = Array.from(namesSet);
+      console.log("[useResiInputData] Fetched uniqueExpeditionNames:", names);
       return names.sort((a, b) => a.localeCompare(b));
     },
     staleTime: 1000 * 60 * 60 * 24, // Changed to 24 hours
@@ -147,7 +156,9 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
   const currentCount = React.useCallback((selectedKarung: string) => {
     if (!karungSummaryData || !selectedKarung) return 0;
     const summaryItem = karungSummaryData.find(item => item.karung_number === selectedKarung);
-    return summaryItem ? summaryItem.quantity : 0;
+    const count = summaryItem ? summaryItem.quantity : 0;
+    console.log(`[useResiInputData] currentCount for karung ${selectedKarung}:`, count); // ADDED LOG
+    return count;
   }, [karungSummaryData]);
 
   // lastKarung is now directly from lastKarungData

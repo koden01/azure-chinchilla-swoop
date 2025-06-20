@@ -1,11 +1,11 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { format, isSameDay, startOfDay, endOfDay } from "date-fns";
-import { useEffect, useState } from "react";
+import { useEffect, useState } from "react"; // Removed useMemo
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import { normalizeExpeditionName, KNOWN_EXPEDITIONS } from "@/utils/expeditionUtils";
 import { supabase } from "@/integrations/supabase/client";
-import { usePendingOperations } from "@/hooks/usePendingOperations";
+import { usePendingOperations } from "@/hooks/usePendingOperations"; // Removed PendingOperation from import
 
 // Import base data hooks
 import { useFollowUpRecords } from "./useFollowUpRecords";
@@ -233,7 +233,6 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
         }
         if (resi.schedule === "batal") {
           currentBatalCount++;
-          console.log(`[DEBUG] Resi ${resi.Resi} is 'batal'. currentBatalCount: ${currentBatalCount}`);
         }
         if (resi.schedule === "late") {
           currentScanFollowupLateCount++;
@@ -257,7 +256,6 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
     setFollowUpFlagNoCount(currentFollowUpFlagNoCount);
     setScanFollowupLateCount(currentScanFollowupLateCount);
     setBatalCount(currentBatalCount);
-    console.log(`[DEBUG] Final overall batalCount: ${currentBatalCount}`);
 
     // --- Calculate per-expedition summaries ---
     const summaries: { [key: string]: any } = {};
@@ -292,31 +290,57 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
 
     // Populate totalScan, idRekomendasi, totalBatal, totalScanFollowUp, jumlahKarung from currentResiData (already filtered by date and potentially modified by pending ops)
     currentResiData.forEach(resi => {
+      const normalizedResi = resi.Resi?.trim().toLowerCase();
       const resiCreatedDate = new Date(resi.created);
-      
+      let originalExpeditionName: string | null = null;
+
       // Only consider resi records for the selected date for per-expedition summaries
       if (!isSameDay(resiCreatedDate, date)) {
         return; // Skip if not for the selected date
       }
 
-      const normalizedResiKeterangan = normalizeExpeditionName(resi.Keterangan);
+      // Try to get the original courier name from currentExpedisiData first
+      if (normalizedResi) {
+        const expedisiRecord = currentExpedisiData.get(normalizedResi);
+        if (expedisiRecord && expedisiRecord.couriername) {
+          originalExpeditionName = normalizeExpeditionName(expedisiRecord.couriername);
+        }
+      }
 
-      if (normalizedResiKeterangan && summaries[normalizedResiKeterangan]) {
+      // Handle ID_REKOMENDASI special case for 'ID' expedition
+      if (resi.Keterangan === "ID_REKOMENDASI") {
+        if (summaries["ID"]) {
+          summaries["ID"].idRekomendasi++;
+          if (resi.nokarung) {
+            summaries["ID"].jumlahKarung.add(resi.nokarung);
+          }
+          if (resi.schedule === "ontime") {
+            summaries["ID"].totalScan++;
+          }
+          if (resi.schedule === "late") {
+            summaries["ID"].totalScanFollowUp++;
+          }
+        }
+      }
+      // Handle BATAL special case
+      else if (resi.schedule === "batal") {
+        // Attribute 'batal' to the original expedition if known, otherwise it's a global count
+        if (originalExpeditionName && summaries[originalExpeditionName]) {
+          summaries[originalExpeditionName].totalBatal++;
+        } else {
+          console.warn(`Resi ${resi.Resi} is 'batal' but original expedition could not be determined. Not counted in per-expedition 'totalBatal'.`);
+        }
+      }
+      // Handle regular 'ontime' or 'late' scans for known original expeditions
+      else if (originalExpeditionName && summaries[originalExpeditionName]) {
         if (resi.schedule === "ontime") {
-          summaries[normalizedResiKeterangan].totalScan++;
+          summaries[originalExpeditionName].totalScan++;
         }
         if (resi.schedule === "late") {
-          summaries[normalizedResiKeterangan].totalScanFollowUp++;
-        }
-        if (resi.schedule === "batal") {
-          summaries[normalizedResiKeterangan].totalBatal++;
-          console.log(`[DEBUG] Expedition ${normalizedResiKeterangan} totalBatal incremented. Current: ${summaries[normalizedResiKeterangan].totalBatal} for resi ${resi.Resi}`);
-        }
-        if (resi.Keterangan === "ID_REKOMENDASI") { // Specific check for ID_REKOMENDASI
-          summaries[normalizedResiKeterangan].idRekomendasi++;
+          summaries[originalExpeditionName].totalScanFollowUp++;
         }
         if (resi.nokarung) {
-          summaries[normalizedResiKeterangan].jumlahKarung.add(resi.nokarung);
+          summaries[originalExpeditionName].jumlahKarung.add(resi.nokarung);
         }
       } else {
         console.warn(`Resi ${resi.Resi} (Keterangan: ${resi.Keterangan}, Schedule: ${resi.schedule}) not attributed to any known expedition summary.`);
@@ -328,7 +352,6 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
       jumlahKarung: summary.jumlahKarung.size,
     }));
 
-    console.log("[DEBUG] Final expeditionSummaries before setting state:", finalSummaries);
     setExpeditionSummaries(finalSummaries);
   }, [date, allExpedisiDataUnfiltered, expedisiDataForSelectedDate, allResiData, pendingOperations, isLoadingAllExpedisiUnfiltered, isLoadingExpedisiDataForSelectedDate, isLoadingAllResi]);
 

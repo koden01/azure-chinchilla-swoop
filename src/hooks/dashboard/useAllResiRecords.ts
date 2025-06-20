@@ -10,7 +10,6 @@ export const useAllResiRecords = (date: Date | undefined) => {
     queryFn: async () => {
       if (!date) return [];
       const data = await fetchAllDataPaginated("tbl_resi", "created", date, date);
-      console.log(`[useAllResiRecords] Fetched allResiData for ${formattedDate}:`, data); // Added debug log
       return data;
     },
     enabled: !!date,

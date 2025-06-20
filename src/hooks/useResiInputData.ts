@@ -118,8 +118,8 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tbl_expedisi")
-        .select("couriername", { distinct: true }) // Corrected: Use distinct as an option in select
-        .eq("flag", "NO"); // Filter by flag = 'NO'
+        .select("couriername")
+        .distinct(); // Corrected: Call distinct as a method
 
       if (error) {
         console.error("Error fetching unique expedition names:", error);

@@ -37,8 +37,8 @@ persistQueryClient({
       query.queryHash.includes("lastKarung") || // Persist last karung
       query.queryHash.includes("allExpedisiDataUnfiltered") || // Persist allExpedisiDataUnfiltered
       query.queryHash.includes("expedisiDataForSelectedDate") || // Persist expedisi data for selected date
-      query.queryHash.includes("recentResiDataForValidation") || // Persist recentResiDataForValidation
-      query.queryHash.includes("allFlagNoExpedisiData"), // NEW: Persist allFlagNoExpedisiData
+      query.queryHash.includes("recentResiNumbersForValidation") || // Corrected: Persist recentResiNumbersForValidation
+      query.queryHash.includes("allFlagNoExpedisiData"), // Persist allFlagNoExpedisiData
   },
 });
 

@@ -29,5 +29,5 @@
         // Import the supabase client like this:
         // import { supabase } from "@/integrations/supabase/client";
 
-        export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+        export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHable_KEY);
         export { SUPABASE_PROJECT_ID };

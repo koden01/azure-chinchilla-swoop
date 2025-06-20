@@ -96,7 +96,7 @@ export async function adjustResiCount(
       return `Berhasil mengatur jumlah menjadi ${targetCount} dengan menghapus ${numToDelete} resi.`;
     } else {
       console.log("No records found to delete.");
-      return `Jumlah sudah ${currentCount}, tidak ada perubahan yang diperlukan.`;
+      return `Jumlah sudah ${targetCount}. Tidak ada perubahan yang diperlukan.`;
     }
   } else {
     console.log("Count is already 54. No changes needed.");

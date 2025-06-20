@@ -360,7 +360,8 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
   // Debounced function to invalidate dashboard queries
   const debouncedInvalidateDashboardQueries = useDebouncedCallback(() => {
     console.log("Debounced invalidation triggered from Realtime!");
-    invalidateDashboardQueries(queryClient, new Date(), expedition);
+    // Pass undefined for expedition as it's not relevant for general dashboard invalidation
+    invalidateDashboardQueries(queryClient, new Date(), undefined); 
   }, 150); // Debounce for 150ms
 
   // Real-time subscription for dashboard data
@@ -385,7 +386,7 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
       supabase.removeChannel(resiChannel);
       supabase.removeChannel(expedisiChannel);
     };
-  }, [debouncedInvalidateDashboardQueries, expedition]); // Added expedition to dependencies
+  }, [debouncedInvalidateDashboardQueries]); // Removed 'expedition' from dependencies
 
   return {
     transaksiHariIni,

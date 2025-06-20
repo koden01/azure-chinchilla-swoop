@@ -67,7 +67,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
 
   // Process data to create expedition summaries
   useEffect(() => {
-    if (isLoadingAllExpedisiUnfiltered || isLoadingExpedisiDataForSelectedDate || isLoadingAllRes || !allExpedisiDataUnfiltered || !expedisiDataForSelectedDate || !allResiData || !date) {
+    if (isLoadingAllExpedisiUnfiltered || isLoadingExpedisiDataForSelectedDate || isLoadingAllResi || !allExpedisiDataUnfiltered || !expedisiDataForSelectedDate || !allResiData || !date) {
       setExpeditionSummaries([]);
       return;
     }
@@ -161,7 +161,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
     }));
 
     setExpeditionSummaries(finalSummaries);
-  }, [date, allExpedisiDataUnfiltered, expedisiDataForSelectedDate, allResiData, isLoadingAllExpedisiUnfiltered, isLoadingExpedisiDataForSelectedDate, isLoadingAllRes]);
+  }, [date, allExpedisiDataUnfiltered, expedisiDataForSelectedDate, allResiData, isLoadingAllExpedisiUnfiltered, isLoadingExpedisiDataForSelectedDate, isLoadingAllResi]);
 
   const debouncedInvalidateDashboardQueries = useDebouncedCallback(() => {
     invalidateDashboardQueries(queryClient, new Date(), undefined); 

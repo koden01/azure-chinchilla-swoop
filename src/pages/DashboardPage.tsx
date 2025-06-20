@@ -26,11 +26,13 @@ const DashboardPage: React.FC = () => {
     isLoadingScanFollowupLateCount,
     batalCount,
     isLoadingBatalCount,
-    // followUpData, // Removed unused variable
     isLoadingFollowUp,
     expeditionSummaries,
     formattedDate,
     allExpedisiData,
+    isLoadingAllResi, // Ensure this is destructured here
+    isLoadingExpedisiDataForSelectedDate, // Ensure this is destructured here
+    isLoadingAllExpedisiUnfiltered, // Ensure this is destructured here
   } = useCombinedDashboardData(selectedDate); // Updated hook call
 
   const {
@@ -58,7 +60,10 @@ const DashboardPage: React.FC = () => {
     isLoadingFollowUpFlagNoCount ||
     isLoadingScanFollowupLateCount ||
     isLoadingBatalCount ||
-    isLoadingFollowUp;
+    isLoadingFollowUp ||
+    isLoadingAllResi || // Include in overall loading check
+    isLoadingExpedisiDataForSelectedDate || // Include in overall loading check
+    isLoadingAllExpedisiUnfiltered; // Include in overall loading check
 
   // Sort expeditionSummaries alphabetically by name
   const sortedExpeditionSummaries = React.useMemo(() => {

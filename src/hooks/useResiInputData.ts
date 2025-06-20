@@ -111,7 +111,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       item.nokarung === selectedKarung && 
       (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition)
     ).length;
-    console.log(`[useResiInputData] currentCount for karung ${selectedKarung} (derived from cache):`, count);
+    console.log(`[useResiInputData] Recalculating currentCount for karung ${selectedKarung}. New count: ${count}. allResiForExpedition length: ${allResiForExpedition.length}`);
     return count;
   }, [allResiForExpedition, expedition]);
 

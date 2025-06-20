@@ -2,13 +2,14 @@ import { initDB } from './db';
 
 export interface PendingOperation {
   id: string;
-  type: 'batal' | 'confirm' | 'cekfu';
+  type: 'batal' | 'confirm' | 'cekfu' | 'scan'; // Added 'scan' type
   payload: {
     resiNumber: string;
     createdTimestampFromExpedisi?: string; // For 'batal' and 'confirm'
-    courierNameFromExpedisi?: string | null; // For 'confirm'
+    courierNameFromExpedisi?: string | null; // For 'confirm' and 'scan'
     expedisiCreatedTimestamp?: string; // For 'confirm'
     newCekfuStatus?: boolean; // For 'cekfu'
+    selectedKarung?: string; // For 'scan'
   };
   timestamp: number; // Timestamp when the operation was added
   retries?: number; // Number of retry attempts

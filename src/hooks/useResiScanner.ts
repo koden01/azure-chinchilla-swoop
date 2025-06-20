@@ -8,6 +8,7 @@ import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { format, subDays } from "date-fns";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 import { normalizeExpeditionName } from "@/utils/expeditionUtils";
+import { addPendingOperation } from "@/integrations/indexeddb/pendingOperations"; // Import addPendingOperation
 
 // Define the type for ResiExpedisiData to match useResiInputData
 interface ResiExpedisiData {
@@ -270,7 +271,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         return; // Exit after handling error
       }
 
-      // --- If all OK, proceed with optimistic update and Supabase calls ---
+      // --- If all OK, proceed with optimistic update and saving to IndexedDB ---
       const newResiEntry: ResiExpedisiData = {
         Resi: currentResi,
         nokarung: selectedKarung,
@@ -280,6 +281,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         optimisticId: currentOptimisticId,
       };
 
+      // Optimistic UI update for the input page's display
       queryClient.setQueryData(queryKeyForInputPageDisplay, (oldData: ResiExpedisiData[] | undefined) => {
         return [...(oldData || []), newResiEntry]; // Ensure oldData is an array
       });
@@ -289,7 +291,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         newSet.add(normalizedCurrentResi);
         return newSet;
       });
-      // NEW: Optimistic update for allExpedisiDataUnfiltered cache
+      // Optimistic update for allExpedisiDataUnfiltered cache
       queryClient.setQueryData(["allExpedisiDataUnfiltered", twoDaysAgoFormatted, endOfTodayFormatted], (oldMap: Map<string, any> | undefined) => {
         const newMap = oldMap ? new Map(oldMap) : new Map();
         const existingExpedisi = newMap.get(normalizedCurrentResi);
@@ -305,57 +307,41 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         });
         return newMap;
       });
-      // NEW: Optimistic update for allFlagNoExpedisiData cache (remove if flag becomes YES)
+      // Optimistic update for allFlagNoExpedisiData cache (remove if flag becomes YES)
       queryClient.setQueryData(["allFlagNoExpedisiData"], (oldMap: Map<string, any> | undefined) => {
         const newMap = oldMap ? new Map(oldMap) : new Map();
         newMap.delete(normalizedCurrentResi); // Remove from flag NO cache as it's now 'YES'
         return newMap;
       });
 
-
       lastOptimisticIdRef.current = currentOptimisticId;
-      // --- End Optimistic UI Update ---
+      
+      // Add operation to IndexedDB for background sync
+      await addPendingOperation({
+        id: `scan-${currentResi}-${Date.now()}`,
+        type: "scan",
+        payload: {
+          resiNumber: currentResi,
+          selectedKarung: selectedKarung,
+          courierNameFromExpedisi: actualCourierName,
+        },
+        timestamp: Date.now(),
+      });
 
-      // --- Direct Supabase Insert/Update using upsert ---
-      const { data: _upsertData, error: upsertError } = await supabase
-        .from("tbl_resi")
-        .upsert({
-          Resi: currentResi,
-          nokarung: selectedKarung,
-          created: new Date().toISOString(),
-          Keterangan: actualCourierName,
-        }, { onConflict: 'Resi' }); // Specify the unique column for conflict resolution
-
-      if (upsertError) {
-        console.error("Supabase upsert to tbl_resi failed:", upsertError); // Detailed error log
-        throw new Error(`Gagal menyisipkan/memperbarui resi ke tbl_resi: ${upsertError.message}`);
-      }
-
-      // 2. Update tbl_expedisi flag to 'YES'
-      const { error: updateExpedisiError } = await supabase
-        .from("tbl_expedisi")
-        .update({ flag: "YES" })
-        .eq("resino", currentResi);
-
-      if (updateExpedisiError) {
-        console.error("Supabase update to tbl_expedisi failed:", updateExpedisiError); // Detailed error log
-        throw new Error(`Gagal memperbarui flag di tbl_expedisi: ${updateExpedisiError.message}`);
-      }
-
-      showSuccess(`Resi ${currentResi} berhasil discan.`);
+      showSuccess(`Resi ${currentResi} berhasil discan (disimpan secara lokal).`);
       try {
         beepSuccess.play();
       } catch (e) {
         console.error("Error playing beepSuccess:", e);
       }
 
-      // Clear the optimistic ref as the operation was successful
+      // Clear the optimistic ref as the operation was successfully added to IndexedDB
       lastOptimisticIdRef.current = null;
       
       debouncedInvalidate(); // Invalidate dashboard queries and history in the background
 
     } catch (error: any) {
-      console.error("Error during resi input:", error); // Log the full error object
+      console.error("Error during resi input (before IndexedDB save or during optimistic update):", error); // Log the full error object
 
       let errorMessage = "Terjadi kesalahan yang tidak diketahui. Silakan coba lagi.";
       if (error instanceof TypeError && error.message === "Failed to fetch") {
@@ -388,29 +374,18 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
             const newMap = oldMap ? new Map(oldMap) : new Map();
             const existingExpedisi = newMap.get(normalizedCurrentResi);
             if (existingExpedisi && existingExpedisi.optimisticId === lastOptimisticIdRef.current) {
-              // If this was an optimistic insert, delete it. If it was an update, revert its flag.
-              // For simplicity, if it was optimistically added, remove it. If it was an update, we'd need to store its original state.
-              // For now, we'll just remove the optimistic flag if it exists.
               const revertedExpedisi = { ...existingExpedisi };
-              delete revertedExpedisi.optimisticId; // Remove the optimistic flag
-              // If the original state was 'NO', we might need to revert the flag too.
-              // This requires storing the original flag state in the optimistic context.
-              // For now, we assume the flag was 'NO' before the optimistic 'YES'.
+              delete revertedExpedisi.optimisticId; 
               revertedExpedisi.flag = "NO"; // Revert flag to NO
               newMap.set(normalizedCurrentResi, revertedExpedisi);
             }
             return newMap;
           });
-          // NEW: Revert optimistic update for allFlagNoExpedisiData cache (add back if flag was 'NO')
+          // Revert optimistic update for allFlagNoExpedisiData cache (add back if flag was 'NO')
           queryClient.setQueryData(["allFlagNoExpedisiData"], (oldMap: Map<string, any> | undefined) => {
             const newMap = oldMap ? new Map(oldMap) : new Map();
-            // If the original expedisi record (before optimistic update) had flag 'NO', add it back.
-            // This requires knowing the original state, which is not directly available here.
-            // For now, we'll re-fetch this cache on error to ensure consistency.
-            // A more robust solution would involve storing the original state in the optimistic context.
-            // For simplicity, we'll just invalidate this cache to force a re-fetch.
-            queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] });
-            return newMap; // Return current map, invalidation will handle refresh
+            queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] }); // Force re-fetch for consistency
+            return newMap; 
           });
       }
       lastOptimisticIdRef.current = null; // Clear the ref after attempting revert

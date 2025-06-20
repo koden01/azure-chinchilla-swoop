@@ -19,6 +19,7 @@ const Navbar = () => {
   const prefetchDashboardData = async () => {
     const today = new Date();
     const formattedDate = format(today, "yyyy-MM-dd");
+    const formattedDateISO = today.toISOString().split('T')[0]; // For queries using date part only
 
     console.log(`Prefetching dashboard data for date: ${formattedDate}`);
 
@@ -36,7 +37,7 @@ const Navbar = () => {
 
     // Prefetch Total Scan
     queryClient.prefetchQuery({
-      queryKey: ["totalScan", formattedDate],
+      queryKey: ["totalScan", formattedDateISO], // Use formattedDateISO
       queryFn: async () => {
         const { count, error } = await supabase
           .from("tbl_resi")
@@ -51,7 +52,7 @@ const Navbar = () => {
 
     // Prefetch ID Rekomendasi
     queryClient.prefetchQuery({
-      queryKey: ["idRekCount", formattedDate],
+      queryKey: ["idRekCount", formattedDateISO], // Use formattedDateISO
       queryFn: async () => {
         const { count, error } = await supabase
           .from("tbl_resi")
@@ -91,7 +92,7 @@ const Navbar = () => {
 
     // Prefetch Scan Followup (Late)
     queryClient.prefetchQuery({
-      queryKey: ["scanFollowupLateCount", formattedDate],
+      queryKey: ["scanFollowupLateCount", formattedDateISO], // Use formattedDateISO
       queryFn: async () => {
         const { count, error } = await supabase
           .from("tbl_resi")
@@ -106,7 +107,7 @@ const Navbar = () => {
 
     // Prefetch Batal
     queryClient.prefetchQuery({
-      queryKey: ["batalCount", formattedDate],
+      queryKey: ["batalCount", formattedDateISO], // Use formattedDateISO
       queryFn: async () => {
         const { count, error } = await supabase
           .from("tbl_resi")
@@ -133,7 +134,7 @@ const Navbar = () => {
 
     // Prefetch All Resi Data for Selected Date (paginated)
     queryClient.prefetchQuery({
-      queryKey: ["allResiData", formattedDate],
+      queryKey: ["allResiData", formattedDateISO], // Use formattedDateISO
       queryFn: async () => {
         let allRecords: any[] = [];
         let offset = 0;
@@ -167,8 +168,13 @@ const Navbar = () => {
     // allExpedisiDataUnfiltered is already persisted and fetched on app load,
     // so explicit prefetch might not be strictly necessary here if it's already in cache.
     // However, including it ensures it's fresh if stale.
+    const twoDaysAgo = new Date();
+    twoDaysAgo.setDate(today.getDate() - 2);
+    const twoDaysAgoFormatted = format(twoDaysAgo, "yyyy-MM-dd");
+    const endOfTodayFormatted = format(today, "yyyy-MM-dd");
+
     queryClient.prefetchQuery({
-      queryKey: ["allExpedisiDataUnfiltered"],
+      queryKey: ["allExpedisiDataUnfiltered", twoDaysAgoFormatted, endOfTodayFormatted],
       queryFn: async () => {
         let allRecords: any[] = [];
         let offset = 0;

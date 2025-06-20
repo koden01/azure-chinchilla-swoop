@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
-import { format } from "date-fns"; // Removed unused imports: startOfDay, endOfDay
+// Removed unused import: format
 
 export const useAllResiRecords = (date: Date | undefined) => {
   const formattedDate = date ? date.toISOString().split('T')[0] : ""; // Use date part for query key

@@ -1,11 +1,11 @@
-import React from "react"; // Hanya perlu import React secara keseluruhan
+import React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { showSuccess, showError } from "@/utils/toast";
-import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
-import { ModalDataItem } from "@/types/data"; // Import from shared types
-import { normalizeExpeditionName } from "@/utils/expeditionUtils"; // Import new utility
+import { ModalDataItem } from "@/types/data";
+import { normalizeExpeditionName } from "@/utils/expeditionUtils";
+import { addPendingOperation, PendingOperation } from "@/integrations/indexeddb/pendingOperations"; // NEW IMPORT
 
 interface UseDashboardModalsProps {
   date: Date | undefined;
@@ -28,8 +28,8 @@ interface UseDashboardModalsReturn {
   handleOpenExpeditionDetailModal: (courierName: string) => Promise<void>;
   handleCloseModal: () => void;
   handleBatalResi: (resiNumber: string) => Promise<void>;
-  onConfirmResi: (resiNumber: string) => Promise<void>; // Renamed to match prop name
-  onCekfuToggle: (resiNumber: string, currentCekfuStatus: boolean) => Promise<void>; // Renamed to match prop name
+  onConfirmResi: (resiNumber: string) => Promise<void>;
+  onCekfuToggle: (resiNumber: string, currentCekfuStatus: boolean) => Promise<void>;
 }
 
 export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: UseDashboardModalsProps): UseDashboardModalsReturn => {
@@ -186,46 +186,18 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
 
       const createdTimestampFromExpedisi = expedisiRecord?.created || new Date().toISOString(); // Default to now if not found
 
-      const { data: existingResi, error: checkError } = await supabase
-        .from("tbl_resi")
-        .select("Resi")
-        .eq("Resi", resiNumber)
-        .single();
+      // Add operation to IndexedDB
+      await addPendingOperation({
+        id: `batal-${resiNumber}-${Date.now()}`,
+        type: "batal",
+        payload: {
+          resiNumber,
+          createdTimestampFromExpedisi,
+        },
+        timestamp: Date.now(),
+      });
 
-      if (checkError && checkError.code !== 'PGRST116') { // PGRST116 means "no rows found"
-        throw checkError;
-      }
-
-      if (existingResi) {
-        const { error: updateError } = await supabase
-          .from("tbl_resi")
-          .update({ 
-            schedule: "batal", // This is explicitly 'batal', so keep it
-            created: createdTimestampFromExpedisi, // Update created date from tbl_expedisi
-            Keterangan: "BATAL", // Ensure Keterangan is BATAL
-            nokarung: "0", // Ensure nokarung is 0 for batal
-          })
-          .eq("Resi", resiNumber);
-
-        if (updateError) throw updateError;
-        showSuccess(`Resi ${resiNumber} berhasil dibatalkan.`);
-      } else {
-        const { error: insertError } = await supabase
-          .from("tbl_resi")
-          .insert({
-            Resi: resiNumber,
-            created: createdTimestampFromExpedisi, // Use created from tbl_expedisi
-            Keterangan: "BATAL",
-            nokarung: "0",
-            schedule: "batal", // This is explicitly 'batal', so keep it
-          });
-
-        if (insertError) throw insertError;
-        showSuccess(`Resi ${resiNumber} berhasil dibatalkan.`);
-      }
-
-      // Invalidate queries to trigger refetch for dashboard summaries
-      invalidateDashboardQueries(queryClient, date);
+      showSuccess(`Resi ${resiNumber} berhasil dibatalkan (disimpan secara lokal).`);
 
     } catch (error: any) {
       // Revert optimistic update on error
@@ -273,51 +245,19 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       const courierNameFromExpedisi = normalizeExpeditionName(expedisiRecord.couriername); // Use normalized name
       const expedisiCreatedTimestamp = expedisiRecord.created; // Get the created timestamp from tbl_expedisi
 
-      const { error: expUpdateError } = await supabase
-        .from("tbl_expedisi")
-        .update({ flag: "YES" })
-        .eq("resino", resiNumber);
+      // Add operation to IndexedDB
+      await addPendingOperation({
+        id: `confirm-${resiNumber}-${Date.now()}`,
+        type: "confirm",
+        payload: {
+          resiNumber,
+          courierNameFromExpedisi,
+          expedisiCreatedTimestamp,
+        },
+        timestamp: Date.now(),
+      });
 
-      if (expUpdateError) {
-        throw new Error(`Gagal mengkonfirmasi resi ${resiNumber} di tbl_expedisi: ${expUpdateError.message}`);
-      }
-
-      const { data: existingResi, error: checkResiError } = await supabase
-        .from("tbl_resi")
-        .select("Resi")
-        .eq("Resi", resiNumber)
-        .single();
-
-      if (checkResiError && checkResiError.code !== 'PGRST116') {
-        throw checkResiError;
-      }
-
-      const resiDataToUpsert = {
-        Resi: resiNumber,
-        created: expedisiCreatedTimestamp, // Use created from tbl_expedisi
-        Keterangan: courierNameFromExpedisi,
-        nokarung: "0", // Default to "0" for confirmed resi from dashboard
-      };
-
-      if (existingResi) {
-        const { error: updateResiError } = await supabase
-          .from("tbl_resi")
-          .update(resiDataToUpsert)
-          .eq("Resi", resiNumber);
-
-        if (updateResiError) throw updateResiError;
-        showSuccess(`Resi ${resiNumber} berhasil dikonfirmasi.`);
-      } else {
-        const { error: insertResiError } = await supabase
-          .from("tbl_resi")
-          .insert(resiDataToUpsert);
-
-        if (insertResiError) throw insertResiError;
-        showSuccess(`Resi ${resiNumber} berhasil dikonfirmasi.`);
-      }
-
-      // Invalidate queries to trigger refetch for dashboard summaries
-      invalidateDashboardQueries(queryClient, date);
+      showSuccess(`Resi ${resiNumber} berhasil dikonfirmasi (disimpan secara lokal).`);
 
     } catch (error: any) {
       // Revert optimistic update on error
@@ -329,8 +269,9 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
     }
   };
 
-  const onCekfuToggle = async (resiNumber: string, currentCekfuStatus: boolean) => { // Renamed to onCekfuToggle
+  const onCekfuToggle = async (resiNumber: string, currentCekfuStatus: boolean) => {
     // Optimistic UI update for CEKFU toggle
+    const originalModalData = modalData; // Store original data for potential revert
     setModalData(prevData =>
       prevData.map(item => {
         const itemResi = item.Resi || item.resino;
@@ -361,26 +302,21 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         }
       }
 
-      const { error } = await supabase
-        .from("tbl_expedisi")
-        .update({ cekfu: !currentCekfuStatus })
-        .eq("resino", resiNumber);
+      // Add operation to IndexedDB
+      await addPendingOperation({
+        id: `cekfu-${resiNumber}-${Date.now()}`,
+        type: "cekfu",
+        payload: {
+          resiNumber,
+          newCekfuStatus: !currentCekfuStatus,
+        },
+        timestamp: Date.now(),
+      });
 
-      if (error) {
-        throw error;
-      }
-      showSuccess(`Status CEKFU resi ${resiNumber} berhasil diperbarui.`);
-      invalidateDashboardQueries(queryClient, date);
+      showSuccess(`Status CEKFU resi ${resiNumber} berhasil diperbarui (disimpan secara lokal).`);
     } catch (error: any) {
       // Revert optimistic update on error
-      setModalData(prevData =>
-        prevData.map(item => {
-          const itemResi = item.Resi || item.resino;
-          return itemResi === resiNumber
-            ? { ...item, cekfu: currentCekfuStatus } // Revert to original status
-            : item;
-        })
-      );
+      setModalData(originalModalData); // Revert to original data
       showError(`Gagal memperbarui status CEKFU resi ${resiNumber}. ${error.message || "Silakan coba lagi."}`);
       console.error("Error updating CEKFU status:", error);
     }
@@ -400,7 +336,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
     handleOpenExpeditionDetailModal,
     handleCloseModal,
     handleBatalResi,
-    onConfirmResi: handleConfirmResi, // Map to the new name
-    onCekfuToggle, // Map to the new name
+    onConfirmResi: handleConfirmResi,
+    onCekfuToggle,
   };
 };

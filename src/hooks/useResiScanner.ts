@@ -14,7 +14,7 @@ interface ResiExpedisiData {
   Resi: string;
   nokarung: string | null;
   created: string;
-  Keterangan: string | null;
+  Keterangan: string | null; // Changed to Keterangan to match tbl_resi
   schedule: string | null;
   optimisticId?: string;
 }
@@ -40,7 +40,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
 
   // Query to fetch tbl_resi data for the last 2 days for local duplicate validation
   // Now returns a Set<string> for O(1) lookups
-  const { data: recentResiNumbersForValidation } = useQuery<Set<string>>({ // Fixed: Removed extra '}' here
+  const { data: recentResiNumbersForValidation } = useQuery<Set<string>>({
     queryKey: ["recentResiNumbersForValidation", twoDaysAgoFormatted, formattedDate],
     queryFn: async () => {
       const data = await fetchAllDataPaginated(
@@ -163,9 +163,14 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       if (validationStatus !== 'OK') {
         showError(validationMessage || "Validasi gagal.");
         try {
-          beepDouble.play();
+          // Conditional beep based on validation status
+          if (validationStatus === 'NOT_FOUND_EXPEDISI' || validationStatus === 'MISMATCH_EXPEDISI') { // Updated logic here
+            beepFailure.play();
+          } else if (validationStatus === 'DUPLICATE_RESI') {
+            beepDouble.play();
+          }
         } catch (e) {
-          console.error("Error playing beepDouble:", e);
+          console.error("Error playing beep sound:", e);
         }
         return; // Exit early if validation fails
       }
@@ -223,10 +228,10 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         showError(validationMessage || "Validasi gagal.");
         try {
           // Conditional beep based on validation status
-          if (validationStatus === 'NOT_FOUND_EXPEDISI') {
-            beepFailure.play(); // Play beepFailure for "data tidak ada"
-          } else {
-            beepDouble.play(); // Keep beepDouble for other mismatches
+          if (validationStatus === 'NOT_FOUND_EXPEDISI' || validationStatus === 'MISMATCH_EXPEDISI') { // Updated logic here
+            beepFailure.play();
+          } else if (validationStatus === 'DUPLICATE_RESI') {
+            beepDouble.play();
           }
         } catch (e) {
           console.error("Error playing beep sound:", e);
@@ -273,10 +278,10 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         showError(validationMessage || "Validasi gagal.");
         try {
           // Conditional beep based on validation status
-          if (validationStatus === 'NOT_FOUND_EXPEDISI') {
-            beepFailure.play(); // Play beepFailure for "data tidak ada"
-          } else {
-            beepDouble.play(); // Keep beepDouble for other mismatches
+          if (validationStatus === 'NOT_FOUND_EXPEDISI' || validationStatus === 'MISMATCH_EXPEDISI') { // Updated logic here
+            beepFailure.play();
+          } else if (validationStatus === 'DUPLICATE_RESI') {
+            beepDouble.play();
           }
         } catch (e) {
           console.error("Error playing beep sound:", e);

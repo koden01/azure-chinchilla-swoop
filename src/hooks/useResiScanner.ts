@@ -166,38 +166,37 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
           expedisiRecord = allFlagNoExpedisiData?.get(normalizedCurrentResi);
         }
 
-        // If still not found in any local cache, try a direct fetch from tbl_expedisi
+        // If still not found in any local cache, try a direct fetch from tbl_expedisi using RPC
         if (!expedisiRecord) {
-            console.log(`[handleScanResi] Not found in local caches. Attempting direct fetch from tbl_expedisi for ${currentResi}.`);
-            const { data: directExpedisiData, error: directExpedisiError } = await supabase
-                .from("tbl_expedisi")
-                .select("*")
-                .ilike("resino", currentResi) // Changed from .eq to .ilike
-                .single();
+            console.log(`[handleScanResi] Not found in local caches. Attempting direct fetch from tbl_expedisi using RPC for ${currentResi}.`);
+            const { data: directExpedisiDataArray, error: directExpedisiError } = await supabase.rpc("get_expedisi_by_resino_case_insensitive", {
+              p_resino: currentResi,
+            });
 
-            if (directExpedisiError && directExpedisiError.code !== 'PGRST116') { // PGRST116 means "no rows found"
+            if (directExpedisiError) {
+                console.error(`[handleScanResi] Error during direct fetch via RPC:`, directExpedisiError);
                 throw directExpedisiError; // Re-throw other errors
             }
             
-            if (directExpedisiData) {
-                expedisiRecord = directExpedisiData;
-                console.log(`[handleScanResi] Found via direct fetch. Updating caches.`);
+            if (directExpedisiDataArray && directExpedisiDataArray.length > 0) {
+                expedisiRecord = directExpedisiDataArray[0]; // Take the first one if multiple
+                console.log(`[handleScanResi] Found via direct fetch (RPC). Data:`, expedisiRecord);
                 // Optionally, update the cache with this fresh data to prevent future direct fetches for this item
                 // Update both 3-day cache and flag NO cache if applicable
                 queryClient.setQueryData(
                     ["allExpedisiDataUnfiltered", twoDaysAgoFormatted, endOfTodayFormatted],
                     (oldMap: Map<string, any> | undefined) => {
                         const newMap = oldMap ? new Map(oldMap) : new Map();
-                        newMap.set(normalizedCurrentResi, directExpedisiData);
+                        newMap.set(normalizedCurrentResi, expedisiRecord);
                         return newMap;
                     }
                 );
-                if (directExpedisiData.flag === 'NO') {
+                if (expedisiRecord.flag === 'NO') {
                   queryClient.setQueryData(
                     ["allFlagNoExpedisiData"],
                     (oldMap: Map<string, any> | undefined) => {
                         const newMap = oldMap ? new Map(oldMap) : new Map();
-                        newMap.set(normalizedCurrentResi, directExpedisiData);
+                        newMap.set(normalizedCurrentResi, expedisiRecord);
                         return newMap;
                     }
                   );

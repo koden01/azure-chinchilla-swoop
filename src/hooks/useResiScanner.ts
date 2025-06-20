@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, showError, dismissToast } from "@/utils/toast";
 import { beepSuccess, beepFailure, beepDouble } from "@/utils/audio";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { format, subDays, startOfDay, endOfDay } from "date-fns";
+import { format, subDays } from "date-fns"; // Removed startOfDay, endOfDay
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 import { normalizeExpeditionName } from "@/utils/expeditionUtils";
 import { addPendingOperation } from "@/integrations/indexeddb/pendingOperations";
@@ -410,8 +410,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
           // Revert optimistic update for allFlagNoExpedisiData cache (add back if flag was 'NO')
           queryClient.setQueryData(["allFlagNoExpedisiData"], (oldMap: Map<string, any> | undefined) => {
             const newMap = oldMap ? new Map(oldMap) : new Map();
-            // If the original record was 'NO', add it back. Otherwise, just invalidate to refetch.
-            // For simplicity and robustness, invalidating is often safer here.
             queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] }); 
             console.log(`[handleScanResi] Reverted allFlagNoExpedisiData Update (forced refetch).`);
             return newMap; 

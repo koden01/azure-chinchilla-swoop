@@ -100,17 +100,17 @@ const InputPage = () => {
     }
   }, [expedition, selectedKarung, isProcessing]);
 
-  console.log("InputPage State:", {
-    expedition,
-    selectedKarung,
-    isLoadingAllResiForExpedition,
-    currentCount,
-    isProcessing,
-    karungSummary,
-    expeditionOptions,
-    allExpedisiDataUnfilteredSize: allExpedisiDataUnfiltered?.size, // Log size
-    isLoadingAllExpedisiUnfiltered, // Log loading state
-  });
+  // console.log("InputPage State:", { // Removed this log
+  //   expedition,
+  //   selectedKarung,
+  //   isLoadingAllResiForExpedition,
+  //   currentCount,
+  //   isProcessing,
+  //   karungSummary,
+  //   expeditionOptions,
+  //   allExpedisiDataUnfilteredSize: allExpedisiDataUnfiltered?.size,
+  //   isLoadingAllExpedisiUnfiltered,
+  // });
 
   return (
     <React.Fragment>

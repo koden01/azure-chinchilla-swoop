@@ -39,7 +39,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     queryFn: async () => {
       if (!expedition) return [];
 
-      console.log(`Fetching allResiForExpedition for ${expedition} on ${formattedDate} (for local validation) using fetchAllDataPaginated.`);
+      // console.log(`Fetching allResiForExpedition for ${expedition} on ${formattedDate} (for local validation) using fetchAllDataPaginated.`); // Removed
       
       const data = await fetchAllDataPaginated(
         "tbl_resi",
@@ -56,7 +56,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
         }
       );
 
-      console.log(`Fetched ${data?.length || 0} resi for local validation. Data:`, data);
+      // console.log(`Fetched ${data?.length || 0} resi for local validation. Data:`, data); // Removed
       return data || [];
     },
     enabled: !!expedition,
@@ -68,7 +68,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     queryFn: async () => {
       if (!expedition) return null;
 
-      console.log(`RPC Call: get_last_karung_for_expedition_and_date with p_couriername: ${expedition}, p_selected_date: ${formattedDate}`);
+      // console.log(`RPC Call: get_last_karung_for_expedition_and_date with p_couriername: ${expedition}, p_selected_date: ${formattedDate}`); // Removed
       const { data, error } = await supabase.rpc("get_last_karung_for_expedition_and_date", {
         p_couriername: expedition,
         p_selected_date: formattedDate,
@@ -89,7 +89,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     queryFn: async () => {
       if (!expedition) return [];
 
-      console.log(`RPC Call: get_karung_summary_for_expedition_and_date with p_couriername: ${expedition}, p_selected_date: ${formattedDate}`);
+      // console.log(`RPC Call: get_karung_summary_for_expedition_and_date with p_couriername: ${expedition}, p_selected_date: ${formattedDate}`); // Removed
       const { data, error } = await supabase.rpc("get_karung_summary_for_expedition_and_date", {
         p_couriername: expedition,
         p_selected_date: formattedDate,
@@ -108,7 +108,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
   const { data: allKarungSummariesData, isLoading: isLoadingAllKarungSummaries } = useQuery<AllKarungSummaryItem[]>({
     queryKey: ["allKarungSummaries", formattedDate],
     queryFn: async () => {
-      console.log(`Fetching allKarungSummaries for date: ${formattedDate}`);
+      // console.log(`Fetching allKarungSummaries for date: ${formattedDate}`); // Removed
       const { data, error } = await supabase.rpc("get_all_karung_summaries_for_date", {
         p_selected_date: formattedDate,
       });
@@ -126,7 +126,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
   const { data: uniqueExpeditionNames, isLoading: isLoadingUniqueExpeditionNames } = useQuery<string[]>({
     queryKey: ["uniqueExpeditionNames"],
     queryFn: async () => {
-      console.log("Fetching unique expedition names from tbl_expedisi with flag = 'NO'.");
+      // console.log("Fetching unique expedition names from tbl_expedisi with flag = 'NO'."); // Removed
       const { data, error } = await supabase
         .from("tbl_expedisi")
         .select("couriername", { distinct: true })
@@ -137,8 +137,8 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
         throw error;
       }
       
-      console.log("Raw distinct couriername data from tbl_expedisi (flag NO):", data);
-      console.log("Number of raw distinct couriername entries (flag NO):", data?.length);
+      // console.log("Raw distinct couriername data from tbl_expedisi (flag NO):", data); // Removed
+      // console.log("Number of raw distinct couriername entries (flag NO):", data?.length); // Removed
 
       // Buat Set baru dan tambahkan 'ID' terlebih dahulu, lalu tambahkan nama kurir dari data
       const namesSet = new Set<string>();
@@ -153,7 +153,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
         }
       });
       
-      console.log("Final namesSet before converting to array:", Array.from(namesSet));
+      // console.log("Final namesSet before converting to array:", Array.from(namesSet)); // Removed
       const names = Array.from(namesSet);
       return names.sort((a, b) => a.localeCompare(b));
     },

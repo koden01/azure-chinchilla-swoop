@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getPendingOperations, deletePendingOperation, updatePendingOperation } from '@/integrations/indexeddb/pendingOperations';
-import type { PendingOperation } from '@/integrations/indexeddb/pendingOperations'; // Dipisahkan sebagai impor tipe
+// import type { PendingOperation } from '@/integrations/indexeddb/pendingOperations'; // Dihapus karena tidak digunakan secara langsung di sini
 import { supabase } from '@/integrations/supabase/client';
 import { showError, showSuccess } from '@/utils/toast';
 import { invalidateDashboardQueries } from '@/utils/dashboardQueryInvalidation';

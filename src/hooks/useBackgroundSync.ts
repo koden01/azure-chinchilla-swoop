@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { getPendingOperations, deletePendingOperation, updatePendingOperation, PendingOperation } from '@/integrations/indexeddb/pendingOperations';
+import { getPendingOperations, deletePendingOperation, updatePendingOperation, type PendingOperation } from '@/integrations/indexeddb/pendingOperations';
 import { supabase } from '@/integrations/supabase/client';
 import { showError, showSuccess } from '@/utils/toast';
 import { invalidateDashboardQueries } from '@/utils/dashboardQueryInvalidation';
@@ -103,7 +103,6 @@ export const useBackgroundSync = () => {
           op.lastAttempt = Date.now();
           if (op.retries >= MAX_RETRIES) {
             console.error(`Operation ${op.id} reached max retries. Deleting.`);
-            await deletePendingOperation(op.id);
             showError(`Gagal menyinkronkan resi ${op.payload.resiNumber} setelah beberapa percobaan. Silakan coba lagi secara manual.`);
           } else {
             await updatePendingOperation(op);

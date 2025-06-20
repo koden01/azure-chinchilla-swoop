@@ -1,5 +1,5 @@
 import React from "react";
-import { useQueryClient } from "@tanstack/react-query"; // Keep import for type inference if needed, but remove usage
+// import { useQueryClient } from "@tanstack/react-query"; // REMOVED: No longer directly used here
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { showSuccess, showError } from "@/utils/toast";
@@ -232,7 +232,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
             .single();
 
         if (directExpedisiError && directExpedisiError.code !== 'PGRST116') { // PGRST116 means "no rows found"
-            throw directExpedisiError; // Re-throw other errors
+            throw directGExpedisiError; // Re-throw other errors
         }
         
         if (directExpedisiData) {

@@ -1,21 +1,14 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { format, startOfDay, endOfDay } from "date-fns";
-import { useEffect, useState } from "react";
+import { format, isSameDay, startOfDay, endOfDay } from "date-fns";
+import { useEffect, useState, useMemo } from "react";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import { normalizeExpeditionName, KNOWN_EXPEDITIONS } from "@/utils/expeditionUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { PendingOperation } from "@/integrations/indexeddb/pendingOperations";
-import { usePendingOperations } from "@/hooks/usePendingOperations"; // NEW: Import usePendingOperations
+import { usePendingOperations } from "@/hooks/usePendingOperations";
 
-// Import individual hooks
-import { useTransaksiHariIniCount } from "./useTransaksiHariIniCount";
-import { useTotalScanCount } from "./useTotalScanCount";
-import { useIdRekCount } from "./useIdRekCount";
-import { useBelumKirimCount } from "./useBelumKirimCount";
-import { useFollowUpFlagNoCount } from "./useFollowUpFlagNoCount";
-import { useScanFollowupLateCount } from "./useScanFollowupLateCount";
-import { useBatalCount } from "./useBatalCount";
+// Import base data hooks
 import { useFollowUpRecords } from "./useFollowUpRecords";
 import { useExpedisiRecordsForSelectedDate } from "./useExpedisiRecordsForSelectedDate";
 import { useAllResiRecords } from "./useAllResiRecords";
@@ -23,19 +16,19 @@ import { useAllExpedisiRecordsUnfiltered } from "./useAllExpedisiRecordsUnfilter
 
 // Define the return type interface for useCombinedDashboardData
 interface DashboardDataReturn {
-  transaksiHariIni: number | undefined;
+  transaksiHariIni: number;
   isLoadingTransaksiHariIni: boolean;
-  totalScan: number | undefined;
+  totalScan: number;
   isLoadingTotalScan: boolean;
-  idRekCount: number | undefined;
+  idRekCount: number;
   isLoadingIdRekCount: boolean;
-  belumKirim: number | undefined;
+  belumKirim: number;
   isLoadingBelumKirim: boolean;
-  followUpFlagNoCount: number | undefined;
+  followUpFlagNoCount: number;
   isLoadingFollowUpFlagNoCount: boolean;
-  scanFollowupLateCount: number | undefined;
+  scanFollowupLateCount: number;
   isLoadingScanFollowupLateCount: boolean;
-  batalCount: number | undefined;
+  batalCount: number;
   isLoadingBatalCount: boolean;
   followUpData: any[] | undefined;
   isLoadingFollowUp: boolean;
@@ -53,27 +46,35 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
   const formattedDate = date ? format(date, "yyyy-MM-dd") : "";
   const queryClient = useQueryClient();
 
+  // State for derived summary counts
+  const [transaksiHariIni, setTransaksiHariIni] = useState<number>(0);
+  const [totalScan, setTotalScan] = useState<number>(0);
+  const [idRekCount, setIdRekCount] = useState<number>(0);
+  const [belumKirim, setBelumKirim] = useState<number>(0);
+  const [followUpFlagNoCount, setFollowUpFlagNoCount] = useState<number>(0);
+  const [scanFollowupLateCount, setScanFollowupLateCount] = useState<number>(0);
+  const [batalCount, setBatalCount] = useState<number>(0);
   const [expeditionSummaries, setExpeditionSummaries] = useState<any[]>([]);
 
-  // Fetch data using individual hooks
-  const { data: transaksiHariIni, isLoading: isLoadingTransaksiHariIni } = useTransaksiHariIniCount(date);
-  const { data: totalScan, isLoading: isLoadingTotalScan } = useTotalScanCount(date);
-  const { data: idRekCount, isLoading: isLoadingIdRekCount } = useIdRekCount(date);
-  const { data: belumKirim, isLoading: isLoadingBelumKirim } = useBelumKirimCount(date);
-  const { data: followUpFlagNoCount, isLoading: isLoadingFollowUpFlagNoCount } = useFollowUpFlagNoCount();
-  const { data: scanFollowupLateCount, isLoading: isLoadingScanFollowupLateCount } = useScanFollowupLateCount(date);
-  const { data: batalCount, isLoading: isLoadingBatalCount } = useBatalCount(date);
+  // Fetch base data using individual hooks
   const { data: followUpData, isLoading: isLoadingFollowUp } = useFollowUpRecords(date);
   const { data: expedisiDataForSelectedDate, isLoading: isLoadingExpedisiDataForSelectedDate } = useExpedisiRecordsForSelectedDate(date);
   const { data: allResiData, isLoading: isLoadingAllResi } = useAllResiRecords(date);
   const { data: allExpedisiDataUnfiltered, isLoading: isLoadingAllExpedisiUnfiltered } = useAllExpedisiRecordsUnfiltered();
 
-  // NEW: Get pending operations from IndexedDB
+  // Get pending operations from IndexedDB
   const { pendingOperations } = usePendingOperations();
 
-  // Process data to create expedition summaries
+  // Process data to create all dashboard summaries and counts
   useEffect(() => {
-    if (isLoadingAllExpedisiUnfiltered || isLoadingExpedisiDataForSelectedDate || isLoadingAllResi || !allExpedisiDataUnfiltered || !expedisiDataForSelectedDate || !allResiData || !date) {
+    if (!date || isLoadingAllExpedisiUnfiltered || isLoadingExpedisiDataForSelectedDate || isLoadingAllResi || !allExpedisiDataUnfiltered || !expedisiDataForSelectedDate || !allResiData) {
+      setTransaksiHariIni(0);
+      setTotalScan(0);
+      setIdRekCount(0);
+      setBelumKirim(0);
+      setFollowUpFlagNoCount(0);
+      setScanFollowupLateCount(0);
+      setBatalCount(0);
       setExpeditionSummaries([]);
       return;
     }
@@ -110,8 +111,8 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
         });
 
         // Update expedisiDataForSelectedDate if it's for the current date
-        const opDate = format(new Date(op.timestamp), "yyyy-MM-dd");
-        if (opDate === formattedDate) {
+        const opDate = new Date(op.timestamp);
+        if (isSameDay(opDate, date)) {
           const existingExpedisiForSelectedDate = expedisiDataForSelectedDate.find(e => (e.resino || "").toLowerCase() === normalizedResi);
           if (!existingExpedisiForSelectedDate) {
             expedisiDataForSelectedDate.push({
@@ -142,9 +143,9 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
           currentExpedisiData.set(normalizedResi, { ...expedisiRecord, flag: "BATAL" });
         }
 
-        // Remove from expedisiDataForSelectedDate if it was present and for current date
-        const opDate = format(new Date(op.timestamp), "yyyy-MM-dd");
-        if (opDate === formattedDate) {
+        // Update expedisiDataForSelectedDate if it was present and for current date
+        const opDate = new Date(op.timestamp);
+        if (isSameDay(opDate, date)) {
           const indexInSelectedDate = expedisiDataForSelectedDate.findIndex(e => (e.resino || "").toLowerCase() === normalizedResi);
           if (indexInSelectedDate !== -1) {
             expedisiDataForSelectedDate[indexInSelectedDate].flag = "BATAL";
@@ -174,8 +175,8 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
         }
 
         // Update expedisiDataForSelectedDate if it was present and for current date
-        const opDate = format(new Date(op.timestamp), "yyyy-MM-dd");
-        if (opDate === formattedDate) {
+        const opDate = new Date(op.timestamp);
+        if (isSameDay(opDate, date)) {
           const indexInSelectedDate = expedisiDataForSelectedDate.findIndex(e => (e.resino || "").toLowerCase() === normalizedResi);
           if (indexInSelectedDate !== -1) {
             expedisiDataForSelectedDate[indexInSelectedDate].flag = "YES";
@@ -190,8 +191,8 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
         }
 
         // Update expedisiDataForSelectedDate if it was present and for current date
-        const opDate = format(new Date(op.timestamp), "yyyy-MM-dd");
-        if (opDate === formattedDate) {
+        const opDate = new Date(op.timestamp);
+        if (isSameDay(opDate, date)) {
           const indexInSelectedDate = expedisiDataForSelectedDate.findIndex(e => (e.resino || "").toLowerCase() === normalizedResi);
           if (indexInSelectedDate !== -1) {
             expedisiDataForSelectedDate[indexInSelectedDate].cekfu = op.payload.newCekfuStatus;
@@ -200,6 +201,64 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
       }
     });
 
+    // --- Calculate overall summary counts ---
+    let currentTransaksiHariIni = 0;
+    let currentBelumKirim = 0;
+    let currentTotalScan = 0;
+    let currentIdRekCount = 0;
+    let currentBatalCount = 0;
+    let currentScanFollowupLateCount = 0;
+    let currentFollowUpFlagNoCount = 0; // This one is special, it's for *except today*
+
+    const today = new Date();
+    const startOfSelectedDate = startOfDay(date);
+    const endOfSelectedDate = endOfDay(date);
+
+    // Calculate Transaksi Hari Ini and Belum Kirim (for selected date)
+    expedisiDataForSelectedDate.forEach(exp => {
+      currentTransaksiHariIni++;
+      if (exp.flag === "NO") {
+        currentBelumKirim++;
+      }
+    });
+
+    // Calculate Total Scan, ID Rek, Batal, Scan Follow Up Late (for selected date)
+    currentResiData.forEach(resi => {
+      const resiCreatedDate = new Date(resi.created);
+      if (resiCreatedDate >= startOfSelectedDate && resiCreatedDate <= endOfSelectedDate) {
+        if (resi.schedule === "ontime") {
+          currentTotalScan++;
+        }
+        if (resi.Keterangan === "ID_REKOMENDASI") {
+          currentIdRekCount++;
+        }
+        if (resi.schedule === "batal") {
+          currentBatalCount++;
+        }
+        if (resi.schedule === "late") {
+          currentScanFollowupLateCount++;
+        }
+      }
+    });
+
+    // Calculate Follow Up (Flag NO except today)
+    // This count needs to iterate through allExpedisiDataUnfiltered and check dates
+    currentExpedisiData.forEach(exp => {
+      const expedisiCreatedDate = new Date(exp.created);
+      if (exp.flag === "NO" && !isSameDay(expedisiCreatedDate, today)) {
+        currentFollowUpFlagNoCount++;
+      }
+    });
+
+    setTransaksiHariIni(currentTransaksiHariIni);
+    setTotalScan(currentTotalScan);
+    setIdRekCount(currentIdRekCount);
+    setBelumKirim(currentBelumKirim);
+    setFollowUpFlagNoCount(currentFollowUpFlagNoCount);
+    setScanFollowupLateCount(currentScanFollowupLateCount);
+    setBatalCount(currentBatalCount);
+
+    // --- Calculate per-expedition summaries ---
     const summaries: { [key: string]: any } = {};
 
     // Initialize summaries for all known expeditions
@@ -233,7 +292,13 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
     // Populate totalScan, idRekomendasi, totalBatal, totalScanFollowUp, jumlahKarung from currentResiData (already filtered by date and potentially modified by pending ops)
     currentResiData.forEach(resi => {
       const normalizedResi = resi.Resi?.trim().toLowerCase();
+      const resiCreatedDate = new Date(resi.created);
       let originalExpeditionName: string | null = null;
+
+      // Only consider resi records for the selected date for per-expedition summaries
+      if (!isSameDay(resiCreatedDate, date)) {
+        return; // Skip if not for the selected date
+      }
 
       // Try to get the original courier name from currentExpedisiData first
       if (normalizedResi) {
@@ -318,19 +383,19 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
 
   return {
     transaksiHariIni,
-    isLoadingTransaksiHariIni,
+    isLoadingTransaksiHariIni: isLoadingExpedisiDataForSelectedDate, // Now depends on expedisiDataForSelectedDate
     totalScan,
-    isLoadingTotalScan,
+    isLoadingTotalScan: isLoadingAllResi, // Now depends on allResiData
     idRekCount, 
-    isLoadingIdRekCount,
+    isLoadingIdRekCount: isLoadingAllResi, // Now depends on allResiData
     belumKirim,
-    isLoadingBelumKirim,
+    isLoadingBelumKirim: isLoadingExpedisiDataForSelectedDate, // Now depends on expedisiDataForSelectedDate
     followUpFlagNoCount, 
-    isLoadingFollowUpFlagNoCount, 
+    isLoadingFollowUpFlagNoCount: isLoadingAllExpedisiUnfiltered, // Now depends on allExpedisiDataUnfiltered
     scanFollowupLateCount, 
-    isLoadingScanFollowupLateCount, 
+    isLoadingScanFollowupLateCount: isLoadingAllResi, // Now depends on allResiData
     batalCount,
-    isLoadingBatalCount,
+    isLoadingBatalCount: isLoadingAllResi, // Now depends on allResiData
     followUpData,
     isLoadingFollowUp,
     expeditionSummaries,

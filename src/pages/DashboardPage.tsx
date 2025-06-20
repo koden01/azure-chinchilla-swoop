@@ -5,7 +5,7 @@ import ResiDetailModal from "@/components/ResiDetailModal";
 import DashboardDatePicker from "@/components/dashboard/DashboardDatePicker";
 import DashboardSummaryCards from "@/components/dashboard/DashboardSummaryCards";
 import DashboardExpeditionDetails from "@/components/dashboard/DashboardExpeditionDetails";
-import { useCombinedDashboardData } from "@/hooks/dashboard/useCombinedDashboardData"; // Updated import
+import { useCombinedDashboardData } from "@/hooks/dashboard/useCombinedDashboardData";
 import { useDashboardModals } from "@/hooks/useDashboardModals";
 
 const DashboardPage: React.FC = () => {
@@ -30,10 +30,10 @@ const DashboardPage: React.FC = () => {
     expeditionSummaries,
     formattedDate,
     allExpedisiData,
-    isLoadingAllResi, // Ensure this is destructured here
-    isLoadingExpedisiDataForSelectedDate, // Ensure this is destructured here
-    isLoadingAllExpedisiUnfiltered, // Ensure this is destructured here
-  } = useCombinedDashboardData(selectedDate); // Updated hook call
+    isLoadingAllResi,
+    isLoadingExpedisiDataForSelectedDate,
+    isLoadingAllExpedisiUnfiltered,
+  } = useCombinedDashboardData(selectedDate);
 
   const {
     isModalOpen,
@@ -48,8 +48,8 @@ const DashboardPage: React.FC = () => {
     handleOpenExpeditionDetailModal,
     handleCloseModal,
     handleBatalResi,
-    onConfirmResi, // Corrected: Destructure as onConfirmResi
-    onCekfuToggle, // Corrected: Destructure as onCekfuToggle
+    onConfirmResi,
+    onCekfuToggle,
   } = useDashboardModals({ date: selectedDate, formattedDate, allExpedisiData });
 
   const isLoadingAny =
@@ -61,9 +61,9 @@ const DashboardPage: React.FC = () => {
     isLoadingScanFollowupLateCount ||
     isLoadingBatalCount ||
     isLoadingFollowUp ||
-    isLoadingAllResi || // Include in overall loading check
-    isLoadingExpedisiDataForSelectedDate || // Include in overall loading check
-    isLoadingAllExpedisiUnfiltered; // Include in overall loading check
+    isLoadingAllResi ||
+    isLoadingExpedisiDataForSelectedDate ||
+    isLoadingAllExpedisiUnfiltered;
 
   // Sort expeditionSummaries alphabetically by name
   const sortedExpeditionSummaries = React.useMemo(() => {

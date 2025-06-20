@@ -1,6 +1,5 @@
 import React, { Suspense } from "react";
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
+import { Toaster as Sonner } from "@/components/ui/sonner"; // Hanya menggunakan Sonner
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { persistQueryClient } from '@tanstack/query-persist-client-core';
@@ -45,7 +44,7 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
+        {/* Menghapus <Toaster /> dari shadcn/ui */}
         <Sonner
           position="top-center"
           duration={3000} // Durasi diubah menjadi 3000ms (3 detik)

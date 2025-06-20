@@ -255,7 +255,7 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
       return expedisiMap;
     },
     enabled: true, // Always enabled for local validation
-    staleTime: 1000 * 60 * 5, // Keep this data fresh for 5 minutes
+    staleTime: 1000 * 60 * 60, // Changed to 60 minutes
     gcTime: 1000 * 60 * 60 * 24 * 2, // Garbage collect after 2 days
   });
   console.log("useDashboardData: All Expedisi Data Unfiltered - isLoading:", isLoadingAllExpedisiUnfiltered, "data size:", allExpedisiDataUnfiltered?.size, "error:", allExpedisiDataUnfilteredError);
@@ -451,7 +451,7 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
   // Debounced function to invalidate dashboard queries
   const debouncedInvalidateDashboardQueries = useDebouncedCallback(() => {
     console.log("Debounced invalidation triggered from Realtime!");
-    invalidateDashboardQueries(queryClient, date);
+    invalidateDashboardQueries(queryClient, new Date(), expedition);
   }, 150); // Debounce for 150ms
 
   // Real-time subscription for dashboard data

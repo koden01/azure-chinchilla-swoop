@@ -164,13 +164,11 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
   }, [date, allExpedisiDataUnfiltered, expedisiDataForSelectedDate, allResiData, isLoadingAllExpedisiUnfiltered, isLoadingExpedisiDataForSelectedDate, isLoadingAllRes]);
 
   const debouncedInvalidateDashboardQueries = useDebouncedCallback(() => {
-    // console.log("Realtime event triggered dashboard data invalidation."); // Removed
     invalidateDashboardQueries(queryClient, new Date(), undefined); 
   }, 150);
 
   useEffect(() => {
     const handleRealtimeEvent = (payload: any) => {
-      // console.log("Realtime event received for Dashboard:", payload); // Removed
       debouncedInvalidateDashboardQueries();
     };
 
@@ -185,7 +183,6 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
       .subscribe();
 
     return () => {
-      // console.log("Unsubscribing Supabase Realtime channels for Dashboard data."); // Removed
       supabase.removeChannel(resiChannel);
       supabase.removeChannel(expedisiChannel);
     };

@@ -1,10 +1,12 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { format } from "date-fns"; // Removed unused import: subDays
+import { format, startOfDay, endOfDay } from "date-fns";
 import { useEffect, useState } from "react";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import { normalizeExpeditionName, KNOWN_EXPEDITIONS } from "@/utils/expeditionUtils";
 import { supabase } from "@/integrations/supabase/client";
+import { PendingOperation } from "@/integrations/indexeddb/pendingOperations";
+import { usePendingOperations } from "@/hooks/usePendingOperations"; // NEW: Import usePendingOperations
 
 // Import individual hooks
 import { useTransaksiHariIniCount } from "./useTransaksiHariIniCount";
@@ -44,7 +46,7 @@ interface DashboardDataReturn {
   isLoadingExpedisiDataForSelectedDate: boolean;
   allResiData: any[] | undefined;
   isLoadingAllResi: boolean;
-  isLoadingAllExpedisiUnfiltered: boolean; // Added this property
+  isLoadingAllExpedisiUnfiltered: boolean;
 }
 
 export const useCombinedDashboardData = (date: Date | undefined): DashboardDataReturn => {
@@ -66,12 +68,137 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
   const { data: allResiData, isLoading: isLoadingAllResi } = useAllResiRecords(date);
   const { data: allExpedisiDataUnfiltered, isLoading: isLoadingAllExpedisiUnfiltered } = useAllExpedisiRecordsUnfiltered();
 
+  // NEW: Get pending operations from IndexedDB
+  const { pendingOperations } = usePendingOperations();
+
   // Process data to create expedition summaries
   useEffect(() => {
     if (isLoadingAllExpedisiUnfiltered || isLoadingExpedisiDataForSelectedDate || isLoadingAllResi || !allExpedisiDataUnfiltered || !expedisiDataForSelectedDate || !allResiData || !date) {
       setExpeditionSummaries([]);
       return;
     }
+
+    // Create mutable copies of data for merging
+    const currentExpedisiData = new Map(allExpedisiDataUnfiltered);
+    const currentResiData = [...allResiData];
+
+    // Apply pending operations to the data
+    pendingOperations.forEach(op => {
+      const normalizedResi = (op.payload.resiNumber || "").toLowerCase().trim();
+      if (!normalizedResi) return;
+
+      if (op.type === 'scan') {
+        // Add new resi to currentResiData
+        const newResiEntry = {
+          Resi: op.payload.resiNumber,
+          nokarung: op.payload.selectedKarung,
+          created: new Date(op.timestamp).toISOString(), // Use operation timestamp for consistency
+          Keterangan: op.payload.courierNameFromExpedisi,
+          schedule: "ontime", // Optimistic schedule
+        };
+        currentResiData.push(newResiEntry);
+
+        // Update or add expedisi record in currentExpedisiData
+        const existingExpedisi = currentExpedisiData.get(normalizedResi);
+        currentExpedisiData.set(normalizedResi, {
+          ...existingExpedisi,
+          resino: op.payload.resiNumber,
+          couriername: op.payload.courierNameFromExpedisi,
+          flag: "YES", // Optimistically set to YES
+          created: existingExpedisi?.created || new Date(op.timestamp).toISOString(), // Keep original or use new
+          cekfu: existingExpedisi?.cekfu || false, // Keep existing cekfu or default
+        });
+
+        // Update expedisiDataForSelectedDate if it's for the current date
+        const opDate = format(new Date(op.timestamp), "yyyy-MM-dd");
+        if (opDate === formattedDate) {
+          const existingExpedisiForSelectedDate = expedisiDataForSelectedDate.find(e => (e.resino || "").toLowerCase() === normalizedResi);
+          if (!existingExpedisiForSelectedDate) {
+            expedisiDataForSelectedDate.push({
+              resino: op.payload.resiNumber,
+              orderno: null, // Default for new scans
+              chanelsales: null, // Default for new scans
+              couriername: op.payload.courierNameFromExpedisi,
+              created: new Date(op.timestamp).toISOString(),
+              flag: "YES",
+              datetrans: null, // Default for new scans
+              cekfu: false,
+            });
+          } else {
+            existingExpedisiForSelectedDate.flag = "YES";
+          }
+        }
+
+      } else if (op.type === 'batal') {
+        // Update resi schedule to 'batal'
+        const resiIndex = currentResiData.findIndex(r => (r.Resi || "").toLowerCase() === normalizedResi);
+        if (resiIndex !== -1) {
+          currentResiData[resiIndex] = { ...currentResiData[resiIndex], schedule: "batal" };
+        }
+
+        // Update expedisi flag to 'BATAL'
+        const expedisiRecord = currentExpedisiData.get(normalizedResi);
+        if (expedisiRecord) {
+          currentExpedisiData.set(normalizedResi, { ...expedisiRecord, flag: "BATAL" });
+        }
+
+        // Remove from expedisiDataForSelectedDate if it was present and for current date
+        const opDate = format(new Date(op.timestamp), "yyyy-MM-dd");
+        if (opDate === formattedDate) {
+          const indexInSelectedDate = expedisiDataForSelectedDate.findIndex(e => (e.resino || "").toLowerCase() === normalizedResi);
+          if (indexInSelectedDate !== -1) {
+            expedisiDataForSelectedDate[indexInSelectedDate].flag = "BATAL";
+          }
+        }
+
+      } else if (op.type === 'confirm') {
+        // Update resi schedule to 'ontime'
+        const resiIndex = currentResiData.findIndex(r => (r.Resi || "").toLowerCase() === normalizedResi);
+        if (resiIndex !== -1) {
+          currentResiData[resiIndex] = { ...currentResiData[resiIndex], schedule: "ontime" };
+        } else {
+          // If resi not found in currentResiData, add it (e.g., if it was deleted but then confirmed)
+          currentResiData.push({
+            Resi: op.payload.resiNumber,
+            nokarung: null, // Assuming no karung for confirmed items if not provided
+            created: op.payload.expedisiCreatedTimestamp || new Date(op.timestamp).toISOString(),
+            Keterangan: op.payload.courierNameFromExpedisi,
+            schedule: "ontime",
+          });
+        }
+
+        // Update expedisi flag to 'YES'
+        const expedisiRecord = currentExpedisiData.get(normalizedResi);
+        if (expedisiRecord) {
+          currentExpedisiData.set(normalizedResi, { ...expedisiRecord, flag: "YES" });
+        }
+
+        // Update expedisiDataForSelectedDate if it was present and for current date
+        const opDate = format(new Date(op.timestamp), "yyyy-MM-dd");
+        if (opDate === formattedDate) {
+          const indexInSelectedDate = expedisiDataForSelectedDate.findIndex(e => (e.resino || "").toLowerCase() === normalizedResi);
+          if (indexInSelectedDate !== -1) {
+            expedisiDataForSelectedDate[indexInSelectedDate].flag = "YES";
+          }
+        }
+
+      } else if (op.type === 'cekfu') {
+        // Update expedisi cekfu status
+        const expedisiRecord = currentExpedisiData.get(normalizedResi);
+        if (expedisiRecord) {
+          currentExpedisiData.set(normalizedResi, { ...expedisiRecord, cekfu: op.payload.newCekfuStatus });
+        }
+
+        // Update expedisiDataForSelectedDate if it was present and for current date
+        const opDate = format(new Date(op.timestamp), "yyyy-MM-dd");
+        if (opDate === formattedDate) {
+          const indexInSelectedDate = expedisiDataForSelectedDate.findIndex(e => (e.resino || "").toLowerCase() === normalizedResi);
+          if (indexInSelectedDate !== -1) {
+            expedisiDataForSelectedDate[indexInSelectedDate].cekfu = op.payload.newCekfuStatus;
+          }
+        }
+      }
+    });
 
     const summaries: { [key: string]: any } = {};
 
@@ -84,12 +211,12 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
         sisa: 0,
         jumlahKarung: new Set<string>(),
         idRekomendasi: 0,
-        totalBatal: 0, 
-        totalScanFollowUp: 0, 
+        totalBatal: 0,
+        totalScanFollowUp: 0,
       };
     });
 
-    // Populate totalTransaksi and sisa from expedisiDataForSelectedDate (already filtered by date)
+    // Populate totalTransaksi and sisa from expedisiDataForSelectedDate (already filtered by date and potentially modified by pending ops)
     expedisiDataForSelectedDate.forEach(exp => {
       const normalizedCourierName = normalizeExpeditionName(exp.couriername);
       
@@ -103,14 +230,14 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
       }
     });
 
-    // Populate totalScan, idRekomendasi, totalBatal, totalScanFollowUp, jumlahKarung from allResiData (already filtered by date)
-    allResiData.forEach(resi => {
+    // Populate totalScan, idRekomendasi, totalBatal, totalScanFollowUp, jumlahKarung from currentResiData (already filtered by date and potentially modified by pending ops)
+    currentResiData.forEach(resi => {
       const normalizedResi = resi.Resi?.trim().toLowerCase();
       let originalExpeditionName: string | null = null;
 
-      // Try to get the original courier name from tbl_expedisi first
+      // Try to get the original courier name from currentExpedisiData first
       if (normalizedResi) {
-        const expedisiRecord = allExpedisiDataUnfiltered.get(normalizedResi);
+        const expedisiRecord = currentExpedisiData.get(normalizedResi);
         if (expedisiRecord && expedisiRecord.couriername) {
           originalExpeditionName = normalizeExpeditionName(expedisiRecord.couriername);
         }
@@ -162,14 +289,14 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
     }));
 
     setExpeditionSummaries(finalSummaries);
-  }, [date, allExpedisiDataUnfiltered, expedisiDataForSelectedDate, allResiData, isLoadingAllExpedisiUnfiltered, isLoadingExpedisiDataForSelectedDate, isLoadingAllResi]);
+  }, [date, allExpedisiDataUnfiltered, expedisiDataForSelectedDate, allResiData, pendingOperations, isLoadingAllExpedisiUnfiltered, isLoadingExpedisiDataForSelectedDate, isLoadingAllResi]);
 
   const debouncedInvalidateDashboardQueries = useDebouncedCallback(() => {
     invalidateDashboardQueries(queryClient, new Date(), undefined); 
   }, 150);
 
   useEffect(() => {
-    const handleRealtimeEvent = (_payload: any) => { // Renamed payload to _payload
+    const handleRealtimeEvent = (_payload: any) => {
       debouncedInvalidateDashboardQueries();
     };
 
@@ -213,6 +340,6 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
     isLoadingExpedisiDataForSelectedDate,
     allResiData,
     isLoadingAllResi,
-    isLoadingAllExpedisiUnfiltered, // Added to return
+    isLoadingAllExpedisiUnfiltered,
   };
 };

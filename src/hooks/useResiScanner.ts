@@ -146,6 +146,8 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
     setIsProcessing(true); // Set to true at the very beginning
 
     const queryKeyForInputPageDisplay = ["allResiForExpedition", expedition, formattedDate];
+    const queryKeyForKarungSummary = ["karungSummary", expedition, formattedDate];
+
 
     const currentOptimisticId = Date.now().toString() + Math.random().toString(36).substring(2, 9);
 
@@ -314,6 +316,27 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         return newMap;
       });
 
+      // NEW OPTIMISTIC UPDATE FOR KARUNG SUMMARY
+      queryClient.setQueryData(queryKeyForKarungSummary, (oldSummary: { karung_number: string; quantity: number; }[] | undefined) => {
+        const newSummary = oldSummary ? [...oldSummary] : [];
+        const existingKarungIndex = newSummary.findIndex(item => item.karung_number === selectedKarung);
+
+        if (existingKarungIndex !== -1) {
+          // If karung exists, increment its quantity
+          newSummary[existingKarungIndex] = {
+            ...newSummary[existingKarungIndex],
+            quantity: newSummary[existingKarungIndex].quantity + 1,
+          };
+        } else {
+          // If karung doesn't exist, add it with quantity 1
+          newSummary.push({
+            karung_number: selectedKarung,
+            quantity: 1,
+          });
+        }
+        return newSummary;
+      });
+
       lastOptimisticIdRef.current = currentOptimisticId;
       
       // Add operation to IndexedDB for background sync
@@ -386,6 +409,22 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
             const newMap = oldMap ? new Map(oldMap) : new Map();
             queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] }); // Force re-fetch for consistency
             return newMap; 
+          });
+          // REVERT OPTIMISTIC UPDATE FOR KARUNG SUMMARY
+          queryClient.setQueryData(queryKeyForKarungSummary, (oldSummary: { karung_number: string; quantity: number; }[] | undefined) => {
+            const newSummary = oldSummary ? [...oldSummary] : [];
+            const existingKarungIndex = newSummary.findIndex(item => item.karung_number === selectedKarung);
+
+            if (existingKarungIndex !== -1) {
+              newSummary[existingKarungIndex] = {
+                ...newSummary[existingKarungIndex],
+                quantity: newSummary[existingKarungIndex].quantity - 1,
+              };
+              if (newSummary[existingKarungIndex].quantity <= 0) {
+                newSummary.splice(existingKarungIndex, 1);
+              }
+            }
+            return newSummary;
           });
       }
       lastOptimisticIdRef.current = null; // Clear the ref after attempting revert

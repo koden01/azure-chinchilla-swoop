@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, showError, dismissToast } from "@/utils/toast";
 import { beepSuccess, beepFailure, beepDouble } from "@/utils/audio";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { format, subDays } from "date-fns";
+import { format, subDays, startOfDay, endOfDay } from "date-fns";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 import { normalizeExpeditionName } from "@/utils/expeditionUtils";
 import { addPendingOperation } from "@/integrations/indexeddb/pendingOperations";
@@ -88,15 +88,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
 
   const lastOptimisticIdRef = React.useRef<string | null>(null);
 
-  // Removed invalidateAndRefetch function as it will be handled by useBackgroundSync
-  // const invalidateAndRefetch = () => {
-  //   console.log("Invalidating and refetching queries...");
-  //   invalidateDashboardQueries(queryClient, new Date(), expedition);
-  //   queryClient.invalidateQueries({ queryKey: ["historyData", formattedDate, formattedDate] });
-  //   queryClient.invalidateQueries({ queryKey: ["recentResiNumbersForValidation", twoDaysAgoFormatted, formattedDate] });
-  //   queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] });
-  // };
-
   const keepFocus = () => {
     setTimeout(() => {
       if (resiInputRef.current) {
@@ -151,7 +142,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
     let validationStatus: "OK" | "DUPLICATE_RESI" | "MISMATCH_EXPEDISI" | "NOT_FOUND_EXPEDISI" = "OK";
     let validationMessage: string | null = null;
     let actualCourierName: string | null = null;
-    let expedisiRecord: any = null;
+    let expedisiRecord: any = null; // Will hold the record from tbl_expedisi if found
 
     try {
       // 1. Local Duplicate Check
@@ -165,67 +156,60 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
 
       // Only proceed with further checks if not already a duplicate
       if (validationStatus === 'OK') {
-        // 2. Local Expedition Validation (and direct fetch fallback)
+        // 2. Attempt to find expedisiRecord from caches or direct RPC call
         console.log(`[handleScanResi] Checking allExpedisiDataUnfiltered for ${normalizedCurrentResi}`);
         expedisiRecord = allExpedisiDataUnfiltered?.get(normalizedCurrentResi);
 
-        // If not found in 3-day cache, try the comprehensive 'flag NO' cache
         if (!expedisiRecord) {
           console.log(`[handleScanResi] Not found in allExpedisiDataUnfiltered. Checking allFlagNoExpedisiData.`);
           expedisiRecord = allFlagNoExpedisiData?.get(normalizedCurrentResi);
         }
 
-        // If still not found in any local cache, try a direct fetch from tbl_expedisi
         if (!expedisiRecord) {
-            console.log(`[handleScanResi] Not found in local caches. Attempting direct fetch from tbl_expedisi for ${currentResi}.`);
-            const { data: directExpedisiData, error: directExpedisiError } = await supabase
-                .from("tbl_expedisi")
-                .select("*")
-                .eq("resino", currentResi)
-                .single();
+            console.log(`[handleScanResi] Not found in local caches. Attempting direct fetch from tbl_expedisi using RPC for ${currentResi}.`);
+            const { data: directExpedisiDataArray, error: directExpedisiError } = await supabase.rpc("get_expedisi_by_resino_case_insensitive", {
+              p_resino: currentResi,
+            });
 
-            if (directExpedisiError && directExpedisiError.code !== 'PGRST116') { // PGRST116 means "no rows found"
+            if (directExpedisiError) {
+                console.error(`[handleScanResi] Error during direct fetch via RPC:`, directExpedisiError);
                 throw directExpedisiError; // Re-throw other errors
             }
             
-            if (directExpedisiData) {
-                expedisiRecord = directExpedisiData;
-                console.log(`[handleScanResi] Found via direct fetch. Updating caches.`);
+            if (directExpedisiDataArray && directExpedisiDataArray.length > 0) {
+                expedisiRecord = directExpedisiDataArray[0]; // Take the first one if multiple
+                console.log(`[handleScanResi] Found via direct fetch (RPC). Data:`, expedisiRecord);
                 // Optionally, update the cache with this fresh data to prevent future direct fetches for this item
-                // Update both 3-day cache and flag NO cache if applicable
                 queryClient.setQueryData(
                     ["allExpedisiDataUnfiltered", twoDaysAgoFormatted, endOfTodayFormatted],
                     (oldMap: Map<string, any> | undefined) => {
                         const newMap = oldMap ? new Map(oldMap) : new Map();
-                        newMap.set(normalizedCurrentResi, directExpedisiData);
+                        newMap.set(normalizedCurrentResi, expedisiRecord);
                         return newMap;
                     }
                 );
-                if (directExpedisiData.flag === 'NO') {
+                if (expedisiRecord.flag === 'NO') {
                   queryClient.setQueryData(
                     ["allFlagNoExpedisiData"],
                     (oldMap: Map<string, any> | undefined) => {
                         const newMap = oldMap ? new Map(oldMap) : new Map();
-                        newMap.set(normalizedCurrentResi, directExpedisiData);
+                        newMap.set(normalizedCurrentResi, expedisiRecord);
                         return newMap;
                     }
                   );
                 }
-            } else {
-                validationStatus = 'NOT_FOUND_EXPEDISI';
-                validationMessage = 'Data tidak ada di database ekspedisi.';
-                console.log(`[handleScanResi] Validation Failed: NOT_FOUND_EXPEDISI. Message: ${validationMessage}`);
             }
+            // IMPORTANT: Do NOT set NOT_FOUND_EXPEDISI here. It will be handled in the next step based on `expedition`.
         }
       }
 
-      // Only proceed with courier name check if previous checks passed
-      if (validationStatus === 'OK') {
+      // 3. Determine actualCourierName and final validationStatus based on `expedition` and `expedisiRecord` presence
+      if (validationStatus === 'OK') { // Only proceed if not already a duplicate
         console.log(`[handleScanResi] Performing courier name check. Selected expedition: ${expedition}`);
         if (expedition === 'ID') {
           if (expedisiRecord) {
             const normalizedExpedisiCourier = normalizeExpeditionName(expedisiRecord.couriername);
-            if (normalizedExpedisiCourier === 'ID') { // Use normalized name for comparison
+            if (normalizedExpedisiCourier === 'ID') {
               actualCourierName = 'ID';
               console.log(`[handleScanResi] Courier match: ID (from expedisiRecord).`);
             } else {
@@ -234,23 +218,19 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
               console.log(`[handleScanResi] Validation Failed: MISMATCH_EXPEDISI (ID). Message: ${validationMessage}`);
             }
           } else {
-            // This branch is reached if expedisiRecord was not found in cache AND not found via direct fetch.
-            // This means validationStatus is already 'NOT_FOUND_EXPEDISI'.
-            // However, for 'ID' expedition, if not found in tbl_expedisi, it can be ID_REKOMENDASI.
-            // This is a specific business rule.
+            // If expedition is 'ID' and resi was NOT found in tbl_expedisi, treat as ID_REKOMENDASI
             actualCourierName = 'ID_REKOMENDASI';
             console.log(`[handleScanResi] Courier assumed: ID_REKOMENDASI (expedisiRecord not found, but selected is ID).`);
           }
-        } else { // For non-ID expeditions
+        } else { // For non-ID expeditions (JNE, SPX, etc.)
           if (!expedisiRecord) {
-            // This case should ideally be caught by the earlier direct fetch logic.
-            // If we reach here and expedisiRecord is null, it means it was truly not found.
+            // If expedition is NOT 'ID' and resi was NOT found in tbl_expedisi, then it's a true NOT_FOUND_EXPEDISI
             validationStatus = 'NOT_FOUND_EXPEDISI';
             validationMessage = 'Data tidak ada di database ekspedisi.';
             console.log(`[handleScanResi] Validation Failed: NOT_FOUND_EXPEDISI (non-ID). Message: ${validationMessage}`);
           } else {
             const normalizedExpedisiCourier = normalizeExpeditionName(expedisiRecord.couriername);
-            if (normalizedExpedisiCourier !== expedition.toUpperCase()) { // Compare with normalized expedition
+            if (normalizedExpedisiCourier !== expedition.toUpperCase()) {
               validationStatus = 'MISMATCH_EXPEDISI';
               validationMessage = `Resi ini bukan milik ekspedisi ${expedition}, melainkan milik ekspedisi ${expedisiRecord.couriername}.`;
               console.log(`[handleScanResi] Validation Failed: MISMATCH_EXPEDISI (non-ID). Message: ${validationMessage}`);
@@ -275,7 +255,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
               beepDouble.play();
               break;
             default:
-              // Should not happen if validationStatus is correctly typed
               beepFailure.play(); // Fallback
               break;
           }
@@ -381,8 +360,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       // Clear the optimistic ref as the operation was successfully added to IndexedDB
       lastOptimisticIdRef.current = null;
       
-      // Removed immediate invalidation. Rely on useBackgroundSync to invalidate after DB write.
-      // invalidateAndRefetch(); 
       triggerSync(); // Manually trigger background sync immediately
 
     } catch (error: any) {
@@ -433,7 +410,9 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
           // Revert optimistic update for allFlagNoExpedisiData cache (add back if flag was 'NO')
           queryClient.setQueryData(["allFlagNoExpedisiData"], (oldMap: Map<string, any> | undefined) => {
             const newMap = oldMap ? new Map(oldMap) : new Map();
-            queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] }); // Force re-fetch for consistency
+            // If the original record was 'NO', add it back. Otherwise, just invalidate to refetch.
+            // For simplicity and robustness, invalidating is often safer here.
+            queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] }); 
             console.log(`[handleScanResi] Reverted allFlagNoExpedisiData Update (forced refetch).`);
             return newMap; 
           });

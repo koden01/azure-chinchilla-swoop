@@ -55,7 +55,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       console.log(`Fetched ${resiSet.size} unique recent resi numbers for validation.`);
       return resiSet;
     },
-    staleTime: 1000 * 60 * 10, // Keep this data fresh for 10 minutes
+    staleTime: 1000 * 60 * 60, // Changed to 60 minutes
     gcTime: 1000 * 60 * 60 * 24 * 2, // Garbage collect after 2 days
     enabled: true, // Always enabled for local validation
   });
@@ -423,7 +423,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
             return newSet;
           });
           // Revert optimistic update for allExpedisiDataUnfiltered cache
-          queryClient.setQueryData(["allExpedisiDataUnfiltered", twoDaysAgoFormatted, endOfTodayFormatted], (oldMap: Map<string, any> | undefined) => {
+          queryClient.setQueryData(["allExpedisiDataUnfiltered", twoDaysAgoFormatted, endOfTodayFormatted], (oldMap: Map<string, any> | undefined) => { {
             const newMap = oldMap ? new Map(oldMap) : new Map();
             const existingExpedisi = newMap.get(normalizedCurrentResi);
             if (existingExpedisi && existingExpedisi.optimisticId === lastOptimisticIdRef.current) {
@@ -433,7 +433,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
               const revertedExpedisi = { ...existingExpedisi };
               delete revertedExpedisi.optimisticId; // Remove the optimistic flag
               // If the original state was 'NO', we might need to revert the flag too.
-              // This requires storing the original flag state in the optimistic update.
+              // This requires storing the original flag state in the optimistic context.
               // For now, we assume the flag was 'NO' before the optimistic 'YES'.
               revertedExpedisi.flag = "NO"; // Revert flag to NO
               newMap.set(normalizedCurrentResi, revertedExpedisi);

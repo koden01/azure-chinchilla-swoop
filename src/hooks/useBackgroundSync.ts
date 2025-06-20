@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { showError, showSuccess } from '@/utils/toast';
 import { invalidateDashboardQueries } from '@/utils/dashboardQueryInvalidation';
 import { format } from 'date-fns';
-import { normalizeExpeditionName } from '@/utils/expeditionUtils'; // Import normalizeExpeditionName
+// import { normalizeExpeditionName } from '@/utils/expeditionUtils'; // Import normalizeExpeditionName - DIHAPUS
 
 const SYNC_INTERVAL_MS = 1000 * 60; // Sync every 1 minute
 const MAX_RETRIES = 5; // Max attempts before giving up on an operation

@@ -7,7 +7,7 @@ import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { format, subDays } from "date-fns";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
-// import { ModalDataItem } from "@/types/data"; // Dihapus karena tidak digunakan
+import { normalizeExpeditionName } from "@/utils/expeditionUtils"; // Import new utility
 
 // Define the type for ResiExpedisiData to match useResiInputData
 interface ResiExpedisiData {
@@ -43,7 +43,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
   const { data: recentResiNumbersForValidation, /* isLoading: isLoadingRecentResiDataForValidation */ } = useQuery<Set<string>>({
     queryKey: ["recentResiNumbersForValidation", twoDaysAgoFormatted, formattedDate],
     queryFn: async () => {
-      // console.log(`Fetching recentResiNumbersForValidation from ${twoDaysAgoFormatted} to ${formattedDate} using fetchAllDataPaginated.`); // Removed
       const data = await fetchAllDataPaginated(
         "tbl_resi",
         "created", // dateFilterColumn
@@ -52,7 +51,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         "Resi" // Only select the Resi column
       );
       const resiSet = new Set(data.map((item: { Resi: string }) => item.Resi.toLowerCase().trim()));
-      // console.log(`Fetched ${resiSet.size} unique recent resi numbers for validation.`); // Removed
       return resiSet;
     },
     staleTime: 1000 * 60 * 10, // Keep this data fresh for 10 minutes
@@ -64,7 +62,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
   const { data: allFlagNoExpedisiData, isLoading: isLoadingAllFlagNoExpedisiData } = useQuery<Map<string, any>>({
     queryKey: ["allFlagNoExpedisiData"],
     queryFn: async () => {
-      // console.log("Fetching allFlagNoExpedisiData (paginated) where flag = 'NO'."); // Removed
       const data = await fetchAllDataPaginated(
         "tbl_expedisi",
         undefined, // No date filter
@@ -79,7 +76,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
           expedisiMap.set(item.resino.toLowerCase(), item);
         }
       });
-      // console.log(`Fetched ${expedisiMap.size} 'flag NO' expedisi records for validation.`); // Removed
       return expedisiMap;
     },
     staleTime: 1000 * 60 * 60, // Changed to 60 minutes
@@ -148,8 +144,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
     }
 
     setIsProcessing(true); // Set to true at the very beginning
-    // console.log("Starting handleScanResi for:", currentResi, "at:", new Date().toISOString()); // Removed
-    // console.log("Supabase Project ID in useResiScanner:", SUPABASE_PROJECT_ID); // Removed
 
     const queryKeyForInputPageDisplay = ["allResiForExpedition", expedition, formattedDate];
 
@@ -161,16 +155,9 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       let validationStatus: "OK" | "DUPLICATE_RESI" | "MISMATCH_EXPEDISI" | "NOT_FOUND_EXPEDISI" = "OK";
 
       // 1. Local Duplicate Check (using recentResiNumbersForValidation Set)
-      // console.log(`Performing local duplicate check for resi ${currentResi} using recentResiNumbersForValidation Set...`); // Removed
-      
       if (recentResiNumbersForValidation?.has(normalizedCurrentResi)) {
-        // console.log("DEBUG: Duplicate found in Set."); // Removed
-        // To get details of the duplicate, we would need to fetch it or store more data in the Set/Map.
-        // For now, we just know it's a duplicate.
         validationStatus = 'DUPLICATE_RESI';
         validationMessage = `DOUBLE! Resi ini sudah discan sebelumnya.`; // Simplified message as we don't have full details from Set
-      } else {
-        // console.log("DEBUG: No duplicate found in Set."); // Removed
       }
 
       if (validationStatus !== 'OK') {
@@ -184,18 +171,15 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       }
 
       // 2. Local Expedition Validation (using allExpedisiDataUnfiltered cache, with fallback to allFlagNoExpedisiData, then direct fetch)
-      // console.log(`Performing local expedition validation for resi ${currentResi} using allExpedisiDataUnfiltered (3-day cache)...`); // Removed
       let expedisiRecord = allExpedisiDataUnfiltered?.get(normalizedCurrentResi);
 
       // If not found in 3-day cache, try the comprehensive 'flag NO' cache
       if (!expedisiRecord) {
-        // console.log(`Resi ${currentResi} not found in 3-day cache. Checking allFlagNoExpedisiData (flag NO cache)...`); // Removed
         expedisiRecord = allFlagNoExpedisiData?.get(normalizedCurrentResi);
       }
 
       // If still not found in any local cache, try a direct fetch from tbl_expedisi
       if (!expedisiRecord) {
-          // console.log(`Resi ${currentResi} not found in any local cache. Attempting direct fetch from tbl_expedisi.`); // Removed
           const { data: directExpedisiData, error: directExpedisiError } = await supabase
               .from("tbl_expedisi")
               .select("*")
@@ -208,7 +192,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
           
           if (directExpedisiData) {
               expedisiRecord = directExpedisiData;
-              // console.log(`Resi ${currentResi} found via direct fetch from tbl_expedisi.`); // Removed
               // Optionally, update the cache with this fresh data to prevent future direct fetches for this item
               // Update both 3-day cache and flag NO cache if applicable
               queryClient.setQueryData(
@@ -255,8 +238,8 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       // If it's not null, proceed with courier name validation.
       if (expedition === 'ID') {
         if (expedisiRecord) {
-          const normalizedExpedisiCourier = expedisiRecord.couriername?.trim().toUpperCase();
-          if (normalizedExpedisiCourier === 'ID' || normalizedExpedisiCourier === 'ID_REKOMENDASI') {
+          const normalizedExpedisiCourier = normalizeExpeditionName(expedisiRecord.couriername);
+          if (normalizedExpedisiCourier === 'ID') { // Use normalized name for comparison
             actualCourierName = 'ID';
           } else {
             validationStatus = 'MISMATCH_EXPEDISI';
@@ -268,7 +251,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
           // However, for 'ID' expedition, if not found in tbl_expedisi, it can be ID_REKOMENDASI.
           // This is a specific business rule.
           actualCourierName = 'ID_REKOMENDASI';
-          // console.log(`Resi ${currentResi} not found in tbl_expedisi, but selected expedition is 'ID'. Assuming 'ID_REKOMENDASI'.`); // Removed
         }
       } else { // For non-ID expeditions
         if (!expedisiRecord) {
@@ -277,8 +259,8 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
           validationStatus = 'NOT_FOUND_EXPEDISI';
           validationMessage = 'Data tidak ada di database ekspedisi.';
         } else {
-          const normalizedExpedisiCourier = expedisiRecord.couriername?.trim().toUpperCase();
-          if (normalizedExpedisiCourier !== expedition.toUpperCase()) {
+          const normalizedExpedisiCourier = normalizeExpeditionName(expedisiRecord.couriername);
+          if (normalizedExpedisiCourier !== expedition.toUpperCase()) { // Compare with normalized expedition
             validationStatus = 'MISMATCH_EXPEDISI';
             validationMessage = `Resi ini bukan milik ekspedisi ${expedition}, melainkan milik ekspedisi ${expedisiRecord.couriername}.`;
           } else {
@@ -335,24 +317,20 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
           created: existingExpedisi?.created || new Date().toISOString(), // Keep original created or set new
           optimisticId: currentOptimisticId, // Add optimistic ID for potential rollback
         });
-        // console.log(`Optimistically updated allExpedisiDataUnfiltered cache for ${currentResi}.`); // Removed
         return newMap;
       });
       // NEW: Optimistic update for allFlagNoExpedisiData cache (remove if flag becomes YES)
       queryClient.setQueryData(["allFlagNoExpedisiData"], (oldMap: Map<string, any> | undefined) => {
         const newMap = oldMap ? new Map(oldMap) : new Map();
         newMap.delete(normalizedCurrentResi); // Remove from flag NO cache as it's now 'YES'
-        // console.log(`Optimistically removed ${currentResi} from allFlagNoExpedisiData cache.`); // Removed
         return newMap;
       });
 
 
       lastOptimisticIdRef.current = currentOptimisticId;
-      // console.log("Optimistically updated caches with ID:", currentOptimisticId); // Removed
       // --- End Optimistic UI Update ---
 
       // --- Direct Supabase Insert/Update using upsert ---
-      // console.log(`Attempting upsert for tbl_resi with Resi: ${currentResi}, Keterangan: ${actualCourierName}, nokarung: ${selectedKarung}`); // Removed
       const { data: upsertData, error: upsertError } = await supabase
         .from("tbl_resi")
         .upsert({
@@ -366,10 +344,8 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         console.error("Supabase upsert to tbl_resi failed:", upsertError); // Detailed error log
         throw new Error(`Gagal menyisipkan/memperbarui resi ke tbl_resi: ${upsertError.message}`);
       }
-      // console.log("Successfully upserted into tbl_resi. Data:", upsertData); // Removed
 
       // 2. Update tbl_expedisi flag to 'YES'
-      // console.log(`Attempting to update tbl_expedisi flag to 'YES' for resino: ${currentResi}`); // Removed
       const { error: updateExpedisiError } = await supabase
         .from("tbl_expedisi")
         .update({ flag: "YES" })
@@ -379,7 +355,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         console.error("Supabase update to tbl_expedisi failed:", updateExpedisiError); // Detailed error log
         throw new Error(`Gagal memperbarui flag di tbl_expedisi: ${updateExpedisiError.message}`);
       }
-      // console.log("Successfully updated tbl_expedisi flag."); // Removed
 
       showSuccess(`Resi ${currentResi} berhasil discan.`);
       try {
@@ -451,11 +426,9 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
             queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] });
             return newMap; // Return current map, invalidation will handle refresh
           });
-          // console.log(`Reverted optimistic update for ID: ${lastOptimisticIdRef.current} due to error.`); // Removed
       }
       lastOptimisticIdRef.current = null; // Clear the ref after attempting revert
     } finally {
-      // console.log("Finished handleScanResi for:", currentResi, "at:", new Date().toISOString()); // Removed
       setIsProcessing(false); // Ensure processing state is reset
       keepFocus(); // Ensure focus is returned to input
     }

@@ -118,7 +118,8 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tbl_expedisi")
-        .select("couriername", { distinct: true })
+        .select("couriername") // Select only couriername
+        .distinct("couriername") // Use .distinct() method
         .eq("flag", "NO"); // Filter by flag = 'NO'
 
       if (error) {

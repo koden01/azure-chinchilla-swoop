@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { format, subDays } from "date-fns";
+import { format } from "date-fns"; // Removed unused import: subDays
 import { useEffect, useState } from "react";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
@@ -44,6 +44,7 @@ interface DashboardDataReturn {
   isLoadingExpedisiDataForSelectedDate: boolean;
   allResiData: any[] | undefined;
   isLoadingAllResi: boolean;
+  isLoadingAllExpedisiUnfiltered: boolean; // Added this property
 }
 
 export const useCombinedDashboardData = (date: Date | undefined): DashboardDataReturn => {
@@ -168,7 +169,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
   }, 150);
 
   useEffect(() => {
-    const handleRealtimeEvent = (payload: any) => {
+    const handleRealtimeEvent = (_payload: any) => { // Renamed payload to _payload
       debouncedInvalidateDashboardQueries();
     };
 
@@ -212,5 +213,6 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
     isLoadingExpedisiDataForSelectedDate,
     allResiData,
     isLoadingAllResi,
+    isLoadingAllExpedisiUnfiltered, // Added to return
   };
 };

@@ -346,6 +346,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
             quantity: 1,
           });
         }
+        console.log(`[handleScanResi] Optimistic Karung Summary Update:`, newSummary);
         return newSummary;
       });
 
@@ -436,6 +437,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
                 newSummary.splice(existingKarungIndex, 1);
               }
             }
+            console.log(`[handleScanResi] Reverted Optimistic Karung Summary Update:`, newSummary);
             return newSummary;
           });
       }

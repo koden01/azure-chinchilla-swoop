@@ -126,18 +126,19 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
   const { data: uniqueExpeditionNames, isLoading: isLoadingUniqueExpeditionNames } = useQuery<string[]>({
     queryKey: ["uniqueExpeditionNames"],
     queryFn: async () => {
-      console.log("Fetching unique expedition names from tbl_expedisi.");
+      console.log("Fetching unique expedition names from tbl_expedisi with flag = 'NO'.");
       const { data, error } = await supabase
         .from("tbl_expedisi")
-        .select("couriername", { distinct: true }); // Added distinct: true
+        .select("couriername", { distinct: true })
+        .eq("flag", "NO"); // Filter by flag = 'NO'
 
       if (error) {
         console.error("Error fetching unique expedition names:", error);
         throw error;
       }
       
-      console.log("Raw distinct couriername data from tbl_expedisi:", data); // NEW LOG
-      console.log("Number of raw distinct couriername entries:", data?.length); // NEW LOG
+      console.log("Raw distinct couriername data from tbl_expedisi (flag NO):", data); // NEW LOG
+      console.log("Number of raw distinct couriername entries (flag NO):", data?.length); // NEW LOG
 
       // Buat Set baru dan tambahkan 'ID' terlebih dahulu, lalu tambahkan nama kurir dari data
       const namesSet = new Set<string>();

@@ -40,10 +40,10 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
   // State to hold expedition summaries
   const [expeditionSummaries, setExpeditionSummaries] = useState<any[]>([]);
 
-  // Calculate date range for 5 days back for allExpedisiDataUnfiltered
+  // Calculate date range for 2 days back for allExpedisiDataUnfiltered
   const today = new Date();
-  const fiveDaysAgo = subDays(today, 4); // 5 days including today (today, yesterday, -2, -3, -4)
-  const fiveDaysAgoFormatted = format(fiveDaysAgo, "yyyy-MM-dd");
+  const twoDaysAgo = subDays(today, 1); // Covers today and yesterday
+  const twoDaysAgoFormatted = format(twoDaysAgo, "yyyy-MM-dd");
   const endOfTodayFormatted = format(today, "yyyy-MM-dd"); // For the end of the range key
 
   // Query for Transaksi Hari Ini (tbl_expedisi count for selected date) using RPC
@@ -236,15 +236,15 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
   console.log("useDashboardData: Follow Up Data - isLoading:", isLoadingFollowUp, "data length:", followUpData?.length, "error:", followUpDataError);
 
 
-  // Fetch tbl_expedisi data for the last 5 days to build a comprehensive resi-to-courier map for local validation
+  // Fetch tbl_expedisi data for the last 2 days to build a comprehensive resi-to-courier map for local validation
   const { data: allExpedisiDataUnfiltered, isLoading: isLoadingAllExpedisiUnfiltered, error: allExpedisiDataUnfilteredError } = useQuery<Map<string, any>>({ // Changed type to Map
-    queryKey: ["allExpedisiDataUnfiltered", fiveDaysAgoFormatted, endOfTodayFormatted], // New query key with 5-day range
+    queryKey: ["allExpedisiDataUnfiltered", twoDaysAgoFormatted, endOfTodayFormatted], // New query key with 2-day range
     queryFn: async () => {
       console.log("QueryFn: allExpedisiDataUnfiltered");
-      console.log(`Fetching allExpedisiDataUnfiltered (paginated) for last 5 days: ${fiveDaysAgoFormatted} to ${endOfTodayFormatted} using fetchAllDataPaginated.`);
-      // Pass the 5-day range to fetchAllDataPaginated
-      const data = await fetchAllDataPaginated("tbl_expedisi", "created", fiveDaysAgo, today);
-      console.log("All Expedisi Data (unfiltered, paginated, 5-day range):", data.length, "items");
+      console.log(`Fetching allExpedisiDataUnfiltered (paginated) for last 2 days: ${twoDaysAgoFormatted} to ${endOfTodayFormatted} using fetchAllDataPaginated.`);
+      // Pass the 2-day range to fetchAllDataPaginated
+      const data = await fetchAllDataPaginated("tbl_expedisi", "created", twoDaysAgo, today);
+      console.log("All Expedisi Data (unfiltered, paginated, 2-day range):", data.length, "items");
       // Convert array to Map for faster lookups
       const expedisiMap = new Map<string, any>();
       data.forEach(item => {
@@ -256,7 +256,7 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
     },
     enabled: true, // Always enabled for local validation
     staleTime: 1000 * 60 * 5, // Changed to 5 minutes as requested
-    gcTime: 1000 * 60 * 60 * 24 * 5, // Garbage collect after 5 days
+    gcTime: 1000 * 60 * 60 * 24 * 2, // Garbage collect after 2 days
   });
   console.log("useDashboardData: All Expedisi Data Unfiltered - isLoading:", isLoadingAllExpedisiUnfiltered, "data size:", allExpedisiDataUnfiltered?.size, "error:", allExpedisiDataUnfilteredError);
 

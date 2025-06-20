@@ -6,9 +6,9 @@ export const invalidateDashboardQueries = (queryClient: QueryClient, date: Date 
   const actualCurrentDate = new Date();
   const actualCurrentFormattedDate = format(actualCurrentDate, 'yyyy-MM-dd');
 
-  // Calculate date range for 5 days back for allExpedisiDataUnfiltered invalidation
-  const fiveDaysAgo = subDays(actualCurrentDate, 4);
-  const fiveDaysAgoFormatted = format(fiveDaysAgo, "yyyy-MM-dd");
+  // Calculate date range for 2 days back for allExpedisiDataUnfiltered invalidation
+  const twoDaysAgo = subDays(actualCurrentDate, 1); // Covers today and yesterday
+  const twoDaysAgoFormatted = format(twoDaysAgo, "yyyy-MM-dd");
   const endOfTodayFormatted = format(actualCurrentDate, "yyyy-MM-dd");
 
   // Invalidate dashboard summary queries
@@ -36,9 +36,9 @@ export const invalidateDashboardQueries = (queryClient: QueryClient, date: Date 
     queryClient.invalidateQueries({ queryKey: ["allResiForExpedition", normalizedExpeditionForInput, formattedDate] });
   }
 
-  // Invalidate the allExpedisiDataUnfiltered query with its new key
-  queryClient.invalidateQueries({ queryKey: ["allExpedisiDataUnfiltered", fiveDaysAgoFormatted, endOfTodayFormatted] });
+  // Invalidate the allExpedisiDataUnfiltered query with its new key (2-day range)
+  queryClient.invalidateQueries({ queryKey: ["allExpedisiDataUnfiltered", twoDaysAgoFormatted, endOfTodayFormatted] });
 
-  // Invalidate recentResiDataForValidation for local duplicate checks
-  queryClient.invalidateQueries({ queryKey: ["recentResiDataForValidation", fiveDaysAgoFormatted, actualCurrentFormattedDate] });
+  // Invalidate recentResiNumbersForValidation for local duplicate checks (2-day range)
+  queryClient.invalidateQueries({ queryKey: ["recentResiNumbersForValidation", twoDaysAgoFormatted, actualCurrentFormattedDate] });
 };

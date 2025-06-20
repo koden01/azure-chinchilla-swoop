@@ -1,5 +1,5 @@
 import React from "react";
-import { supabase, SUPABASE_PROJECT_ID } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client"; // Removed SUPABASE_PROJECT_ID
 import { showSuccess, showError, dismissToast } from "@/utils/toast";
 import { beepSuccess, beepFailure, beepDouble } from "@/utils/audio";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
@@ -40,7 +40,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
 
   // Query to fetch tbl_resi data for the last 2 days for local duplicate validation
   // Now returns a Set<string> for O(1) lookups
-  const { data: recentResiNumbersForValidation, /* isLoading: isLoadingRecentResiDataForValidation */ } = useQuery<Set<string>>({
+  const { data: recentResiNumbersForValidation } } = useQuery<Set<string>>({ // Removed unused isLoading: isLoadingRecentResiDataForValidation
     queryKey: ["recentResiNumbersForValidation", twoDaysAgoFormatted, formattedDate],
     queryFn: async () => {
       const data = await fetchAllDataPaginated(
@@ -59,7 +59,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
   });
 
   // NEW: Query to fetch ALL tbl_expedisi data with flag = 'NO' for comprehensive local validation
-  const { data: allFlagNoExpedisiData, isLoading: isLoadingAllFlagNoExpedisiData } = useQuery<Map<string, any>>({
+  const { data: allFlagNoExpedisiData } = useQuery<Map<string, any>>({ // Renamed isLoading: _isLoadingAllFlagNoExpedisiData
     queryKey: ["allFlagNoExpedisiData"],
     queryFn: async () => {
       const data = await fetchAllDataPaginated(
@@ -331,7 +331,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       // --- End Optimistic UI Update ---
 
       // --- Direct Supabase Insert/Update using upsert ---
-      const { data: upsertData, error: upsertError } = await supabase
+      const { data: _upsertData, error: upsertError } = await supabase // Renamed upsertData to _upsertData
         .from("tbl_resi")
         .upsert({
           Resi: currentResi,

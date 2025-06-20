@@ -49,7 +49,7 @@ const DashboardPage: React.FC = () => {
     handleCloseModal,
     handleBatalResi,
     handleConfirmResi,
-    handleCekfuToggle,
+    onCekfuToggle,
   } = useDashboardModals({ date: selectedDate, formattedDate, allExpedisiData });
 
   const isLoadingAny =
@@ -120,7 +120,7 @@ const DashboardPage: React.FC = () => {
         selectedCourier={selectedCourier}
         onBatalResi={handleBatalResi}
         onConfirmResi={handleConfirmResi}
-        onCekfuToggle={handleCekfuToggle}
+        onCekfuToggle={onCekfuToggle}
       />
     </React.Fragment>
   );

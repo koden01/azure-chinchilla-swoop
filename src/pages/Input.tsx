@@ -18,6 +18,9 @@ import { format, subDays } from "date-fns";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 
 const InputPage = () => {
+  // Debug log to force module re-evaluation
+  console.log("InputPage component loaded.");
+
   const { expedition, setExpedition } = useExpedition();
   const [selectedKarung, setSelectedKarung] = React.useState<string>("1"); // Default to "1"
 

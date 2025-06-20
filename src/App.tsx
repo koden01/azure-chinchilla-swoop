@@ -1,5 +1,5 @@
 import React, { Suspense } from "react";
-import { Toaster as Sonner } from "@/components/ui/sonner"; // Hanya menggunakan Sonner
+import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { persistQueryClient } from '@tanstack/query-persist-client-core';
@@ -7,7 +7,7 @@ import { persister } from "@/lib/queryClientPersister";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ExpeditionProvider } from "./context/ExpeditionContext";
 import Layout from "./components/Layout";
-import { useBackgroundSync } from "./hooks/useBackgroundSync"; // NEW IMPORT
+import { useBackgroundSync } from "./hooks/useBackgroundSync";
 
 // Menggunakan React.lazy untuk memuat komponen secara dinamis
 const DashboardPage = React.lazy(() => import("./pages/DashboardPage"));
@@ -43,18 +43,15 @@ persistQueryClient({
 });
 
 const App = () => {
-  useBackgroundSync(); // Initialize background sync
-
   return (
     <QueryClientProvider client={queryClient}>
+      {/* useBackgroundSync dipindahkan ke sini */}
+      <BackgroundSyncInitializer /> 
       <TooltipProvider>
-        {/* Menghapus <Toaster /> dari shadcn/ui */}
         <Sonner
           position="top-center"
-          duration={3000} // Durasi diubah menjadi 3000ms (3 detik)
-          toastOptions={{
-            // `success` dan `error` tidak valid di sini, dikelola oleh `toast.success()` atau `toast.error()`
-          }}
+          duration={3000}
+          toastOptions={{}}
         />
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <ExpeditionProvider>
@@ -64,7 +61,6 @@ const App = () => {
                   <Route path="/" element={<InputPage />} />
                   <Route path="/dashboard" element={<DashboardPage />} />
                   <Route path="/history" element={<HistoryPage />} />
-                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </Suspense>
@@ -74,6 +70,12 @@ const App = () => {
       </TooltipProvider>
     </QueryClientProvider>
   );
+};
+
+// Komponen pembantu untuk menginisialisasi useBackgroundSync
+const BackgroundSyncInitializer = () => {
+  useBackgroundSync();
+  return null; // Komponen ini tidak merender apa-apa
 };
 
 export default App;

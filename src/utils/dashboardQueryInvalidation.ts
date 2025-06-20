@@ -41,4 +41,7 @@ export const invalidateDashboardQueries = (queryClient: QueryClient, date: Date 
 
   // Invalidate recentResiNumbersForValidation for local duplicate checks (3-day range)
   queryClient.invalidateQueries({ queryKey: ["recentResiNumbersForValidation", twoDaysAgoFormatted, actualCurrentFormattedDate] });
+
+  // NEW: Invalidate the allFlagNoExpedisiData query
+  queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] });
 };

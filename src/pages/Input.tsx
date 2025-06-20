@@ -14,7 +14,6 @@ import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import KarungSummaryModal from "@/components/KarungSummaryModal";
 import { useQuery } from "@tanstack/react-query";
-// import { supabase } from "@/integrations/supabase/client"; // Dihapus karena tidak digunakan langsung
 import { format, subDays } from "date-fns";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 
@@ -24,20 +23,20 @@ const InputPage = () => {
 
   const [isKarungSummaryModalOpen, setIsKarungSummaryModalOpen] = React.useState(false);
 
-  // Calculate date range for 5 days back for allExpedisiDataUnfiltered
+  // Calculate date range for 2 days back for allExpedisiDataUnfiltered
   const today = new Date();
-  const fiveDaysAgo = subDays(today, 4); // 5 days including today (today, yesterday, -2, -3, -4)
-  const fiveDaysAgoFormatted = format(fiveDaysAgo, "yyyy-MM-dd");
+  const twoDaysAgo = subDays(today, 1); // Covers today and yesterday
+  const twoDaysAgoFormatted = format(twoDaysAgo, "yyyy-MM-dd");
   const endOfTodayFormatted = format(today, "yyyy-MM-dd"); // For the end of the range key
 
-  // NEW: Query to fetch tbl_expedisi data for the last 5 days for local validation
+  // NEW: Query to fetch tbl_expedisi data for the last 2 days for local validation
   const { data: allExpedisiDataUnfiltered, isLoading: isLoadingAllExpedisiUnfiltered } = useQuery<Map<string, any>>({
-    queryKey: ["allExpedisiDataUnfiltered", fiveDaysAgoFormatted, endOfTodayFormatted], // New query key with 5-day range
+    queryKey: ["allExpedisiDataUnfiltered", twoDaysAgoFormatted, endOfTodayFormatted], // New query key with 2-day range
     queryFn: async () => {
       console.log("InputPage: QueryFn: allExpedisiDataUnfiltered");
-      console.log(`InputPage: Fetching allExpedisiDataUnfiltered (paginated) for last 5 days: ${fiveDaysAgoFormatted} to ${endOfTodayFormatted} using fetchAllDataPaginated.`);
-      const data = await fetchAllDataPaginated("tbl_expedisi", "created", fiveDaysAgo, today);
-      console.log("InputPage: All Expedisi Data (unfiltered, paginated, 5-day range):", data.length, "items");
+      console.log(`InputPage: Fetching allExpedisiDataUnfiltered (paginated) for last 2 days: ${twoDaysAgoFormatted} to ${endOfTodayFormatted} using fetchAllDataPaginated.`);
+      const data = await fetchAllDataPaginated("tbl_expedisi", "created", twoDaysAgo, today);
+      console.log("InputPage: All Expedisi Data (unfiltered, paginated, 2-day range):", data.length, "items");
       const expedisiMap = new Map<string, any>();
       data.forEach(item => {
         if (item.resino) {
@@ -48,7 +47,7 @@ const InputPage = () => {
     },
     enabled: true, // Always enabled for local validation
     staleTime: 1000 * 60 * 5, // Keep this data fresh for 5 minutes
-    gcTime: 1000 * 60 * 60 * 24 * 5, // Garbage collect after 5 days
+    gcTime: 1000 * 60 * 60 * 24 * 2, // Garbage collect after 2 days (changed from 5 days)
   });
 
   const {

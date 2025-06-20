@@ -1,11 +1,11 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { format, isSameDay, startOfDay, endOfDay } from "date-fns";
-import { useEffect, useState } from "react"; // Removed useMemo
+import { useEffect, useState } from "react";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import { normalizeExpeditionName, KNOWN_EXPEDITIONS } from "@/utils/expeditionUtils";
 import { supabase } from "@/integrations/supabase/client";
-import { usePendingOperations } from "@/hooks/usePendingOperations"; // Removed PendingOperation from import
+import { usePendingOperations } from "@/hooks/usePendingOperations";
 
 // Import base data hooks
 import { useFollowUpRecords } from "./useFollowUpRecords";
@@ -290,57 +290,30 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
 
     // Populate totalScan, idRekomendasi, totalBatal, totalScanFollowUp, jumlahKarung from currentResiData (already filtered by date and potentially modified by pending ops)
     currentResiData.forEach(resi => {
-      const normalizedResi = resi.Resi?.trim().toLowerCase();
       const resiCreatedDate = new Date(resi.created);
-      let originalExpeditionName: string | null = null;
-
+      
       // Only consider resi records for the selected date for per-expedition summaries
       if (!isSameDay(resiCreatedDate, date)) {
         return; // Skip if not for the selected date
       }
 
-      // Try to get the original courier name from currentExpedisiData first
-      if (normalizedResi) {
-        const expedisiRecord = currentExpedisiData.get(normalizedResi);
-        if (expedisiRecord && expedisiRecord.couriername) {
-          originalExpeditionName = normalizeExpeditionName(expedisiRecord.couriername);
-        }
-      }
+      const normalizedResiKeterangan = normalizeExpeditionName(resi.Keterangan);
 
-      // Handle ID_REKOMENDASI special case for 'ID' expedition
-      if (resi.Keterangan === "ID_REKOMENDASI") {
-        if (summaries["ID"]) {
-          summaries["ID"].idRekomendasi++;
-          if (resi.nokarung) {
-            summaries["ID"].jumlahKarung.add(resi.nokarung);
-          }
-          if (resi.schedule === "ontime") {
-            summaries["ID"].totalScan++;
-          }
-          if (resi.schedule === "late") {
-            summaries["ID"].totalScanFollowUp++;
-          }
-        }
-      }
-      // Handle BATAL special case
-      else if (resi.schedule === "batal") {
-        // Attribute 'batal' to the original expedition if known, otherwise it's a global count
-        if (originalExpeditionName && summaries[originalExpeditionName]) {
-          summaries[originalExpeditionName].totalBatal++;
-        } else {
-          console.warn(`Resi ${resi.Resi} is 'batal' but original expedition could not be determined. Not counted in per-expedition 'totalBatal'.`);
-        }
-      }
-      // Handle regular 'ontime' or 'late' scans for known original expeditions
-      else if (originalExpeditionName && summaries[originalExpeditionName]) {
+      if (normalizedResiKeterangan && summaries[normalizedResiKeterangan]) {
         if (resi.schedule === "ontime") {
-          summaries[originalExpeditionName].totalScan++;
+          summaries[normalizedResiKeterangan].totalScan++;
         }
         if (resi.schedule === "late") {
-          summaries[originalExpeditionName].totalScanFollowUp++;
+          summaries[normalizedResiKeterangan].totalScanFollowUp++;
+        }
+        if (resi.schedule === "batal") {
+          summaries[normalizedResiKeterangan].totalBatal++;
+        }
+        if (resi.Keterangan === "ID_REKOMENDASI") { // Specific check for ID_REKOMENDASI
+          summaries[normalizedResiKeterangan].idRekomendasi++;
         }
         if (resi.nokarung) {
-          summaries[originalExpeditionName].jumlahKarung.add(resi.nokarung);
+          summaries[normalizedResiKeterangan].jumlahKarung.add(resi.nokarung);
         }
       } else {
         console.warn(`Resi ${resi.Resi} (Keterangan: ${resi.Keterangan}, Schedule: ${resi.schedule}) not attributed to any known expedition summary.`);

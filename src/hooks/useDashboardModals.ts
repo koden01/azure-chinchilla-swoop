@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
@@ -13,7 +13,26 @@ interface UseDashboardModalsProps {
   allExpedisiData: Map<string, any> | undefined; // Mengubah tipe menjadi Map
 }
 
-export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: UseDashboardModalsProps) => {
+// Define the explicit return type interface for useDashboardModals
+interface UseDashboardModalsReturn {
+  isModalOpen: boolean;
+  modalTitle: string;
+  modalData: ModalDataItem[];
+  modalType: "belumKirim" | "followUp" | "expeditionDetail" | "transaksiHariIni" | null;
+  selectedCourier: string | null;
+  openResiModal: (title: string, data: ModalDataItem[], type: "belumKirim" | "followUp" | "expeditionDetail" | "transaksiHariIni", courier?: string | null) => void;
+  handleOpenTransaksiHariIniModal: () => Promise<void>;
+  handleOpenBelumKirimModal: () => Promise<void>;
+  handleOpenFollowUpFlagNoModal: () => Promise<void>;
+  handleOpenScanFollowupModal: () => Promise<void>;
+  handleOpenExpeditionDetailModal: (courierName: string) => Promise<void>;
+  handleCloseModal: () => void;
+  handleBatalResi: (resiNumber: string) => Promise<void>;
+  onConfirmResi: (resiNumber: string) => Promise<void>; // Renamed to match prop name
+  onCekfuToggle: (resiNumber: string, currentCekfuStatus: boolean) => Promise<void>; // Renamed to match prop name
+}
+
+export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: UseDashboardModalsProps): UseDashboardModalsReturn => {
   const queryClient = useQueryClient();
 
   const [isModalOpen, setIsModalOpen] = React.useState(false);
@@ -310,7 +329,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
     }
   };
 
-  const handleCekfuToggle = async (resiNumber: string, currentCekfuStatus: boolean) => {
+  const onCekfuToggle = async (resiNumber: string, currentCekfuStatus: boolean) => { // Renamed to onCekfuToggle
     // Optimistic UI update for CEKFU toggle
     setModalData(prevData =>
       prevData.map(item => {
@@ -381,7 +400,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
     handleOpenExpeditionDetailModal,
     handleCloseModal,
     handleBatalResi,
-    handleConfirmResi,
-    handleCekfuToggle,
+    onConfirmResi: handleConfirmResi, // Map to the new name
+    onCekfuToggle, // Map to the new name
   };
 };

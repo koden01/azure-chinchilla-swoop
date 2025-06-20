@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { showError, showSuccess } from '@/utils/toast';
 import { invalidateDashboardQueries } from '@/utils/dashboardQueryInvalidation';
 import { format } from 'date-fns';
+import { normalizeExpeditionName } from '@/utils/expeditionUtils'; // Import normalizeExpeditionName
 
 const SYNC_INTERVAL_MS = 1000 * 60; // Sync every 1 minute
 const MAX_RETRIES = 5; // Max attempts before giving up on an operation
@@ -92,6 +93,44 @@ export const useBackgroundSync = () => {
 
             success = true;
             console.log(`Successfully synced 'cekfu' toggle for resi: ${op.payload.resiNumber} to ${op.payload.newCekfuStatus}`);
+          } else if (op.type === 'scan') {
+            // Logic for 'scan' operation
+            const { resiNumber, selectedKarung, courierNameFromExpedisi } = op.payload;
+
+            // 1. Insert into tbl_resi
+            const { error: resiInsertError } = await supabase
+              .from("tbl_resi")
+              .insert({
+                Resi: resiNumber,
+                nokarung: selectedKarung,
+                created: new Date().toISOString(), // Use current time for scan
+                Keterangan: courierNameFromExpedisi,
+                schedule: "ontime", // Default to ontime, trigger will adjust if needed
+              });
+
+            if (resiInsertError) {
+              // If it's a duplicate key error (e.g., resi already exists), we might still want to update tbl_expedisi
+              // but for now, we'll treat it as an error for simplicity.
+              // In a real-world scenario, you might fetch the existing resi and update if needed.
+              throw resiInsertError;
+            }
+
+            // 2. Update tbl_expedisi flag to 'YES'
+            const { error: expedisiUpdateError } = await supabase
+              .from("tbl_expedisi")
+              .update({ flag: "YES" })
+              .eq("resino", resiNumber);
+
+            if (expedisiUpdateError) {
+              // If tbl_expedisi record doesn't exist, it's fine, it means it was ID_REKOMENDASI or new.
+              // If it exists but update fails for other reasons, log it.
+              if (expedisiUpdateError.code !== 'PGRST116') { // PGRST116 means "no rows found"
+                console.warn(`Warning: Failed to update tbl_expedisi for resi ${resiNumber}: ${expedisiUpdateError.message}`);
+              }
+            }
+
+            success = true;
+            console.log(`Successfully synced 'scan' for resi: ${resiNumber}`);
           }
 
           if (success) {
@@ -105,6 +144,7 @@ export const useBackgroundSync = () => {
           if (op.retries >= MAX_RETRIES) {
             console.error(`Operation ${op.id} reached max retries. Deleting.`);
             showError(`Gagal menyinkronkan resi ${op.payload.resiNumber} setelah beberapa percobaan. Silakan coba lagi secara manual.`);
+            await deletePendingOperation(op.id); // Delete after max retries
           } else {
             await updatePendingOperation(op);
             operationsFailed++;

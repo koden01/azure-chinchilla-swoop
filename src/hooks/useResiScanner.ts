@@ -32,22 +32,22 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
   const resiInputRef = React.useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
-  // Calculate date range for 5 days back for local validation data
+  // Calculate date range for 2 days back for local validation data
   const today = new Date();
-  const fiveDaysAgo = subDays(today, 4); // 5 days including today (today, yesterday, -2, -3, -4)
-  const fiveDaysAgoFormatted = format(fiveDaysAgo, "yyyy-MM-dd");
+  const twoDaysAgo = subDays(today, 1); // Covers today and yesterday
+  const twoDaysAgoFormatted = format(twoDaysAgo, "yyyy-MM-dd");
   const endOfTodayFormatted = format(today, "yyyy-MM-dd");
 
-  // Query to fetch tbl_resi data for the last 5 days for local duplicate validation
+  // Query to fetch tbl_resi data for the last 2 days for local duplicate validation
   // Now returns a Set<string> for O(1) lookups
   const { data: recentResiNumbersForValidation, /* isLoading: isLoadingRecentResiDataForValidation */ } = useQuery<Set<string>>({
-    queryKey: ["recentResiNumbersForValidation", fiveDaysAgoFormatted, formattedDate],
+    queryKey: ["recentResiNumbersForValidation", twoDaysAgoFormatted, formattedDate],
     queryFn: async () => {
-      console.log(`Fetching recentResiNumbersForValidation from ${fiveDaysAgoFormatted} to ${formattedDate} using fetchAllDataPaginated.`);
+      console.log(`Fetching recentResiNumbersForValidation from ${twoDaysAgoFormatted} to ${formattedDate} using fetchAllDataPaginated.`);
       const data = await fetchAllDataPaginated(
         "tbl_resi",
         "created", // dateFilterColumn
-        fiveDaysAgo, // selectedStartDate
+        twoDaysAgo, // selectedStartDate
         today, // selectedEndDate (use 'today' to include all of today)
         "Resi" // Only select the Resi column
       );
@@ -56,7 +56,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       return resiSet;
     },
     staleTime: 1000 * 60 * 10, // Keep this data fresh for 10 minutes
-    gcTime: 1000 * 60 * 60 * 24 * 5, // Garbage collect after 5 days
+    gcTime: 1000 * 60 * 60 * 24 * 2, // Garbage collect after 2 days (changed from 5 days)
     enabled: true, // Always enabled for local validation
   });
 
@@ -74,7 +74,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
     // Invalidate historyData for the current day to ensure immediate update
     queryClient.invalidateQueries({ queryKey: ["historyData", formattedDate, formattedDate] });
     // Invalidate the recentResiNumbersForValidation query
-    queryClient.invalidateQueries({ queryKey: ["recentResiNumbersForValidation", fiveDaysAgoFormatted, formattedDate] });
+    queryClient.invalidateQueries({ queryKey: ["recentResiNumbersForValidation", twoDaysAgoFormatted, formattedDate] });
   }, 150);
 
   const keepFocus = () => {
@@ -176,7 +176,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
               console.log(`Resi ${currentResi} found via direct fetch from tbl_expedisi.`);
               // Optionally, update the cache with this fresh data to prevent future direct fetches for this item
               queryClient.setQueryData(
-                  ["allExpedisiDataUnfiltered", fiveDaysAgoFormatted, endOfTodayFormatted], // Use the correct query key for allExpedisiDataUnfiltered
+                  ["allExpedisiDataUnfiltered", twoDaysAgoFormatted, endOfTodayFormatted], // Use the correct query key for allExpedisiDataUnfiltered
                   (oldMap: Map<string, any> | undefined) => {
                       const newMap = oldMap ? new Map(oldMap) : new Map();
                       newMap.set(normalizedCurrentResi, directExpedisiData);
@@ -270,14 +270,13 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         return [...(oldData || []), newResiEntry]; // Ensure oldData is an array
       });
       // Optimistic update for recentResiNumbersForValidation (Set)
-      queryClient.setQueryData(["recentResiNumbersForValidation", fiveDaysAgoFormatted, formattedDate], (oldSet: Set<string> | undefined) => {
+      queryClient.setQueryData(["recentResiNumbersForValidation", twoDaysAgoFormatted, formattedDate], (oldSet: Set<string> | undefined) => {
         const newSet = oldSet ? new Set(oldSet) : new Set();
         newSet.add(normalizedCurrentResi);
         return newSet;
       });
-
       // NEW: Optimistic update for allExpedisiDataUnfiltered cache
-      queryClient.setQueryData(["allExpedisiDataUnfiltered", fiveDaysAgoFormatted, endOfTodayFormatted], (oldMap: Map<string, any> | undefined) => {
+      queryClient.setQueryData(["allExpedisiDataUnfiltered", twoDaysAgoFormatted, endOfTodayFormatted], (oldMap: Map<string, any> | undefined) => {
         const newMap = oldMap ? new Map(oldMap) : new Map();
         const existingExpedisi = newMap.get(normalizedCurrentResi);
         
@@ -365,13 +364,13 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
               return (oldData || []).filter(item => item.optimisticId !== lastOptimisticIdRef.current);
           });
           // Revert optimistic update for recentResiNumbersForValidation (Set)
-          queryClient.setQueryData(["recentResiNumbersForValidation", fiveDaysAgoFormatted, formattedDate], (oldSet: Set<string> | undefined) => {
+          queryClient.setQueryData(["recentResiNumbersForValidation", twoDaysAgoFormatted, formattedDate], (oldSet: Set<string> | undefined) => {
             const newSet = oldSet ? new Set(oldSet) : new Set();
             newSet.delete(normalizedCurrentResi); // Remove the optimistically added resi
             return newSet;
           });
           // Revert optimistic update for allExpedisiDataUnfiltered cache
-          queryClient.setQueryData(["allExpedisiDataUnfiltered", fiveDaysAgoFormatted, endOfTodayFormatted], (oldMap: Map<string, any> | undefined) => {
+          queryClient.setQueryData(["allExpedisiDataUnfiltered", twoDaysAgoFormatted, endOfTodayFormatted], (oldMap: Map<string, any> | undefined) => {
             const newMap = oldMap ? new Map(oldMap) : new Map();
             const existingExpedisi = newMap.get(normalizedCurrentResi);
             if (existingExpedisi && existingExpedisi.optimisticId === lastOptimisticIdRef.current) {

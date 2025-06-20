@@ -31,6 +31,19 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 
+import {
+  ColumnDef,
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+  SortingState,
+  ColumnFiltersState,
+  VisibilityState,
+} from "@tanstack/react-table";
+
 interface ResiDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -43,8 +56,6 @@ interface ResiDetailModalProps {
   onCekfuToggle: (resiNumber: string, currentCekfuStatus: boolean) => Promise<void>;
 }
 
-const ITEMS_PER_PAGE = 10;
-
 const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
   isOpen,
   onClose,
@@ -56,182 +67,212 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
   onConfirmResi,
   onCekfuToggle,
 }) => {
-  const [rawSearchTerm, setRawSearchTerm] = useState("");
-  const debouncedSearchTerm = useDebounce(rawSearchTerm, 300);
-
-  const [currentPage, setCurrentPage] = useState(1);
+  const [globalFilter, setGlobalFilter] = useState("");
+  const debouncedGlobalFilter = useDebounce(globalFilter, 300);
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
 
   useEffect(() => {
-    console.log("ResiDetailModal: data prop changed. New length:", data.length);
-    setCurrentPage(1);
-    setRawSearchTerm("");
-  }, [data, isOpen, modalType]);
+    // Reset filter and sorting when modal opens or data/type changes
+    setGlobalFilter("");
+    setSorting([]);
+    setColumnFilters([]);
+    table.setPageIndex(0); // Reset to first page
+    // Reset column visibility if needed, or define default visibility
+    // setColumnVisibility({}); 
+  }, [data, isOpen, modalType]); // Added table to dependencies for setPageIndex
 
-  const sortedAndFilteredData = useMemo(() => {
-    console.log("ResiDetailModal: Recalculating sortedAndFilteredData. Initial data length:", data.length);
-    const lowerCaseSearchTerm = (debouncedSearchTerm || "").toLowerCase();
-    let tempFilteredData = data.filter((item) => {
-      const resiIdentifier = modalType === "followUp" ? item.Resi : item.resino;
-      
-      if (modalType === "belumKirim" || modalType === "expeditionDetail" || modalType === "transaksiHariIni") {
-        return (
-          resiIdentifier?.toLowerCase().includes(lowerCaseSearchTerm) ||
-          item.orderno?.toLowerCase().includes(lowerCaseSearchTerm) ||
-          item.chanelsales?.toLowerCase().includes(lowerCaseSearchTerm) ||
-          item.couriername?.toLowerCase().includes(lowerCaseSearchTerm) ||
-          (item.datetrans ? format(new Date(item.datetrans), "dd/MM/yyyy HH:mm").toLowerCase().includes(lowerCaseSearchTerm) : false)
-        );
-      } else if (modalType === "followUp") {
-        return (
-          resiIdentifier?.toLowerCase().includes(lowerCaseSearchTerm) ||
-          item.couriername?.toLowerCase().includes(lowerCaseSearchTerm) ||
-          (item.created_resi ? format(new Date(item.created_resi), "dd/MM/yyyy HH:mm").toLowerCase().includes(lowerCaseSearchTerm) : false) ||
-          (item.created_expedisi ? format(new Date(item.created_expedisi), "dd/MM/yyyy HH:mm").toLowerCase().includes(lowerCaseSearchTerm) : false)
-        );
-      }
-      return false;
-    });
+  const columns = useMemo<ColumnDef<ModalDataItem>[]>(() => {
+    const baseColumns: ColumnDef<ModalDataItem>[] = [];
 
     if (modalType === "belumKirim" || modalType === "expeditionDetail" || modalType === "transaksiHariIni") {
-      tempFilteredData.sort((a, b) => {
-        const dateA = a.datetrans ? new Date(a.datetrans).getTime() : 0;
-        const dateB = b.datetrans ? new Date(b.datetrans).getTime() : 0;
-        return dateA - dateB;
-      });
-    } else if (modalType === "followUp") {
-      tempFilteredData.sort((a, b) => {
-        const dateA = a.created_resi ? new Date(a.created_resi).getTime() : 0;
-        const dateB = b.created_resi ? new Date(b.created_resi).getTime() : 0;
-        return dateA - dateB;
-      });
-    }
-    console.log("ResiDetailModal: Filtered data length after search/sort:", tempFilteredData.length);
-    return tempFilteredData;
-  }, [debouncedSearchTerm, data, modalType]);
-
-  const totalPages = Math.ceil(sortedAndFilteredData.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = startIndex + ITEMS_PER_PAGE;
-  const currentData = sortedAndFilteredData.slice(startIndex, endIndex);
-
-  const handlePageChange = useCallback((page: number) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
-    }
-  }, [totalPages]);
-
-  const getTableHeaders = useCallback(() => {
-    if (modalType === "belumKirim" || modalType === "expeditionDetail" || modalType === "transaksiHariIni") {
-      return ["No. Resi", "No Order", "Marketplace", "Tanggal Pembelian", "Kurir", "Followup", "Aksi"];
-    } else if (modalType === "followUp") {
-      return ["No. Resi", "Tanggal Resi", "Tanggal Expedisi", "Kurir", "Followup", "Aksi"];
-    }
-    return [];
-  }, [modalType]);
-
-  const renderTableRows = useCallback(() => {
-    if (modalType === "belumKirim" || modalType === "expeditionDetail" || modalType === "transaksiHariIni") {
-      return currentData.map((item, index) => (
-        <TableRow key={item.resino || `exp-row-${index}`}>
-          <TableCell>{item.resino}</TableCell>
-          <TableCell>{item.orderno || "-"}</TableCell>
-          <TableCell>{item.chanelsales || "-"}</TableCell>
-          <TableCell>{item.datetrans ? format(new Date(item.datetrans), "dd/MM/yyyy HH:mm") : "-"}</TableCell>
-          <TableCell>{item.couriername || "-"}</TableCell>
-          <TableCell>
+      baseColumns.push(
+        {
+          accessorKey: "resino",
+          header: "No. Resi",
+          cell: ({ row }) => row.original.resino,
+        },
+        {
+          accessorKey: "orderno",
+          header: "No Order",
+          cell: ({ row }) => row.original.orderno || "-",
+        },
+        {
+          accessorKey: "chanelsales",
+          header: "Marketplace",
+          cell: ({ row }) => row.original.chanelsales || "-",
+        },
+        {
+          accessorKey: "datetrans",
+          header: "Tanggal Pembelian",
+          cell: ({ row }) => {
+            const date = row.original.datetrans;
+            return date ? format(new Date(date as string), "dd/MM/yyyy HH:mm") : "-";
+          },
+        },
+        {
+          accessorKey: "couriername",
+          header: "Kurir",
+          cell: ({ row }) => row.original.couriername || "-",
+        },
+        {
+          accessorKey: "cekfu",
+          header: "Followup",
+          cell: ({ row }) => (
             <Checkbox
-              checked={item.cekfu || false}
-              onCheckedChange={() => item.resino && onCekfuToggle(item.resino, item.cekfu || false)}
+              checked={row.original.cekfu || false}
+              onCheckedChange={() => row.original.resino && onCekfuToggle(row.original.resino, row.original.cekfu || false)}
             />
-          </TableCell>
-          <TableCell className="flex space-x-2">
-            <Button variant="destructive" size="sm" onClick={() => item.resino && onBatalResi(item.resino)}>
-              Batal
-            </Button>
-            {(modalType === "expeditionDetail" || modalType === "belumKirim" || modalType === "transaksiHariIni") && (
-              <Button className="bg-green-600 hover:bg-green-700 text-white" size="sm" onClick={() => item.resino && onConfirmResi(item.resino)}>
+          ),
+        },
+        {
+          id: "actions",
+          header: "Aksi",
+          cell: ({ row }) => (
+            <div className="flex space-x-2">
+              <Button variant="destructive" size="sm" onClick={() => row.original.resino && onBatalResi(row.original.resino)}>
+                Batal
+              </Button>
+              <Button className="bg-green-600 hover:bg-green-700 text-white" size="sm" onClick={() => row.original.resino && onConfirmResi(row.original.resino)}>
                 Konfirmasi
               </Button>
-            )}
-          </TableCell>
-        </TableRow>
-      ));
+            </div>
+          ),
+          enableSorting: false,
+          enableColumnFilter: false,
+        }
+      );
     } else if (modalType === "followUp") {
-      return currentData.map((item, index) => (
-        <TableRow key={item.Resi || `fu-row-${index}`}>
-          <TableCell>{item.Resi}</TableCell>
-          <TableCell>{item.created_resi ? format(new Date(item.created_resi), "dd/MM/yyyy HH:mm") : "-"}</TableCell>
-          <TableCell>{item.created_expedisi ? format(new Date(item.created_expedisi), "dd/MM/yyyy HH:mm") : "-"}</TableCell>
-          <TableCell>{item.couriername || "-"}</TableCell>
-          <TableCell>
+      baseColumns.push(
+        {
+          accessorKey: "Resi",
+          header: "No. Resi",
+          cell: ({ row }) => row.original.Resi,
+        },
+        {
+          accessorKey: "created_resi",
+          header: "Tanggal Resi",
+          cell: ({ row }) => {
+            const date = row.original.created_resi;
+            return date ? format(new Date(date as string), "dd/MM/yyyy HH:mm") : "-";
+          },
+        },
+        {
+          accessorKey: "created_expedisi",
+          header: "Tanggal Expedisi",
+          cell: ({ row }) => {
+            const date = row.original.created_expedisi;
+            return date ? format(new Date(date as string), "dd/MM/yyyy HH:mm") : "-";
+          },
+        },
+        {
+          accessorKey: "couriername",
+          header: "Kurir",
+          cell: ({ row }) => row.original.couriername || "-",
+        },
+        {
+          accessorKey: "cekfu",
+          header: "Followup",
+          cell: ({ row }) => (
             <Checkbox
-              checked={item.cekfu || false}
-              onCheckedChange={() => item.Resi && onCekfuToggle(item.Resi, item.cekfu || false)}
+              checked={row.original.cekfu || false}
+              onCheckedChange={() => row.original.Resi && onCekfuToggle(row.original.Resi, row.original.cekfu || false)}
             />
-          </TableCell>
-          <TableCell className="flex space-x-2">
-            <Button variant="destructive" size="sm" onClick={() => item.Resi && onBatalResi(item.Resi)}>
-              Batal
-            </Button>
-            <Button className="bg-green-600 hover:bg-green-700 text-white" size="sm" onClick={() => item.Resi && onConfirmResi(item.Resi)}>
-              Konfirmasi
-            </Button>
-          </TableCell>
-        </TableRow>
-      ));
+          ),
+        },
+        {
+          id: "actions",
+          header: "Aksi",
+          cell: ({ row }) => (
+            <div className="flex space-x-2">
+              <Button variant="destructive" size="sm" onClick={() => row.original.Resi && onBatalResi(row.original.Resi)}>
+                Batal
+              </Button>
+              <Button className="bg-green-600 hover:bg-green-700 text-white" size="sm" onClick={() => row.original.Resi && onConfirmResi(row.original.Resi)}>
+                Konfirmasi
+              </Button>
+            </div>
+          ),
+          enableSorting: false,
+          enableColumnFilter: false,
+        }
+      );
     }
-    return null;
-  }, [currentData, modalType, onBatalResi, onConfirmResi, onCekfuToggle]);
+    return baseColumns;
+  }, [modalType, onBatalResi, onConfirmResi, onCekfuToggle]);
+
+  const table = useReactTable({
+    data,
+    columns,
+    state: {
+      sorting,
+      columnFilters,
+      globalFilter: debouncedGlobalFilter,
+      columnVisibility,
+    },
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    onGlobalFilterChange: setGlobalFilter,
+    onColumnVisibilityChange: setColumnVisibility,
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    initialState: {
+      pagination: {
+        pageSize: 10, // Default page size
+      },
+    },
+  });
 
   const handleCopyTableData = useCallback(async () => {
-    if (sortedAndFilteredData.length === 0) {
+    const rowsToCopy = table.getFilteredRowModel().rows;
+    if (rowsToCopy.length === 0) {
       showError("Tidak ada data untuk disalin.");
       return;
     }
 
-    const headers = getTableHeaders();
-    // Exclude the "Aksi" column from headers for copying
-    const headerRow = headers.slice(0, -1).join('\t');
+    const headers = table.getHeaderGroups()[0].headers
+      .filter(header => header.id !== "actions") // Exclude the "Aksi" column
+      .map(header => flexRender(header.column.columnDef.header, header.getContext()));
+    const headerRow = headers.join('\t');
 
-    const rows = sortedAndFilteredData.map(item => {
-      if (modalType === "belumKirim" || modalType === "expeditionDetail" || modalType === "transaksiHariIni") {
-        return [
-          item.resino || "",
-          item.orderno || "",
-          item.chanelsales || "",
-          item.datetrans ? format(new Date(item.datetrans), "dd/MM/yyyy HH:mm") : "",
-          item.couriername || "",
-          item.cekfu ? "YES" : "NO",
-        ];
-      } else if (modalType === "followUp") {
-        return [
-          item.Resi || "",
-          item.created_resi ? format(new Date(item.created_resi), "dd/MM/yyyy HH:mm") : "",
-          item.created_expedisi ? format(new Date(item.created_expedisi), "dd/MM/yyyy HH:mm") : "",
-          item.couriername || "",
-          item.cekfu ? "YES" : "NO",
-        ];
-      }
-      return [];
-    });
+    const dataRows = rowsToCopy.map(row => {
+      const rowValues = row.getVisibleCells()
+        .filter(cell => cell.column.id !== "actions") // Exclude the "Aksi" column
+        .map(cell => {
+          if (cell.column.id === "datetrans" || cell.column.id === "created_resi" || cell.column.id === "created_expedisi") {
+            const dateValue = cell.getValue() as string | null;
+            return dateValue ? format(new Date(dateValue), "dd/MM/yyyy HH:mm") : "-";
+          }
+          if (cell.column.id === "cekfu") {
+            return cell.getValue() ? "YES" : "NO";
+          }
+          return String(cell.getValue() || "");
+        });
+      return rowValues.join('\t');
+    }).join('\n');
 
-    const dataRows = rows.map(row => row.join('\t')).join('\n');
     const textToCopy = `${headerRow}\n${dataRows}`;
 
     console.log("Attempting to copy data:", textToCopy);
 
     try {
       await navigator.clipboard.writeText(textToCopy);
-      showSuccess(`Berhasil menyalin ${sortedAndFilteredData.length} baris data!`);
+      showSuccess(`Berhasil menyalin ${rowsToCopy.length} baris data!`);
       console.log("Data copied successfully!");
     } catch (err: any) {
       showError(`Gagal menyalin data tabel: ${err.message || "Unknown error"}`);
       console.error("Failed to copy table data:", err);
     }
-  }, [sortedAndFilteredData, modalType, getTableHeaders]);
+  }, [table]);
 
   const getPaginationPages = useMemo(() => {
     const pages = [];
+    const totalPages = table.getPageCount();
+    const currentPage = table.getState().pagination.pageIndex + 1;
+
     if (totalPages <= 3) {
       for (let i = 1; i <= totalPages; i++) {
         pages.push(i);
@@ -246,24 +287,24 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
       }
     }
     return pages;
-  }, [currentPage, totalPages]);
+  }, [table.getPageCount(), table.getState().pagination.pageIndex]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[800px] lg:max-w-[1000px] max-h-[90vh] flex flex-col overflow-y-auto overflow-x-hidden"> {/* Changed to overflow-y-auto */}
+      <DialogContent className="sm:max-w-[800px] lg:max-w-[1000px] max-h-[90vh] flex flex-col overflow-y-auto overflow-x-hidden">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
-            Menampilkan {currentData.length} dari {sortedAndFilteredData.length} resi.
+            Menampilkan {table.getFilteredRowModel().rows.length} dari {data.length} resi.
             {selectedCourier && ` (Kurir: ${selectedCourier})`}
           </DialogDescription>
         </DialogHeader>
         <div className="my-4 flex flex-col md:flex-row gap-2 w-full overflow-x-hidden">
           <Input
             id="search-term-input"
-            placeholder="Cari Resi, No Order, Marketplace, Kurir, atau Tanggal Pembelian..."
-            value={rawSearchTerm}
-            onChange={(e) => setRawSearchTerm(e.target.value)}
+            placeholder="Cari..."
+            value={globalFilter}
+            onChange={(e) => setGlobalFilter(e.target.value)}
             className="w-full"
           />
           <Button
@@ -276,17 +317,53 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
         <div className="overflow-x-scroll flex-grow">
           <Table>
             <TableHeader>
-              <TableRow>
-                {getTableHeaders().map((header) => (
-                  <TableHead key={header}>{header}</TableHead>
-                ))}
-              </TableRow>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => {
+                    return (
+                      <TableHead key={header.id} colSpan={header.colSpan}>
+                        {header.isPlaceholder ? null : (
+                          <div
+                            {...{
+                              className: header.column.getCanSort()
+                                ? "cursor-pointer select-none"
+                                : "",
+                              onClick: header.column.getToggleSortingHandler(),
+                            }}
+                          >
+                            {flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                            {{
+                              asc: " 🔼",
+                              desc: " 🔽",
+                            }[header.column.getIsSorted() as string] ?? null}
+                          </div>
+                        )}
+                      </TableHead>
+                    );
+                  })}
+                </TableRow>
+              ))}
             </TableHeader>
             <TableBody>
-              {renderTableRows()}
-              {currentData.length === 0 && (
+              {table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && "selected"}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : (
                 <TableRow>
-                  <TableCell colSpan={getTableHeaders().length} className="text-center">
+                  <TableCell colSpan={columns.length} className="h-24 text-center">
                     Tidak ada data.
                   </TableCell>
                 </TableRow>
@@ -294,22 +371,22 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
             </TableBody>
           </Table>
         </div>
-        {totalPages > 1 && (
+        {table.getPageCount() > 1 && (
           <Pagination className="mt-4">
             <PaginationContent>
               <PaginationItem>
                 <PaginationPrevious
                   href="#"
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+                  onClick={() => table.previousPage()}
+                  className={!table.getCanPreviousPage() ? "pointer-events-none opacity-50" : ""}
                 />
               </PaginationItem>
               {getPaginationPages.map((pageNumber) => (
                 <PaginationItem key={pageNumber}>
                   <PaginationLink
                     href="#"
-                    isActive={pageNumber === currentPage}
-                    onClick={() => handlePageChange(pageNumber)}
+                    isActive={pageNumber === table.getState().pagination.pageIndex + 1}
+                    onClick={() => table.setPageIndex(pageNumber - 1)}
                   >
                     {pageNumber}
                   </PaginationLink>
@@ -318,8 +395,8 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
               <PaginationItem>
                 <PaginationNext
                   href="#"
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
+                  onClick={() => table.nextPage()}
+                  className={!table.getCanNextPage() ? "pointer-events-none opacity-50" : ""}
                 />
               </PaginationItem>
             </PaginationContent>

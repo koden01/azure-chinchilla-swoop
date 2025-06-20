@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getPendingOperations, deletePendingOperation, updatePendingOperation } from '@/integrations/indexeddb/pendingOperations';
 import { supabase } from '@/integrations/supabase/client';
-import { showError, showSuccess } from '@/utils/toast';
+import { showError } from '@/utils/toast'; // Hanya impor showError jika masih digunakan untuk kasus max retries
 import { invalidateDashboardQueries } from '@/utils/dashboardQueryInvalidation';
 import { format } from 'date-fns';
 
@@ -151,7 +151,7 @@ export const useBackgroundSync = () => {
       }
 
       if (operationsSynced > 0) {
-        showSuccess(`Berhasil menyinkronkan ${operationsSynced} operasi di latar belakang.`);
+        // showSuccess(`Berhasil menyinkronkan ${operationsSynced} operasi di latar belakang.`); // Dihapus
         // Invalidate relevant queries after successful sync
         const today = new Date();
         const formattedToday = format(today, 'yyyy-MM-dd');
@@ -167,12 +167,12 @@ export const useBackgroundSync = () => {
         queryClient.refetchQueries({ queryKey: ["lastKarung"] });
       }
       if (operationsFailed > 0) {
-        showError(`Gagal menyinkronkan ${operationsFailed} operasi. Akan mencoba lagi nanti.`);
+        // showError(`Gagal menyinkronkan ${operationsFailed} operasi. Akan mencoba lagi nanti.`); // Dihapus
       }
 
     } catch (error: any) {
       console.error("Error fetching pending operations or during sync process:", error.message);
-      showError("Terjadi kesalahan saat mencoba menyinkronkan data.");
+      // showError("Terjadi kesalahan saat mencoba menyinkronkan data."); // Dihapus
     } finally {
       isSyncingRef.current = false;
     }

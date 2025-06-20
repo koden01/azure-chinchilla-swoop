@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, showError, dismissToast } from "@/utils/toast";
 import { beepSuccess, beepFailure, beepDouble } from "@/utils/audio";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { format, subDays } from "date-fns";
+import { format, subDays, startOfDay, endOfDay } from "date-fns";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 import { normalizeExpeditionName } from "@/utils/expeditionUtils";
 import { addPendingOperation } from "@/integrations/indexeddb/pendingOperations";
@@ -87,15 +87,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
   });
 
   const lastOptimisticIdRef = React.useRef<string | null>(null);
-
-  // Removed invalidateAndRefetch function as it will be handled by useBackgroundSync
-  // const invalidateAndRefetch = () => {
-  //   console.log("Invalidating and refetching queries...");
-  //   invalidateDashboardQueries(queryClient, new Date(), expedition);
-  //   queryClient.invalidateQueries({ queryKey: ["historyData", formattedDate, formattedDate] });
-  //   queryClient.invalidateQueries({ queryKey: ["recentResiNumbersForValidation", twoDaysAgoFormatted, formattedDate] });
-  //   queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] });
-  // };
 
   const keepFocus = () => {
     setTimeout(() => {
@@ -181,7 +172,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
             const { data: directExpedisiData, error: directExpedisiError } = await supabase
                 .from("tbl_expedisi")
                 .select("*")
-                .eq("resino", currentResi)
+                .ilike("resino", currentResi) // Changed from .eq to .ilike
                 .single();
 
             if (directExpedisiError && directExpedisiError.code !== 'PGRST116') { // PGRST116 means "no rows found"
@@ -381,8 +372,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       // Clear the optimistic ref as the operation was successfully added to IndexedDB
       lastOptimisticIdRef.current = null;
       
-      // Removed immediate invalidation. Rely on useBackgroundSync to invalidate after DB write.
-      // invalidateAndRefetch(); 
       triggerSync(); // Manually trigger background sync immediately
 
     } catch (error: any) {

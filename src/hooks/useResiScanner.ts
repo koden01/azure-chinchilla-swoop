@@ -163,11 +163,18 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       if (validationStatus !== 'OK') {
         showError(validationMessage || "Validasi gagal.");
         try {
-          // Conditional beep based on validation status
-          if (validationStatus === 'NOT_FOUND_EXPEDISI' || validationStatus === 'MISMATCH_EXPEDISI') { // Updated logic here
-            beepFailure.play();
-          } else if (validationStatus === 'DUPLICATE_RESI') {
-            beepDouble.play();
+          switch (validationStatus) {
+            case 'NOT_FOUND_EXPEDISI':
+            case 'MISMATCH_EXPEDISI':
+              beepFailure.play();
+              break;
+            case 'DUPLICATE_RESI':
+              beepDouble.play();
+              break;
+            default:
+              // Should not happen if validationStatus is correctly typed
+              beepFailure.play(); // Fallback
+              break;
           }
         } catch (e) {
           console.error("Error playing beep sound:", e);
@@ -227,11 +234,18 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       if (validationStatus !== 'OK') {
         showError(validationMessage || "Validasi gagal.");
         try {
-          // Conditional beep based on validation status
-          if (validationStatus === 'NOT_FOUND_EXPEDISI' || validationStatus === 'MISMATCH_EXPEDISI') { // Updated logic here
-            beepFailure.play();
-          } else if (validationStatus === 'DUPLICATE_RESI') {
-            beepDouble.play();
+          switch (validationStatus) {
+            case 'NOT_FOUND_EXPEDISI':
+            case 'MISMATCH_EXPEDISI':
+              beepFailure.play();
+              break;
+            case 'DUPLICATE_RESI':
+              beepDouble.play();
+              break;
+            default:
+              // Should not happen if validationStatus is correctly typed
+              beepFailure.play(); // Fallback
+              break;
           }
         } catch (e) {
           console.error("Error playing beep sound:", e);
@@ -277,11 +291,18 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       if (validationStatus !== 'OK') {
         showError(validationMessage || "Validasi gagal.");
         try {
-          // Conditional beep based on validation status
-          if (validationStatus === 'NOT_FOUND_EXPEDISI' || validationStatus === 'MISMATCH_EXPEDISI') { // Updated logic here
-            beepFailure.play();
-          } else if (validationStatus === 'DUPLICATE_RESI') {
-            beepDouble.play();
+          switch (validationStatus) {
+            case 'NOT_FOUND_EXPEDISI':
+            case 'MISMATCH_EXPEDISI':
+              beepFailure.play();
+              break;
+            case 'DUPLICATE_RESI':
+              beepDouble.play();
+              break;
+            default:
+              // Should not happen if validationStatus is correctly typed
+              beepFailure.play(); // Fallback
+              break;
           }
         } catch (e) {
           console.error("Error playing beep sound:", e);

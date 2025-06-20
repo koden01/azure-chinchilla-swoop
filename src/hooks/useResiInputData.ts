@@ -137,8 +137,8 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
         throw error;
       }
       
-      console.log("Raw distinct couriername data from tbl_expedisi (flag NO):", data); // NEW LOG
-      console.log("Number of raw distinct couriername entries (flag NO):", data?.length); // NEW LOG
+      console.log("Raw distinct couriername data from tbl_expedisi (flag NO):", data);
+      console.log("Number of raw distinct couriername entries (flag NO):", data?.length);
 
       // Buat Set baru dan tambahkan 'ID' terlebih dahulu, lalu tambahkan nama kurir dari data
       const namesSet = new Set<string>();
@@ -147,13 +147,13 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
         if (item.couriername) {
           const normalizedName = item.couriername.trim().toUpperCase(); // Store normalized name
           namesSet.add(normalizedName);
-          console.log(`Added '${normalizedName}' to set. Current set size: ${namesSet.size}`); // NEW LOG
+          // console.log(`Added '${normalizedName}' to set. Current set size: ${namesSet.size}`); // Dihapus untuk mengurangi log
         } else {
-          console.log("Skipping null/empty couriername."); // NEW LOG
+          // console.log("Skipping null/empty couriername."); // Dihapus untuk mengurangi log
         }
       });
       
-      console.log("Final namesSet before converting to array:", Array.from(namesSet)); // NEW LOG
+      console.log("Final namesSet before converting to array:", Array.from(namesSet));
       const names = Array.from(namesSet);
       return names.sort((a, b) => a.localeCompare(b));
     },

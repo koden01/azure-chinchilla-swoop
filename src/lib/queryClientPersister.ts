@@ -22,7 +22,7 @@ function reviver(_key: string, value: any): any { // Added _ to key
 
 export const persister: Persister = {
   persistClient: async (client: PersistedClient) => { // Added PersistedClient type
-    console.log('Persisting client...');
+    // console.log('Persisting client...'); // Dihapus untuk mengurangi log
     // Use custom replacer when stringifying
     await set('scanresihg-query-cache', JSON.stringify(client, replacer));
   },

@@ -1,8 +1,9 @@
-import { useQuery, /* useQueryClient */ } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns"; // Removed startOfDay, endOfDay
+import { format } from "date-fns";
 import React from "react";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
+import { normalizeExpeditionName, KNOWN_EXPEDITIONS } from "@/utils/expeditionUtils"; // Import new utility
 
 interface KarungSummaryItem {
   karung_number: string;
@@ -28,18 +29,12 @@ interface AllKarungSummaryItem {
 export const useResiInputData = (expedition: string, showAllExpeditionSummary: boolean) => {
   const today = new Date();
   const formattedDate = format(today, "yyyy-MM-dd");
-  // const startOfTodayISO = startOfDay(today).toISOString(); // Dihapus karena tidak terpakai
-  // const endOfTodayISO = endOfDay(today).toISOString(); // Dihapus karena tidak terpakai
-  // Menghapus queryClient karena tidak digunakan
-  // const queryClient = useQueryClient(); 
 
   // Query to fetch all resi data for the current expedition and date for local validation
   const { data: allResiForExpedition, isLoading: isLoadingAllResiForExpedition } = useQuery<ResiExpedisiData[]>({
     queryKey: ["allResiForExpedition", expedition, formattedDate],
     queryFn: async () => {
       if (!expedition) return [];
-
-      // console.log(`Fetching allResiForExpedition for ${expedition} on ${formattedDate} (for local validation) using fetchAllDataPaginated.`); // Removed
       
       const data = await fetchAllDataPaginated(
         "tbl_resi",
@@ -55,8 +50,6 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
           }
         }
       );
-
-      // console.log(`Fetched ${data?.length || 0} resi for local validation. Data:`, data); // Removed
       return data || [];
     },
     enabled: !!expedition,
@@ -68,7 +61,6 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     queryFn: async () => {
       if (!expedition) return null;
 
-      // console.log(`RPC Call: get_last_karung_for_expedition_and_date with p_couriername: ${expedition}, p_selected_date: ${formattedDate}`); // Removed
       const { data, error } = await supabase.rpc("get_last_karung_for_expedition_and_date", {
         p_couriername: expedition,
         p_selected_date: formattedDate,
@@ -89,7 +81,6 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     queryFn: async () => {
       if (!expedition) return [];
 
-      // console.log(`RPC Call: get_karung_summary_for_expedition_and_date with p_couriername: ${expedition}, p_selected_date: ${formattedDate}`); // Removed
       const { data, error } = await supabase.rpc("get_karung_summary_for_expedition_and_date", {
         p_couriername: expedition,
         p_selected_date: formattedDate,
@@ -108,7 +99,6 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
   const { data: allKarungSummariesData, isLoading: isLoadingAllKarungSummaries } = useQuery<AllKarungSummaryItem[]>({
     queryKey: ["allKarungSummaries", formattedDate],
     queryFn: async () => {
-      // console.log(`Fetching allKarungSummaries for date: ${formattedDate}`); // Removed
       const { data, error } = await supabase.rpc("get_all_karung_summaries_for_date", {
         p_selected_date: formattedDate,
       });
@@ -126,7 +116,6 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
   const { data: uniqueExpeditionNames, isLoading: isLoadingUniqueExpeditionNames } = useQuery<string[]>({
     queryKey: ["uniqueExpeditionNames"],
     queryFn: async () => {
-      // console.log("Fetching unique expedition names from tbl_expedisi with flag = 'NO'."); // Removed
       const { data, error } = await supabase
         .from("tbl_expedisi")
         .select("couriername", { distinct: true })
@@ -137,23 +126,17 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
         throw error;
       }
       
-      // console.log("Raw distinct couriername data from tbl_expedisi (flag NO):", data); // Removed
-      // console.log("Number of raw distinct couriername entries (flag NO):", data?.length); // Removed
-
-      // Buat Set baru dan tambahkan 'ID' terlebih dahulu, lalu tambahkan nama kurir dari data
       const namesSet = new Set<string>();
-      namesSet.add("ID"); // Pastikan 'ID' selalu ada dan hanya sekali
+      KNOWN_EXPEDITIONS.forEach(name => namesSet.add(name)); // Add all known expeditions first
       data.forEach((item: { couriername: string | null }) => {
         if (item.couriername) {
-          const normalizedName = item.couriername.trim().toUpperCase(); // Store normalized name
-          namesSet.add(normalizedName);
-          // console.log(`Added '${normalizedName}' to set. Current set size: ${namesSet.size}`); // Dihapus untuk mengurangi log
-        } else {
-          // console.log("Skipping null/empty couriername."); // Dihapus untuk mengurangi log
+          const normalizedName = normalizeExpeditionName(item.couriername); // Use normalizeExpeditionName
+          if (normalizedName) {
+            namesSet.add(normalizedName);
+          }
         }
       });
       
-      // console.log("Final namesSet before converting to array:", Array.from(namesSet)); // Removed
       const names = Array.from(namesSet);
       return names.sort((a, b) => a.localeCompare(b));
     },

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
+import { normalizeExpeditionName, KNOWN_EXPEDITIONS } from "@/utils/expeditionUtils"; // Import new utility
 
 // Define the return type interface for useDashboardData
 interface DashboardDataReturn {
@@ -50,9 +51,7 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
   const { data: transaksiHariIni, isLoading: isLoadingTransaksiHariIni, error: transaksiHariIniError } = useQuery<number>({
     queryKey: ["transaksiHariIni", formattedDate],
     queryFn: async () => {
-      // console.log("QueryFn: transaksiHariIni"); // Removed
       if (!date) return 0;
-      // console.log(`Fetching transaksiHariIni count for date: ${formattedDate} using RPC.`); // Removed
       const { data: countData, error } = await supabase.rpc("get_transaksi_hari_ini_count", {
         p_selected_date: formattedDate,
       });
@@ -71,9 +70,7 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
   const { data: totalScan, isLoading: isLoadingTotalScan, error: totalScanError } = useQuery<number>({
     queryKey: ["totalScan", formattedDate],
     queryFn: async () => {
-      // console.log("QueryFn: totalScan"); // Removed
       if (!date) return 0;
-      // console.log(`Fetching totalScan for date: ${formattedDate}`); // Removed
       const { count, error } = await supabase
         .from("tbl_resi")
         .select("*", { count: "exact" })
@@ -95,9 +92,7 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
   const { data: idRekCount, isLoading: isLoadingIdRekCount, error: idRekCountError } = useQuery<number>({
     queryKey: ["idRekCount", formattedDate],
     queryFn: async () => {
-      // console.log("QueryFn: idRekCount"); // Removed
       if (!date) return 0;
-      // console.log(`Fetching idRekCount for date: ${formattedDate}`); // Removed
       const { count, error } = await supabase
         .from("tbl_resi")
         .select("*", { count: "exact" })
@@ -119,9 +114,7 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
   const { data: belumKirim, isLoading: isLoadingBelumKirim, error: belumKirimError } = useQuery<number>({
     queryKey: ["belumKirim", formattedDate],
     queryFn: async () => {
-      // console.log("QueryFn: belumKirim"); // Removed
       if (!date) return 0;
-      // console.log(`Fetching belumKirim count for date: ${formattedDate} using RPC.`); // Removed
       const { data: countData, error } = await supabase.rpc("get_belum_kirim_count", {
         p_selected_date: formattedDate,
       });
@@ -140,10 +133,8 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
   const { data: followUpFlagNoCount, isLoading: isLoadingFollowUpFlagNoCount, error: followUpFlagNoCountError } = useQuery<number>({
     queryKey: ["followUpFlagNoCount", format(new Date(), 'yyyy-MM-dd')], // Query key based on actual current date
     queryFn: async () => {
-      // console.log("QueryFn: followUpFlagNoCount"); // Removed
       // Always use the actual current date for this specific query
       const actualCurrentFormattedDate = format(new Date(), 'yyyy-MM-dd');
-      // console.log(`Fetching followUpFlagNoCount for actual current date: ${actualCurrentFormattedDate}`); // Removed
       const { data: countData, error: rpcError } = await supabase.rpc("get_flag_no_except_today_count", {
         p_selected_date: actualCurrentFormattedDate,
       });
@@ -163,9 +154,7 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
   const { data: scanFollowupLateCount, isLoading: isLoadingScanFollowupLateCount, error: scanFollowupLateCountError } = useQuery<number>({
     queryKey: ["scanFollowupLateCount", formattedDate],
     queryFn: async () => {
-      // console.log("QueryFn: scanFollowupLateCount"); // Removed
       if (!date) return 0;
-      // console.log(`Fetching scanFollowupLateCount for date: ${formattedDate}`); // Removed
       const { count, error } = await supabase
         .from("tbl_resi")
         .select("*", { count: "exact" })
@@ -187,9 +176,7 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
   const { data: batalCount, isLoading: isLoadingBatalCount, error: batalCountError } = useQuery<number>({
     queryKey: ["batalCount", formattedDate],
     queryFn: async () => {
-      // console.log("QueryFn: batalCount"); // Removed
       if (!date) return 0;
-      // console.log(`Fetching batalCount for date: ${formattedDate}`); // Removed
       const { count, error } = await supabase
         .from("tbl_resi")
         .select("*", { count: "exact" })
@@ -211,9 +198,7 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
   const { data: followUpData, isLoading: isLoadingFollowUp, error: followUpDataError } = useQuery<any[]>({
     queryKey: ["followUpData", formattedDate],
     queryFn: async () => {
-      // console.log("QueryFn: followUpData"); // Removed
       if (!date) return [];
-      // console.log(`Fetching followUpData for date: ${formattedDate}`); // Removed
       const { data, error } = await supabase.rpc("get_scan_follow_up", {
         selected_date: formattedDate,
       });
@@ -232,8 +217,6 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
   const { data: allExpedisiDataUnfiltered, isLoading: isLoadingAllExpedisiUnfiltered, error: allExpedisiDataUnfilteredError } = useQuery<Map<string, any>>({ // Changed type to Map
     queryKey: ["allExpedisiDataUnfiltered", twoDaysAgoFormatted, endOfTodayFormatted], // New query key with 3-day range
     queryFn: async () => {
-      // console.log("QueryFn: allExpedisiDataUnfiltered"); // Removed
-      // console.log(`Fetching allExpedisiDataUnfiltered (paginated) for last 3 days: ${twoDaysAgoFormatted} to ${endOfTodayFormatted} using fetchAllDataPaginated.`); // Removed
       // Pass the 3-day range to fetchAllDataPaginated
       const data = await fetchAllDataPaginated("tbl_expedisi", "created", twoDaysAgo, today);
       console.log("All Expedisi Data (unfiltered, paginated, 3-day range):", data.length, "items");
@@ -256,9 +239,7 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
   const { data: expedisiDataForSelectedDate, isLoading: isLoadingExpedisiDataForSelectedDate, error: expedisiDataForSelectedDateError } = useQuery<any[]>({
     queryKey: ["expedisiDataForSelectedDate", formattedDate],
     queryFn: async () => {
-      // console.log("QueryFn: expedisiDataForSelectedDate"); // Removed
       if (!date) return [];
-      // console.log(`RPC Call: get_transaksi_hari_ini_records for date: ${formattedDate}`); // Removed
       const { data, error } = await supabase.rpc("get_transaksi_hari_ini_records", {
         p_selected_date: formattedDate,
       });
@@ -277,9 +258,7 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
   const { data: allResiData, isLoading: isLoadingAllResi, error: allResiDataError } = useQuery<any[]>({
     queryKey: ["allResiData", formattedDate],
     queryFn: async () => {
-      // console.log("QueryFn: allResiData"); // Removed
       if (!date) return [];
-      // console.log(`Fetching allResiData for date (paginated): ${formattedDate} using fetchAllDataPaginated.`); // Removed
       const data = await fetchAllDataPaginated("tbl_resi", "created", date, date); // Use the new date filtering logic
       console.log("All Resi Data (filtered by selected date, paginated):", data.length, "items");
       return data;
@@ -290,46 +269,25 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
 
   // Process data to create expedition summaries
   useEffect(() => {
-    // console.log("--- useEffect for expeditionSummaries calculation started ---"); // Removed
-    // console.log("Dependencies status:"); // Removed
-    // console.log(`  isLoadingAllExpedisiUnfiltered: ${isLoadingAllExpedisiUnfiltered}`); // Removed
-    // console.log(`  isLoadingExpedisiDataForSelectedDate: ${isLoadingExpedisiDataForSelectedDate}`); // Removed
-    // console.log(`  isLoadingAllResi: ${isLoadingAllResi}`); // Removed
-    // console.log(`  allExpedisiDataUnfiltered: ${allExpedisiDataUnfiltered ? 'Loaded (' + allExpedisiDataUnfiltered.size + ' items)' : 'Not Loaded'}`); // Removed
-    // console.log(`  expedisiDataForSelectedDate: ${expedisiDataForSelectedDate ? 'Loaded (' + expedisiDataForSelectedDate.length + ' items)' : 'Not Loaded'}`); // Removed
-    // console.log(`  allResiData: ${allResiData ? 'Loaded (' + allResiData.length + ' items)' : 'Not Loaded'}`); // Removed
-    // console.log(`  date: ${date ? date.toISOString() : 'null'}`); // Removed
-
-
     if (isLoadingAllExpedisiUnfiltered || isLoadingExpedisiDataForSelectedDate || isLoadingAllResi || !allExpedisiDataUnfiltered || !expedisiDataForSelectedDate || !allResiData || !date) {
       setExpeditionSummaries([]);
-      // console.log("Expedition summaries: Dependencies not ready or date is null. Setting summaries to empty."); // Removed
       return;
     }
-
-    // console.log("Starting detailed expedition summaries calculation..."); // Removed
-    // console.log("allExpedisiDataUnfiltered for resiToExpeditionMap (size):", allExpedisiDataUnfiltered.size); // Removed
-    // console.log("expedisiDataForSelectedDate for totalTransaksi/sisa (count):", expedisiDataForSelectedDate.length); // Removed
-    // console.log("allResiData for other counts (count, already date-filtered):", allResiData.length); // Removed
 
     // Build a comprehensive map from all expedisi data (unfiltered)
     const resiToExpeditionMap = new Map<string, string>();
     allExpedisiDataUnfiltered.forEach(exp => {
-      // Normalize resino for map key: trim spaces and convert to lowercase
       const normalizedResino = exp.resino?.trim().toLowerCase();
       if (normalizedResino) {
-        resiToExpeditionMap.set(normalizedResino, exp.couriername?.trim().toUpperCase() || ""); // Normalize couriername here too
+        resiToExpeditionMap.set(normalizedResino, normalizeExpeditionName(exp.couriername) || "");
       }
     });
-    // console.log("resiToExpeditionMap (comprehensive, size):", resiToExpeditionMap.size); // Removed
 
     const summaries: { [key: string]: any } = {};
 
     // Initialize summaries for all unique courier names from tbl_expedisi (unfiltered)
-    // Corrected: Use Array.from(allExpedisiDataUnfiltered.values()) to iterate over Map values
-    const uniqueCourierNames = new Set(Array.from(allExpedisiDataUnfiltered.values()).map(e => e.couriername?.trim().toUpperCase()).filter(Boolean));
-    uniqueCourierNames.add("ID"); // Ensure 'ID' is always initialized
-    uniqueCourierNames.forEach(name => {
+    const uniqueCourierNames = new Set(Array.from(allExpedisiDataUnfiltered.values()).map(e => normalizeExpeditionName(e.couriername)).filter(Boolean));
+    KNOWN_EXPEDITIONS.forEach(name => { // Ensure all known expeditions are initialized
       summaries[name] = {
         name,
         totalTransaksi: 0,
@@ -341,85 +299,49 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
         totalScanFollowUp: 0, 
       };
     });
-    // console.log("Initial summaries structure (keys):", Object.keys(summaries)); // Removed
-
-    // --- START: Debugging for discrepancy ---
-    const uncountedExpedisiRecords: any[] = [];
-    // --- END: Debugging for discrepancy ---
 
     // Process expedisiDataForSelectedDate for totalTransaksi and sisa
-    // This data is already filtered by date from Supabase using 'created::date'
     expedisiDataForSelectedDate.forEach(exp => {
-      const normalizedCourierName = exp.couriername?.trim().toUpperCase(); // Normalize here
-
-      // console.log(`  Processing expedisiDataForSelectedDate record: Resi=${exp.resino}, Courier (raw)=${exp.couriername} (Normalized: ${normalizedCourierName}), Created (raw): ${exp.created}`); // REMOVED
+      const normalizedCourierName = normalizeExpeditionName(exp.couriername);
       
       if (normalizedCourierName && summaries[normalizedCourierName]) {
         summaries[normalizedCourierName].totalTransaksi++;
         if (exp.flag === "NO") {
           summaries[normalizedCourierName].sisa++;
         }
-        // console.log(`    -> Matched courier for ${normalizedCourierName}. Current totalTransaksi: ${summaries[normalizedCourierName].totalTransaksi}, sisa: ${summaries[normalizedCourierName].sisa}`); // REMOVED
       } else {
-        console.warn(`    -> expedisiDataForSelectedDate: Normalized Courier name '${normalizedCourierName}' not found in summaries or is null/empty for resino: ${exp.resino}. This record will not be counted in expedition summaries.`);
-        uncountedExpedisiRecords.push(exp); // Add to uncounted list
+        console.warn(`expedisiDataForSelectedDate: Normalized Courier name '${normalizedCourierName}' not found in summaries or is null/empty for resino: ${exp.resino}. This record will not be counted in expedition summaries.`);
       }
     });
-    // console.log("Summaries after processing expedisiDataForSelectedDate:", summaries); // Removed
-    // console.log("Uncounted expedisi records (due to missing/unrecognized couriername):", uncountedExpedisiRecords); // Removed
-
 
     // Process tbl_resi data (already filtered by selected date)
     allResiData.forEach(resi => {
-      // Normalize resi.Resi for lookup: trim spaces and convert to lowercase
       const normalizedResi = resi.Resi?.trim().toLowerCase();
       let targetCourierName = null;
 
-      // First, try to get from the comprehensive map
       if (normalizedResi) {
         targetCourierName = resiToExpeditionMap.get(normalizedResi);
       }
 
-      // Fallback for ID or other couriers if not found in map but Keterangan matches
       if (!targetCourierName) {
-        const normalizedKeterangan = resi.Keterangan?.trim().toUpperCase();
-        // *** PERBAIKAN DI SINI: Tambahkan 'JNT' ke daftar ekspedisi yang dikenali ***
-        if (normalizedKeterangan === "ID" || normalizedKeterangan === "ID_REKOMENDASI") {
-          targetCourierName = "ID";
-          // console.log(`  [Resi Attr] Resi ${resi.Resi} with Keterangan '${resi.Keterangan}' attributed to ID expedition (not found in tbl_expedisi map).`); // REMOVED
-        } else if (normalizedKeterangan && ["JNE", "SPX", "INSTAN", "SICEPAT", "JNT"].includes(normalizedKeterangan)) { // Added JNT
-          targetCourierName = normalizedKeterangan;
-          // console.log(`  [Resi Attr] Resi ${resi.Resi} with Keterangan '${resi.Keterangan}' attributed to ${targetCourierName} expedition (not found in tbl_expedisi map).`); // REMOVED
-        } else {
-          console.warn(`  [Resi Attr] Resi ${resi.Resi} with Keterangan '${resi.Keterangan}' could not be attributed to any known expedition. Skipping.`);
-        }
-      } else {
-        // console.log(`  [Resi Attr] Resi ${resi.Resi} attributed to ${targetCourierName} expedition (found in tbl_expedisi map).`); // REMOVED
+        targetCourierName = normalizeExpeditionName(resi.Keterangan);
       }
 
       if (targetCourierName && summaries[targetCourierName]) {
-        // console.log(`  Processing Resi: ${resi.Resi}, Target Courier: ${targetCourierName}, Schedule: ${resi.schedule}, Keterangan: ${resi.Keterangan}, Nokarung: ${resi.nokarung}`); // REMOVED
-        
         if (resi.schedule === "ontime") {
           summaries[targetCourierName].totalScan++;
-          // console.log(`    -> Incremented totalScan for ${targetCourierName}. Current: ${summaries[targetCourierName].totalScan}`); // REMOVED
         }
-        // Count ID Rekomendasi based on Keterangan
-        if (resi.Keterangan === "ID_REKOMENDASI") { // Keterangan itself is "ID_REKOMENDASI", no need to normalize here
+        if (resi.Keterangan === "ID_REKOMENDASI") { 
           summaries[targetCourierName].idRekomendasi++;
-          // console.log(`    -> Incremented ID Rekomendasi for ${targetCourierName}. Current: ${summaries[targetCourierName].idRekomendasi}`); // REMOVED
         }
         if (resi.schedule === "batal") { 
           summaries[targetCourierName].totalBatal++;
-          // console.log(`    -> Incremented totalBatal for ${targetCourierName}. Current: ${summaries[targetCourierName].totalBatal}`); // REMOVED
         }
         if (resi.schedule === "late") { 
           summaries[targetCourierName].totalScanFollowUp++;
-          // console.log(`    -> Incremented Scan Follow Up for ${targetCourierName}. Current: ${summaries[targetCourierName].totalScanFollowUp}`); // REMOVED
         }
         if (resi.nokarung) {
           summaries[targetCourierName].jumlahKarung.add(resi.nokarung);
-          // console.log(`    -> Added karung ${resi.nokarung} to ${targetCourierName}. Current unique karungs: ${summaries[targetCourierName].jumlahKarung.size}`); // REMOVED
         }
       } else {
         console.warn(`Resi ${resi.Resi} has no matching courier in summaries or targetCourierName is null/undefined. Keterangan: ${resi.Keterangan}. This resi will not be counted in expedition summaries.`);
@@ -433,8 +355,6 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
     }));
 
     setExpeditionSummaries(finalSummaries);
-    // console.log("Final Expedition Summaries:", finalSummaries); // Removed
-    // console.log("--- useEffect for expeditionSummaries calculation finished ---"); // Removed
   }, [date, allExpedisiDataUnfiltered, expedisiDataForSelectedDate, allResiData, isLoadingAllExpedisiUnfiltered, isLoadingExpedisiDataForSelectedDate, isLoadingAllResi]);
 
   // Debounced function to invalidate dashboard queries
@@ -445,11 +365,8 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
 
   // Real-time subscription for dashboard data
   useEffect(() => {
-    // console.log("Setting up Supabase Realtime subscription for Dashboard data..."); // Removed
-
     const handleRealtimeEvent = (payload: any) => {
       console.log("Realtime event received for Dashboard:", payload);
-      // Call the debounced invalidation function
       debouncedInvalidateDashboardQueries();
     };
 
@@ -468,9 +385,7 @@ export const useDashboardData = (date: Date | undefined): DashboardDataReturn =>
       supabase.removeChannel(resiChannel);
       supabase.removeChannel(expedisiChannel);
     };
-  }, [debouncedInvalidateDashboardQueries]);
-
-  // console.log("useDashboardData returning expeditionSummaries:", expeditionSummaries); // Removed
+  }, [debouncedInvalidateDashboardQueries, expedition]); // Added expedition to dependencies
 
   return {
     transaksiHariIni,

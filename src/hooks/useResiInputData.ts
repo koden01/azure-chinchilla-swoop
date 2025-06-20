@@ -5,11 +5,6 @@ import React from "react";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 import { normalizeExpeditionName, KNOWN_EXPEDITIONS } from "@/utils/expeditionUtils"; // Import new utility
 
-interface KarungSummaryItem {
-  karung_number: string;
-  quantity: number;
-}
-
 // Define the type for ResiExpedisiData to match useResiInputData
 interface ResiExpedisiData {
   Resi: string;
@@ -17,6 +12,7 @@ interface ResiExpedisiData {
   created: string;
   Keterangan: string | null; // Changed to Keterangan to match tbl_resi
   schedule: string | null;
+  optimisticId?: string; // Added for optimistic updates
 }
 
 // NEW: Type for all karung summaries
@@ -54,50 +50,6 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       return data || [];
     },
     enabled: !!expedition,
-    staleTime: 1000 * 10, // Keep data fresh for 10 seconds to allow optimistic updates to persist
-  });
-
-  // Query to fetch lastKarung directly from database using RPC
-  const { data: lastKarungData, isLoading: isLoadingLastKarung } = useQuery<string | null>({
-    queryKey: ["lastKarung", expedition, formattedDate],
-    queryFn: async () => {
-      if (!expedition) return null;
-
-      const { data, error } = await supabase.rpc("get_last_karung_for_expedition_and_date", {
-        p_couriername: expedition,
-        p_selected_date: formattedDate,
-      });
-
-      if (error) {
-        console.error("Error fetching last karung:", error);
-        throw error;
-      }
-      console.log(`[useResiInputData] Fetched lastKarungData for ${expedition} on ${formattedDate}:`, data);
-      return data || null;
-    },
-    enabled: !!expedition && !showAllExpeditionSummary, // Only enabled if not showing all summaries
-    staleTime: 1000 * 10, // Keep data fresh for 10 seconds
-  });
-
-  // Query to fetch karung summary directly from database using RPC (for specific expedition)
-  const { data: karungSummaryData, isLoading: isLoadingKarungSummary } = useQuery<KarungSummaryItem[]>({
-    queryKey: ["karungSummary", expedition, formattedDate],
-    queryFn: async () => {
-      if (!expedition) return [];
-
-      const { data, error } = await supabase.rpc("get_karung_summary_for_expedition_and_date", {
-        p_couriername: expedition,
-        p_selected_date: formattedDate,
-      });
-
-      if (error) {
-        console.error("Error fetching karung summary:", error);
-        throw error;
-      }
-      console.log(`[useResiInputData] Fetched karungSummaryData for ${expedition} on ${formattedDate}:`, data); // ADDED LOG
-      return data || [];
-    },
-    enabled: !!expedition && !showAllExpeditionSummary, // Only enabled if not showing all summaries
     staleTime: 1000 * 10, // Keep data fresh for 10 seconds to allow optimistic updates to persist
   });
 
@@ -152,28 +104,42 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     gcTime: 1000 * 60 * 60 * 24, // Garbage collect after 24 hours
   });
 
-  // Derive currentCount from karungSummaryData
+  // Derive currentCount from allResiForExpedition
   const currentCount = React.useCallback((selectedKarung: string) => {
-    if (!karungSummaryData || !selectedKarung) return 0;
-    const summaryItem = karungSummaryData.find(item => item.karung_number === selectedKarung);
-    const count = summaryItem ? summaryItem.quantity : 0;
-    console.log(`[useResiInputData] currentCount for karung ${selectedKarung}:`, count); // ADDED LOG
+    if (!allResiForExpedition || !selectedKarung) return 0;
+    const count = allResiForExpedition.filter(item => 
+      item.nokarung === selectedKarung && 
+      (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition)
+    ).length;
+    console.log(`[useResiInputData] currentCount for karung ${selectedKarung} (derived from cache):`, count);
     return count;
-  }, [karungSummaryData]);
+  }, [allResiForExpedition, expedition]);
 
-  // lastKarung is now directly from lastKarungData
+  // Derive lastKarung from allResiForExpedition
   const lastKarung = React.useMemo(() => {
-    return parseInt(lastKarungData || "0") || 0;
-  }, [lastKarungData]);
+    if (!allResiForExpedition || allResiForExpedition.length === 0) return "0";
+    const filteredResi = allResiForExpedition.filter(item => 
+      item.nokarung !== null && 
+      (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition)
+    );
+    if (filteredResi.length === 0) return "0";
 
-  // Derive highestKarung from karungSummaryData
+    const sortedResi = [...filteredResi].sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime());
+    return sortedResi[0].nokarung || "0";
+  }, [allResiForExpedition, expedition]);
+
+  // Derive highestKarung from allResiForExpedition
   const highestKarung = React.useMemo(() => {
-    if (!karungSummaryData || karungSummaryData.length === 0) return 0;
-    const validKarungNumbers = karungSummaryData
-      .map(item => parseInt(item.karung_number || "0"))
+    if (!allResiForExpedition || allResiForExpedition.length === 0) return 0;
+    const validKarungNumbers = allResiForExpedition
+      .filter(item => 
+        item.nokarung !== null && 
+        (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition)
+      )
+      .map(item => parseInt(item.nokarung || "0"))
       .filter(num => !isNaN(num) && num > 0);
     return validKarungNumbers.length > 0 ? Math.max(...validKarungNumbers) : 0;
-  }, [karungSummaryData]);
+  }, [allResiForExpedition, expedition]);
 
   // Karung options based on highestKarung (still client-side generation)
   const karungOptions = React.useMemo(() => {
@@ -181,13 +147,25 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     return Array.from({ length: maxKarung }, (_, i) => (i + 1).toString());
   }, [highestKarung]);
 
-  // karungSummary is now directly from karungSummaryData, mapped to match existing structure
+  // karungSummary is now derived from allResiForExpedition
   const karungSummary = React.useMemo(() => {
-    return karungSummaryData ? karungSummaryData.map(item => ({
-      karungNumber: item.karung_number,
-      quantity: item.quantity,
-    })) : [];
-  }, [karungSummaryData]);
+    if (!allResiForExpedition) return [];
+
+    const summaryMap = new Map<string, number>();
+    allResiForExpedition.forEach(item => {
+      if (item.nokarung !== null && (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition)) {
+        const currentCount = summaryMap.get(item.nokarung) || 0;
+        summaryMap.set(item.nokarung, currentCount + 1);
+      }
+    });
+
+    const sortedSummary = Array.from(summaryMap.entries())
+      .map(([karungNumber, quantity]) => ({ karungNumber, quantity }))
+      .sort((a, b) => parseInt(a.karungNumber) - parseInt(b.karungNumber)); // Sort numerically
+
+    console.log(`[useResiInputData] Derived karungSummary from cache:`, sortedSummary);
+    return sortedSummary;
+  }, [allResiForExpedition, expedition]);
 
   // NEW: Mapped allKarungSummariesData to match existing structure for modal
   const allExpeditionKarungSummary = React.useMemo(() => {
@@ -204,7 +182,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
 
   return {
     allResiForExpedition, // Now returned
-    isLoadingAllResiForExpedition: isLoadingAllResiForExpedition || isLoadingLastKarung || isLoadingKarungSummary || isLoadingAllKarungSummaries || isLoadingUniqueExpeditionNames, // Combine loading states
+    isLoadingAllResiForExpedition: isLoadingAllResiForExpedition || isLoadingAllKarungSummaries || isLoadingUniqueExpeditionNames, // Combine loading states
     currentCount,
     lastKarung,
     highestKarung,
@@ -212,7 +190,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     formattedDate,
     karungSummary,
     allExpeditionKarungSummary, // NEW: Return all expedition karung summary
-    isLoadingKarungSummary,
+    isLoadingKarungSummary: isLoadingAllResiForExpedition, // Now depends on allResiForExpedition
     isLoadingAllKarungSummaries, // NEW: Loading state for all summaries
     expeditionOptions, // NEW: Return expedition options
   };

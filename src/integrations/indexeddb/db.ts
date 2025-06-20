@@ -1,4 +1,5 @@
 import { openDB, IDBPDatabase } from 'idb';
+import { PendingOperation } from './pendingOperations'; // NEW: Import PendingOperation
 
 const DB_NAME = 'scanresihg-db';
 const DB_VERSION = 1;

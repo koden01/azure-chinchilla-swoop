@@ -1,11 +1,11 @@
 import React from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query"; // Keep import for type inference if needed, but remove usage
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { showSuccess, showError } from "@/utils/toast";
 import { ModalDataItem } from "@/types/data";
 import { normalizeExpeditionName } from "@/utils/expeditionUtils";
-import { addPendingOperation, PendingOperation } from "@/integrations/indexeddb/pendingOperations"; // NEW IMPORT
+import { addPendingOperation } from "@/integrations/indexeddb/pendingOperations"; // Removed PendingOperation from import as it's not directly used as a type here
 
 interface UseDashboardModalsProps {
   date: Date | undefined;
@@ -33,7 +33,7 @@ interface UseDashboardModalsReturn {
 }
 
 export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: UseDashboardModalsProps): UseDashboardModalsReturn => {
-  const queryClient = useQueryClient();
+  // const queryClient = useQueryClient(); // REMOVED: No longer directly used here
 
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [modalTitle, setModalTitle] = React.useState("");

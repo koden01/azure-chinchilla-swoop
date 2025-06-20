@@ -60,6 +60,33 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
     enabled: true, // Always enabled for local validation
   });
 
+  // NEW: Query to fetch ALL tbl_expedisi data with flag = 'NO' for comprehensive local validation
+  const { data: allFlagNoExpedisiData, isLoading: isLoadingAllFlagNoExpedisiData } = useQuery<Map<string, any>>({
+    queryKey: ["allFlagNoExpedisiData"],
+    queryFn: async () => {
+      console.log("Fetching allFlagNoExpedisiData (paginated) where flag = 'NO'.");
+      const data = await fetchAllDataPaginated(
+        "tbl_expedisi",
+        undefined, // No date filter
+        undefined, // No start date
+        undefined, // No end date
+        "*", // Select all columns needed for validation
+        (query) => query.eq("flag", "NO") // Add flag filter
+      );
+      const expedisiMap = new Map<string, any>();
+      data.forEach(item => {
+        if (item.resino) {
+          expedisiMap.set(item.resino.toLowerCase(), item);
+        }
+      });
+      console.log(`Fetched ${expedisiMap.size} 'flag NO' expedisi records for validation.`);
+      return expedisiMap;
+    },
+    staleTime: 1000 * 60 * 5, // Keep this data fresh for 5 minutes
+    gcTime: 1000 * 60 * 60 * 24, // Garbage collect after 24 hours
+    enabled: true, // Always enabled
+  });
+
   // Add this useEffect for debugging recentResiNumbersForValidation changes
   React.useEffect(() => {
     console.log("DEBUG: recentResiNumbersForValidation updated. Current size:", recentResiNumbersForValidation?.size);
@@ -75,6 +102,8 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
     queryClient.invalidateQueries({ queryKey: ["historyData", formattedDate, formattedDate] });
     // Invalidate the recentResiNumbersForValidation query
     queryClient.invalidateQueries({ queryKey: ["recentResiNumbersForValidation", twoDaysAgoFormatted, formattedDate] });
+    // Invalidate the new allFlagNoExpedisiData query
+    queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] });
   }, 150);
 
   const keepFocus = () => {
@@ -154,13 +183,19 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         return; // Exit early if validation fails
       }
 
-      // 2. Local Expedition Validation (using allExpedisiDataUnfiltered cache, with fallback to direct fetch)
-      console.log(`Performing local expedition validation for resi ${currentResi} using allExpedisiDataUnfiltered...`);
+      // 2. Local Expedition Validation (using allExpedisiDataUnfiltered cache, with fallback to allFlagNoExpedisiData, then direct fetch)
+      console.log(`Performing local expedition validation for resi ${currentResi} using allExpedisiDataUnfiltered (3-day cache)...`);
       let expedisiRecord = allExpedisiDataUnfiltered?.get(normalizedCurrentResi);
 
-      // If not found in cache, try a direct fetch from tbl_expedisi
+      // If not found in 3-day cache, try the comprehensive 'flag NO' cache
       if (!expedisiRecord) {
-          console.log(`Resi ${currentResi} not found in allExpedisiDataUnfiltered cache. Attempting direct fetch from tbl_expedisi.`);
+        console.log(`Resi ${currentResi} not found in 3-day cache. Checking allFlagNoExpedisiData (flag NO cache)...`);
+        expedisiRecord = allFlagNoExpedisiData?.get(normalizedCurrentResi);
+      }
+
+      // If still not found in any local cache, try a direct fetch from tbl_expedisi
+      if (!expedisiRecord) {
+          console.log(`Resi ${currentResi} not found in any local cache. Attempting direct fetch from tbl_expedisi.`);
           const { data: directExpedisiData, error: directExpedisiError } = await supabase
               .from("tbl_expedisi")
               .select("*")
@@ -175,14 +210,25 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
               expedisiRecord = directExpedisiData;
               console.log(`Resi ${currentResi} found via direct fetch from tbl_expedisi.`);
               // Optionally, update the cache with this fresh data to prevent future direct fetches for this item
+              // Update both 3-day cache and flag NO cache if applicable
               queryClient.setQueryData(
-                  ["allExpedisiDataUnfiltered", twoDaysAgoFormatted, endOfTodayFormatted], // Use the correct query key for allExpedisiDataUnfiltered
+                  ["allExpedisiDataUnfiltered", twoDaysAgoFormatted, endOfTodayFormatted],
                   (oldMap: Map<string, any> | undefined) => {
                       const newMap = oldMap ? new Map(oldMap) : new Map();
                       newMap.set(normalizedCurrentResi, directExpedisiData);
                       return newMap;
                   }
               );
+              if (directExpedisiData.flag === 'NO') {
+                queryClient.setQueryData(
+                  ["allFlagNoExpedisiData"],
+                  (oldMap: Map<string, any> | undefined) => {
+                      const newMap = oldMap ? new Map(oldMap) : new Map();
+                      newMap.set(normalizedCurrentResi, directExpedisiData);
+                      return newMap;
+                  }
+                );
+              }
           } else {
               console.log(`Resi ${currentResi} NOT found via direct fetch from tbl_expedisi.`);
               validationStatus = 'NOT_FOUND_EXPEDISI';
@@ -292,6 +338,13 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         console.log(`Optimistically updated allExpedisiDataUnfiltered cache for ${currentResi}.`);
         return newMap;
       });
+      // NEW: Optimistic update for allFlagNoExpedisiData cache (remove if flag becomes YES)
+      queryClient.setQueryData(["allFlagNoExpedisiData"], (oldMap: Map<string, any> | undefined) => {
+        const newMap = oldMap ? new Map(oldMap) : new Map();
+        newMap.delete(normalizedCurrentResi); // Remove from flag NO cache as it's now 'YES'
+        console.log(`Optimistically removed ${currentResi} from allFlagNoExpedisiData cache.`);
+        return newMap;
+      });
 
 
       lastOptimisticIdRef.current = currentOptimisticId;
@@ -386,6 +439,17 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
               newMap.set(normalizedCurrentResi, revertedExpedisi);
             }
             return newMap;
+          });
+          // NEW: Revert optimistic update for allFlagNoExpedisiData cache (add back if flag was 'NO')
+          queryClient.setQueryData(["allFlagNoExpedisiData"], (oldMap: Map<string, any> | undefined) => {
+            const newMap = oldMap ? new Map(oldMap) : new Map();
+            // If the original expedisi record (before optimistic update) had flag 'NO', add it back.
+            // This requires knowing the original state, which is not directly available here.
+            // For now, we'll re-fetch this cache on error to ensure consistency.
+            // A more robust solution would involve storing the original state in the optimistic context.
+            // For simplicity, we'll just invalidate this cache to force a re-fetch.
+            queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] });
+            return newMap; // Return current map, invalidation will handle refresh
           });
           console.log(`Reverted optimistic update for ID: ${lastOptimisticIdRef.current} due to error.`);
       }

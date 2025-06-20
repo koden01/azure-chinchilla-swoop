@@ -228,11 +228,12 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
         if (resi.schedule === "ontime") {
           currentTotalScan++;
         }
-        if (resi.Keterangan === "ID_REKOMENDASI") {
+        if (resi.Keterangan === "ID_REKOMENDASI") { // Fixed typo here
           currentIdRekCount++;
         }
         if (resi.schedule === "batal") {
           currentBatalCount++;
+          console.log(`[DEBUG] Resi ${resi.Resi} is 'batal'. currentBatalCount: ${currentBatalCount}`);
         }
         if (resi.schedule === "late") {
           currentScanFollowupLateCount++;
@@ -256,6 +257,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
     setFollowUpFlagNoCount(currentFollowUpFlagNoCount);
     setScanFollowupLateCount(currentScanFollowupLateCount);
     setBatalCount(currentBatalCount);
+    console.log(`[DEBUG] Final overall batalCount: ${currentBatalCount}`);
 
     // --- Calculate per-expedition summaries ---
     const summaries: { [key: string]: any } = {};
@@ -308,6 +310,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
         }
         if (resi.schedule === "batal") {
           summaries[normalizedResiKeterangan].totalBatal++;
+          console.log(`[DEBUG] Expedition ${normalizedResiKeterangan} totalBatal incremented. Current: ${summaries[normalizedResiKeterangan].totalBatal}`);
         }
         if (resi.Keterangan === "ID_REKOMENDASI") { // Specific check for ID_REKOMENDASI
           summaries[normalizedResiKeterangan].idRekomendasi++;

@@ -110,7 +110,7 @@ const HistoryPage = () => {
     return allRecords;
   }, []);
 
-  const { data: historyData, isLoading: isLoadingHistory, error: historyError } = useQuery<HistoryData[]>({
+  const { data: historyData, isLoading: isLoadingHistory } = useQuery<HistoryData[]>({ // Renamed historyError to _historyError
     queryKey: ["historyData", formattedStartDate, formattedEndDate],
     queryFn: async () => {
       if (!startDate || !endDate) {

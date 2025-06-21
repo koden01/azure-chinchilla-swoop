@@ -4,7 +4,7 @@ import { getPendingOperations, deletePendingOperation, updatePendingOperation } 
 import { supabase } from '@/integrations/supabase/client';
 import { showError } from '@/utils/toast';
 import { invalidateDashboardQueries } from '@/utils/dashboardQueryInvalidation';
-import { format } from 'date-fns';
+// Removed unused import: format
 
 const SYNC_INTERVAL_MS = 1000 * 60; // Sync every 1 minute
 const MAX_RETRIES = 5; // Max attempts before giving up on an operation

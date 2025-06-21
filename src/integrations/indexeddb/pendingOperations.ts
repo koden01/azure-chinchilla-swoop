@@ -5,13 +5,13 @@ export interface PendingOperation {
   type: 'batal' | 'confirm' | 'cekfu' | 'scan'; // Added 'scan' type
   payload: {
     resiNumber: string;
-    createdTimestampFromExpedisi?: string; // For 'batal' and 'confirm'
+    createdTimestampFromExpedisi?: string; // For 'batal'
+    expedisiCreatedTimestamp?: string; // For 'confirm'
     courierNameFromExpedisi?: string | null; // For 'confirm' and 'scan'
     newCekfuStatus?: boolean; // For 'cekfu'
     selectedKarung?: string; // For 'scan'
     isRescan?: boolean; // NEW: Added for 'scan' type to indicate if it's an update
-    keteranganValue?: string; // NEW: Added for 'batal' and 'confirm' to explicitly set Keterangan
-    // originalCourierName?: string | null; // REMOVED: No longer needed as Keterangan will store original courier
+    keteranganValue?: string | null; // NEW: Added for 'batal' and 'confirm' to explicitly set Keterangan, now allows null
   };
   timestamp: number; // Timestamp when the operation was added
   retries?: number; // Number of retry attempts

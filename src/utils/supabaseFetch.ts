@@ -20,6 +20,7 @@ export const fetchAllDataPaginated = async (
   selectColumns: string = "*",
   queryModifier?: (query: any) => any
 ) => {
+  console.time(`fetchAllDataPaginated_${tableName}`);
   let allRecords: any[] = [];
   let offset = 0;
   const limit = 1000; // Fetch 1000 records at a time
@@ -47,6 +48,7 @@ export const fetchAllDataPaginated = async (
 
     if (error) {
       console.error(`Error fetching paginated data from ${tableName}:`, error);
+      console.timeEnd(`fetchAllDataPaginated_${tableName}`); // Ensure timer ends on error
       throw error;
     }
 
@@ -58,5 +60,6 @@ export const fetchAllDataPaginated = async (
       hasMore = false;
     }
   }
+  console.timeEnd(`fetchAllDataPaginated_${tableName}`);
   return allRecords;
 };

@@ -51,10 +51,14 @@ const HistoryDatePicker: React.FC<HistoryDatePickerProps> = ({
                 mode="single"
                 selected={startDate}
                 onSelect={(date) => {
+                  console.log("Start Date selected:", date);
                   setStartDate(date);
-                  setIsStartDatePopoverOpen(false);
+                  // Menambahkan setTimeout untuk memastikan popover menutup setelah state diperbarui
+                  setTimeout(() => {
+                    setIsStartDatePopoverOpen(false);
+                    console.log("isStartDatePopoverOpen set to false via setTimeout");
+                  }, 0);
                 }}
-                // initialFocus // Dihapus
               />
             </PopoverContent>
           </Popover>
@@ -82,10 +86,14 @@ const HistoryDatePicker: React.FC<HistoryDatePickerProps> = ({
                 mode="single"
                 selected={endDate}
                 onSelect={(date) => {
+                  console.log("End Date selected:", date);
                   setEndDate(date);
-                  setIsEndDatePopoverOpen(false);
+                  // Menambahkan setTimeout untuk memastikan popover menutup setelah state diperbarui
+                  setTimeout(() => {
+                    setIsEndDatePopoverOpen(false);
+                    console.log("isEndDatePopoverOpen set to false via setTimeout");
+                  }, 0);
                 }}
-                // initialFocus // Dihapus
               />
             </PopoverContent>
           </Popover>

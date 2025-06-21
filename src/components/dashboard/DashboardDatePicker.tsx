@@ -6,7 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Button } from "@/components/ui/button";
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
-import { cn } => "@/lib/utils";
+import { cn } from "@/lib/utils"; // Memperbaiki impor cn
 
 interface DashboardDatePickerProps {
   selectedDate: Date | undefined;
@@ -17,12 +17,14 @@ const DashboardDatePicker: React.FC<DashboardDatePickerProps> = ({
   selectedDate,
   setSelectedDate,
 }) => {
+  const [isDatePickerOpen, setIsDatePickerOpen] = React.useState(false); // State untuk mengontrol popover
+
   return (
     <div className="bg-gradient-to-r from-green-500 to-blue-600 p-6 rounded-lg shadow-md mb-6">
       <h2 className="text-white text-xl font-semibold mb-4 flex items-center">
         <CalendarIcon className="mr-2 h-6 w-6" /> Pilih Tanggal Dashboard
       </h2>
-      <Popover>
+      <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}> {/* Mengontrol popover */}
         <PopoverTrigger asChild>
           <Button
             id="date-picker"
@@ -40,8 +42,13 @@ const DashboardDatePicker: React.FC<DashboardDatePickerProps> = ({
           <Calendar
             mode="single"
             selected={selectedDate}
-            onSelect={setSelectedDate}
-            // initialFocus // Dihapus
+            onSelect={(date) => {
+              setSelectedDate(date);
+              // Menambahkan setTimeout untuk memastikan popover menutup setelah state diperbarui
+              setTimeout(() => {
+                setIsDatePickerOpen(false);
+              }, 0);
+            }}
           />
         </PopoverContent>
       </Popover>

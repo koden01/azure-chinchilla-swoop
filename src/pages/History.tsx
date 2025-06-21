@@ -3,64 +3,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { CalendarIcon, Copy, CalendarDays } from "lucide-react";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
-import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { supabase } from "@/integrations/supabase/client";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { showSuccess, showError } from "@/utils/toast";
-import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
-import { useDebounce } from "@/hooks/useDebounce";
-import { getKeteranganBadgeClasses } from "@/utils/expeditionUtils";
-
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-  SortingState,
-  ColumnFiltersState,
-  VisibilityState,
-} from "@tanstack/react-table";
-
-interface HistoryData {
-  Resi: string;
-  Keterangan: string | null;
-  nokarung: string | null;
-  created: string;
-  schedule: string | null;
-}
-
-const HistoryPage = () => {
+import { format } => {
   const [startDate, setStartDate] = useState<Date | undefined>(new Date());
   const [endDate, setEndDate] = useState<Date | undefined>(new Date());
   const [globalFilter, setGlobalFilter] = useState<string>("");
@@ -73,7 +16,7 @@ const HistoryPage = () => {
   const [lastClickInfo, setLastClickInfo] = useState<{ resi: string | null; timestamp: number | null } | null>(null);
   const clickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // NEW: State untuk mengelola status buka/tutup Popover
+  // State untuk mengelola status buka/tutup Popover
   const [isStartDatePopoverOpen, setIsStartDatePopoverOpen] = useState(false);
   const [isEndDatePopoverOpen, setIsEndDatePopoverOpen] = useState(false);
 
@@ -352,7 +295,10 @@ const HistoryPage = () => {
               <label htmlFor="start-date-picker" className="block text-left text-sm font-medium text-white mb-1">
                 Tanggal Mulai
               </label>
-              <Popover open={isStartDatePopoverOpen} onOpenChange={setIsStartDatePopoverOpen}>
+              <Popover open={isStartDatePopoverOpen} onOpenChange={(open) => {
+                console.log("Start Date Popover changed:", open);
+                setIsStartDatePopoverOpen(open);
+              }}>
                 <PopoverTrigger asChild>
                   <Button
                     id="start-date-picker"
@@ -368,6 +314,7 @@ const HistoryPage = () => {
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
                   <Calendar
+                    key={startDate?.toISOString() || 'start-date-empty'} {/* Added key */}
                     mode="single"
                     selected={startDate}
                     onSelect={(date) => {
@@ -375,7 +322,7 @@ const HistoryPage = () => {
                       setStartDate(date);
                       setIsStartDatePopoverOpen(false); // Close popover on select
                     }}
-                    initialFocus
+                    // initialFocus // Dihapus
                   />
                 </PopoverContent>
               </Popover>
@@ -384,7 +331,10 @@ const HistoryPage = () => {
               <label htmlFor="end-date-picker" className="block text-left text-sm font-medium text-white mb-1">
                 Tanggal Selesai
               </label>
-              <Popover open={isEndDatePopoverOpen} onOpenChange={setIsEndDatePopoverOpen}>
+              <Popover open={isEndDatePopoverOpen} onOpenChange={(open) => {
+                console.log("End Date Popover changed:", open);
+                setIsEndDatePopoverOpen(open);
+              }}>
                 <PopoverTrigger asChild>
                   <Button
                     id="end-date-picker"
@@ -400,6 +350,7 @@ const HistoryPage = () => {
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
                   <Calendar
+                    key={endDate?.toISOString() || 'end-date-empty'} {/* Added key */}
                     mode="single"
                     selected={endDate}
                     onSelect={(date) => {
@@ -407,7 +358,7 @@ const HistoryPage = () => {
                       setEndDate(date);
                       setIsEndDatePopoverOpen(false); // Close popover on select
                     }}
-                    initialFocus
+                    // initialFocus // Dihapus
                   />
                 </PopoverContent>
               </Popover>

@@ -5,7 +5,7 @@ import { beepSuccess, beepFailure, beepDouble } from "@/utils/audio";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { format, subDays } from "date-fns";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
-import { normalizeExpeditionName } => "@/utils/expeditionUtils";
+import { normalizeExpeditionName } from "@/utils/expeditionUtils"; // Perbaikan di sini: '=>' diganti menjadi 'from'
 import { addPendingOperation } from "@/integrations/indexeddb/pendingOperations";
 import { useBackgroundSync } from "./useBackgroundSync";
 

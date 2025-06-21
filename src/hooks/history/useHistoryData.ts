@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
+import { format, startOfDay, endOfDay } from "date-fns"; // Import startOfDay and endOfDay
+import { fetchAllDataPaginated } from "@/utils/supabaseFetch"; // Import the shared utility
 
 export interface HistoryData {
   Resi: string;
@@ -15,50 +16,6 @@ export const useHistoryData = (startDate: Date | undefined, endDate: Date | unde
   const formattedStartDate = startDate ? format(startDate, "yyyy-MM-dd") : "";
   const formattedEndDate = endDate ? format(endDate, "yyyy-MM-dd") : "";
 
-  const fetchAllResiDataPaginated = useCallback(async (startIso: string, endIso: string) => {
-    let allRecords: HistoryData[] = [];
-    let offset = 0;
-    const limit = 1000;
-    let hasMore = true;
-
-    console.log(`[fetchAllResiDataPaginated] Fetching from tbl_resi between ${startIso} and ${endIso}`);
-
-    while (hasMore) {
-      let data, error;
-      try {
-        console.log(`[fetchAllResiDataPaginated] Attempting Supabase query for offset ${offset}...`);
-        // TEMPORARY: Simplify query to test basic connectivity to tbl_resi
-        ({ data, error } = await supabase
-          .from("tbl_resi")
-          .select("*") // Disimplifikasi untuk memilih semua kolom
-          .limit(limit) // Tambahkan limit secara eksplisit untuk tes ini
-          .offset(offset)); // Tambahkan offset secara eksplisit untuk tes ini
-      } catch (e: any) {
-        console.error(`[fetchAllResiDataPaginated] Critical error during Supabase fetch for offset ${offset}:`, e.message, e);
-        throw e; // Re-throw to be caught by useQuery
-      }
-
-      console.log(`[fetchAllResiDataPaginated] Supabase response for offset ${offset}:`, { data, error });
-
-      if (error) {
-        console.error(`[fetchAllResiDataPaginated] Error fetching paginated history data:`, error);
-        throw error;
-      }
-
-      if (data && data.length > 0) {
-        console.log(`[fetchAllResiDataPaginated] Fetched ${data.length} records (offset: ${offset}).`);
-        allRecords = allRecords.concat(data);
-        offset += data.length;
-        hasMore = data.length === limit;
-      } else {
-        console.log(`[fetchAllResiDataPaginated] No more data or empty response (offset: ${offset}).`);
-        hasMore = false;
-      }
-    }
-    console.log(`[fetchAllResiDataPaginated] Total records fetched: ${allRecords.length}`);
-    return allRecords;
-  }, []);
-
   const { data: historyData, isLoading: isLoadingHistory } = useQuery<HistoryData[]>({
     queryKey: ["historyData", formattedStartDate, formattedEndDate],
     queryFn: async () => {
@@ -68,16 +25,20 @@ export const useHistoryData = (startDate: Date | undefined, endDate: Date | unde
         return [];
       }
 
-      const startOfSelectedStartDate = new Date(startDate);
-      startOfSelectedStartDate.setHours(0, 0, 0, 0);
-
-      const endOfSelectedEndDate = new Date(endDate);
-      endOfSelectedEndDate.setHours(23, 59, 59, 999);
-
-      const startIso = startOfSelectedStartDate.toISOString();
-      const endIso = endOfSelectedEndDate.toISOString();
+      // Use startOfDay and endOfDay from date-fns to ensure full day range
+      const startOfRange = startOfDay(startDate);
+      const endOfRange = endOfDay(endDate);
       
-      const data = await fetchAllResiDataPaginated(startIso, endIso);
+      console.log(`[useHistoryData queryFn] Fetching data from tbl_resi between ${startOfRange.toISOString()} and ${endOfRange.toISOString()}`);
+
+      const data = await fetchAllDataPaginated(
+        "tbl_resi",
+        "created", // Column for date filtering
+        startOfRange,
+        endOfRange,
+        "Resi, Keterangan, nokarung, created, schedule", // Specific columns to select
+        (query) => query.order("created", { ascending: false }) // Add ordering
+      );
       console.log(`[useHistoryData queryFn] Fetched data length: ${data?.length || 0}`);
       return data || [];
     },

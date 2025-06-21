@@ -74,7 +74,8 @@ export const useHistoryActions = ({ historyData, formattedStartDate, formattedEn
         exact: false,
       });
 
-      await queryClient.refetchQueries({ queryKey: ["allResiDataComprehensive"] });
+      // Corrected query key from allResiDataComprehensive to allResiData
+      await queryClient.refetchQueries({ queryKey: ["allResiData"] }); 
 
       invalidateDashboardQueries(queryClient, dateOfDeletedResi, expeditionOfDeletedResi); 
     }

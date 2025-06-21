@@ -21,7 +21,7 @@ export const useAllExpedisiRecordsUnfiltered = () => {
       return expedisiMap;
     },
     enabled: true,
-    staleTime: 1000 * 60 * 60, // 60 minutes
+    staleTime: 1000 * 10, // Changed to 10 seconds for quicker updates
     gcTime: 1000 * 60 * 60 * 24 * 2, // 2 days
   });
 };

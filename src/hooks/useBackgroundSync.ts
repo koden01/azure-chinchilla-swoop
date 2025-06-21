@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getPendingOperations, deletePendingOperation, updatePendingOperation } from '@/integrations/indexeddb/pendingOperations';
 import { supabase } from '@/integrations/supabase/client';
-import { showError } from '@/utils/toast'; // Perbaikan di sini: '=>' diganti menjadi 'from'
+import { showError } from '@/utils/toast';
 import { invalidateDashboardQueries } from '@/utils/dashboardQueryInvalidation';
 import { format } from 'date-fns';
 
@@ -64,7 +64,7 @@ export const useBackgroundSync = () => {
                 created: op.payload.expedisiCreatedTimestamp || new Date().toISOString(),
                 Keterangan: op.payload.courierNameFromExpedisi,
                 schedule: "ontime", // This should be fine as it's a 'confirm' action
-              }, { onConflict: 'Resi' });
+              }, { onConflict: 'Resi', ignoreDuplicates: false });
 
             if (resiError) throw resiError;
 
@@ -143,9 +143,12 @@ export const useBackgroundSync = () => {
 
       if (operationsSynced > 0) {
         const today = new Date();
-        const formattedToday = format(today, 'yyyy-MM-dd');
+        // Invalidate dashboard queries for today
         invalidateDashboardQueries(queryClient, today);
-        queryClient.invalidateQueries({ queryKey: ["historyData", formattedToday, formattedToday] });
+        
+        // Invalidate ALL historyData queries to ensure any date range is refreshed
+        queryClient.invalidateQueries({ queryKey: ["historyData"] }); 
+
         queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] });
         queryClient.invalidateQueries({ queryKey: ["allExpedisiDataUnfiltered"] });
         queryClient.invalidateQueries({ queryKey: ["recentResiNumbersForValidation"] });

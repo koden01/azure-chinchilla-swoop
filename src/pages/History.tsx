@@ -59,8 +59,19 @@ const HistoryPage = () => {
         if (typeof headerDef === 'string') {
           return headerDef;
         }
-        // If header is a function or ReactNode, you might need a more complex way to extract text
-        // For simplicity, we'll just return an empty string or a placeholder if it's not a string
+        // If header is a function or ReactNode, try to render it to a string
+        // This is a simplified approach; for complex ReactNodes, you might need a more robust solution
+        const renderedHeader = header.column.columnDef.header;
+        if (typeof renderedHeader === 'function') {
+          // Attempt to get a string representation if it's a function
+          const context = header.getContext();
+          const result = renderedHeader(context);
+          if (typeof result === 'string') {
+            return result;
+          }
+          // Fallback for React elements or other types
+          return ''; 
+        }
         return ''; 
       });
     const headerRow = headers.join('\t');

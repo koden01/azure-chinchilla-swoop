@@ -32,6 +32,8 @@ export const useHistoryData = (startDate: Date | undefined, endDate: Date | unde
         .order("created", { ascending: false })
         .range(offset, offset + limit - 1);
 
+      console.log(`[fetchAllResiDataPaginated] Supabase response for offset ${offset}:`, { data, error });
+
       if (error) {
         console.error(`[fetchAllResiDataPaginated] Error fetching paginated history data:`, error);
         throw error;

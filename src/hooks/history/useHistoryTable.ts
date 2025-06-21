@@ -27,11 +27,13 @@ export const useHistoryTable = ({ data, debouncedGlobalFilter, startDate, endDat
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
 
+  // Define columns first, using the context to get table instance
   const columns = useMemo<ColumnDef<HistoryData>[]>(() => [
     {
       accessorKey: "rowNumber",
       header: "No",
-      cell: ({ row }) => row.index + 1 + table.getState().pagination.pageIndex * table.getState().pagination.pageSize,
+      // Access table instance via cell context (renamed to 'instance' to avoid conflict with outer 'table')
+      cell: ({ row, table: instance }) => instance.getState().pagination.pageIndex * instance.getState().pagination.pageSize + row.index + 1,
       enableSorting: false,
       enableColumnFilter: false,
     },
@@ -65,11 +67,11 @@ export const useHistoryTable = ({ data, debouncedGlobalFilter, startDate, endDat
       header: "Tanggal Input",
       cell: ({ row }) => format(new Date(row.original.created), "dd/MM/yyyy HH:mm"),
     },
-  ], []); // Removed table from dependencies as it's defined later
+  ], []); // Empty dependency array is correct here as 'instance' comes from cell context
 
   const table = useReactTable({
     data: data,
-    columns,
+    columns: columns, // Pass the defined columns
     state: {
       sorting,
       columnFilters,

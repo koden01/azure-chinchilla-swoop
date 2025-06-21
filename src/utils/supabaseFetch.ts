@@ -25,8 +25,13 @@ export const fetchAllDataPaginated = async (
   let offset = 0;
   const limit = 1000; // Fetch 1000 records at a time
   let hasMore = true;
+  const maxIterations = 10; // Safety break: max 10 iterations (10,000 records) for debugging
+  let currentIteration = 0;
 
-  while (hasMore) {
+  while (hasMore && currentIteration < maxIterations) { // Add maxIterations check
+    currentIteration++;
+    console.log(`[fetchAllDataPaginated_${tableName}] Iteration ${currentIteration}: Fetching range ${offset} to ${offset + limit - 1}`);
+
     let query = supabase.from(tableName).select(selectColumns).range(offset, offset + limit - 1);
 
     if (dateFilterColumn && selectedStartDate && selectedEndDate) {
@@ -44,22 +49,32 @@ export const fetchAllDataPaginated = async (
       query = queryModifier(query);
     }
 
+    console.log(`[fetchAllDataPaginated_${tableName}] Executing query for offset ${offset}...`);
     const { data, error } = await query;
+    console.log(`[fetchAllDataPaginated_${tableName}] Query response received for offset ${offset}. Data length: ${data?.length || 0}, Error: ${error?.message || 'none'}`);
 
     if (error) {
-      console.error(`Error fetching paginated data from ${tableName}:`, error);
-      console.timeEnd(`fetchAllDataPaginated_${tableName}`); // Ensure timer ends on error
+      console.error(`[fetchAllDataPaginated_${tableName}] Error fetching paginated data from ${tableName} at offset ${offset}:`, error);
+      console.timeEnd(`fetchAllDataPaginated_${tableName}`);
       throw error;
     }
 
     if (data && data.length > 0) {
+      console.log(`[fetchAllDataPaginated_${tableName}] Fetched ${data.length} records in this iteration.`);
       allRecords = allRecords.concat(data);
       offset += data.length;
       hasMore = data.length === limit; // If less than limit, no more data
     } else {
+      console.log(`[fetchAllDataPaginated_${tableName}] No more data or empty response in this iteration (data.length: ${data?.length || 0}).`);
       hasMore = false;
     }
   }
+
+  if (currentIteration >= maxIterations) {
+    console.warn(`[fetchAllDataPaginated_${tableName}] Reached maxIterations (${maxIterations}). Stopping fetch early.`);
+  }
+
+  console.log(`[fetchAllDataPaginated_${tableName}] Total records fetched: ${allRecords.length}`);
   console.timeEnd(`fetchAllDataPaginated_${tableName}`);
   return allRecords;
 };

@@ -1,11 +1,11 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { format, isSameDay, startOfDay, endOfDay } from "date-fns";
-import { useEffect, useState } from "react"; // Removed useMemo
+import { useEffect, useState } from "react";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import { normalizeExpeditionName, KNOWN_EXPEDITIONS } from "@/utils/expeditionUtils";
 import { supabase } from "@/integrations/supabase/client";
-import { usePendingOperations } from "@/hooks/usePendingOperations"; // Removed PendingOperation from import
+import { usePendingOperations } from "@/hooks/usePendingOperations";
 
 // Import base data hooks
 import { useFollowUpRecords } from "./useFollowUpRecords";

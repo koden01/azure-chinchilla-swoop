@@ -164,11 +164,12 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
 
     try {
       let expedisiRecord = allExpedisiData?.get(resiNumber.toLowerCase());
+      let originalCourierName: string | null = null;
       
       if (!expedisiRecord) {
         const { data: directExpedisiData, error: directExpedisiError } = await supabase
             .from("tbl_expedisi")
-            .select("*")
+            .select("created, couriername") // Select couriername as well
             .eq("resino", resiNumber)
             .single();
 
@@ -184,6 +185,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       }
 
       const createdTimestampFromExpedisi = expedisiRecord?.created || new Date().toISOString(); // Default to now if not found
+      originalCourierName = expedisiRecord?.couriername || null; // Get original courier name
 
       // Add operation to IndexedDB
       await addPendingOperation({
@@ -193,6 +195,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
           resiNumber,
           createdTimestampFromExpedisi, // Use created from tbl_expedisi
           keteranganValue: "BATAL", // Set Keterangan to BATAL
+          originalCourierName: normalizeExpeditionName(originalCourierName), // Store normalized original courier name
         },
         timestamp: Date.now(),
       });

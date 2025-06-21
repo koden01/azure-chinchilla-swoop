@@ -45,12 +45,12 @@ export const useBackgroundSync = () => {
 
             if (resiError) throw resiError;
 
-            const { error: expedisiError } = await supabase
-              .from("tbl_expedisi")
-              .update({ flag: "BTL" }) // Diubah dari "BATAL" menjadi "BTL"
-              .eq("resino", op.payload.resiNumber);
-
-            if (expedisiError) throw expedisiError;
+            // Hapus pembaruan flag di tbl_expedisi karena dikelola oleh trigger
+            // const { error: expedisiError } = await supabase
+            //   .from("tbl_expedisi")
+            //   .update({ flag: "BTL" })
+            //   .eq("resino", op.payload.resiNumber);
+            // if (expedisiError) throw expedisiError;
 
             success = true;
             console.log(`Successfully synced 'batal' for resi: ${op.payload.resiNumber}`);
@@ -63,17 +63,17 @@ export const useBackgroundSync = () => {
                 nokarung: null,
                 created: op.payload.expedisiCreatedTimestamp || new Date().toISOString(),
                 Keterangan: op.payload.courierNameFromExpedisi,
-                schedule: "ontime", // This should be fine as it's a 'confirm' action
+                schedule: "ontime",
               }, { onConflict: 'Resi', ignoreDuplicates: false });
 
             if (resiError) throw resiError;
 
-            const { error: expedisiError } = await supabase
-              .from("tbl_expedisi")
-              .update({ flag: "YES" })
-              .eq("resino", op.payload.resiNumber);
-
-            if (expedisiError) throw expedisiError;
+            // Hapus pembaruan flag di tbl_expedisi karena dikelola oleh trigger
+            // const { error: expedisiError } = await supabase
+            //   .from("tbl_expedisi")
+            //   .update({ flag: "YES" })
+            //   .eq("resino", op.payload.resiNumber);
+            // if (expedisiError) throw expedisiError;
 
             success = true;
             console.log(`Successfully synced 'confirm' for resi: ${op.payload.resiNumber}`);
@@ -97,19 +97,18 @@ export const useBackgroundSync = () => {
               .upsert({
                 Resi: resiNumber,
                 nokarung: selectedKarung,
-                created: new Date(op.timestamp).toISOString(), // Use operation timestamp for consistency
+                created: new Date(op.timestamp).toISOString(),
                 Keterangan: courierNameFromExpedisi,
-                // schedule: "ontime", // REMOVED: Let DB trigger handle this
-              }, { onConflict: 'Resi', ignoreDuplicates: false }); // Use onConflict to update if exists
+              }, { onConflict: 'Resi', ignoreDuplicates: false });
 
             if (resiUpsertError) {
               throw resiUpsertError;
             }
 
-            // 2. Update tbl_expedisi flag to 'YES' and cekfu to FALSE
+            // 2. Update tbl_expedisi cekfu to FALSE (flag dikelola oleh trigger)
             const { error: expedisiUpdateError } = await supabase
               .from("tbl_expedisi")
-              .update({ flag: "YES", cekfu: false }) // Set cekfu to false on scan
+              .update({ cekfu: false }) // Hanya update cekfu, flag akan diatur oleh trigger
               .eq("resino", resiNumber);
 
             if (expedisiUpdateError) {
@@ -136,23 +135,17 @@ export const useBackgroundSync = () => {
             await deletePendingOperation(op.id);
           } else {
             await updatePendingOperation(op);
-            operationsFailed++;
           }
         }
       }
 
       if (operationsSynced > 0) {
         const today = new Date();
-        // Invalidate dashboard queries for today
         invalidateDashboardQueries(queryClient, today);
-        
-        // Invalidate ALL historyData queries to ensure any date range is refreshed
         queryClient.invalidateQueries({ queryKey: ["historyData"] }); 
-
         queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] });
         queryClient.invalidateQueries({ queryKey: ["allExpedisiDataUnfiltered"] });
         queryClient.invalidateQueries({ queryKey: ["recentResiNumbersForValidation"] });
-        
         queryClient.refetchQueries({ queryKey: ["karungSummary"] });
         queryClient.refetchQueries({ queryKey: ["lastKarung"] });
       }

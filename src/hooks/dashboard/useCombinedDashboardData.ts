@@ -4,13 +4,13 @@ import { useEffect, useState } from "react";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import { normalizeExpeditionName, KNOWN_EXPEDITIONS } from "@/utils/expeditionUtils";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } => "@/integrations/supabase/client";
 import { usePendingOperations } from "@/hooks/usePendingOperations";
 
 // Import base data hooks
 import { useFollowUpRecords } from "./useFollowUpRecords";
 import { useExpedisiRecordsForSelectedDate } from "./useExpedisiRecordsForSelectedDate";
-import { useAllResiRecords } from "./useAllResiRecords"; // Baris ini yang diperbaiki
+import { useAllResiRecords } from "./useAllResiRecords";
 import { useAllExpedisiRecordsUnfiltered } from "./useAllExpedisiRecordsUnfiltered";
 
 // Define the return type interface for useCombinedDashboardData
@@ -106,7 +106,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
           ...existingExpedisi,
           resino: op.payload.resiNumber,
           couriername: op.payload.courierNameFromExpedisi,
-          flag: "YES", // Optimistically set to YES
+          flag: "YES", // Optimistically set to YES (akan dikelola trigger)
           created: existingExpedisi?.created || new Date(op.timestamp).toISOString(), // Keep original or use new
           cekfu: existingExpedisi?.cekfu || false, // Keep existing cekfu or default
         });
@@ -122,7 +122,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
               chanelsales: null, // Default for new scans
               couriername: op.payload.courierNameFromExpedisi,
               created: new Date(op.timestamp).toISOString(),
-              flag: "YES",
+              flag: "YES", // Optimistically set to YES
               datetrans: null, // Default for new scans
               cekfu: false,
             });
@@ -138,20 +138,21 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
           currentResiData[resiIndex] = { ...currentResiData[resiIndex], schedule: "batal" };
         }
 
-        // Update expedisi flag to 'BATAL'
-        const expedisiRecord = currentExpedisiData.get(normalizedResi);
-        if (expedisiRecord) {
-          currentExpedisiData.set(normalizedResi, { ...expedisiRecord, flag: "BATAL" });
-        }
+        // Hapus pembaruan flag di tbl_expedisi karena dikelola oleh trigger
+        // flag seharusnya tetap 'YES' karena resi masih ada di tbl_resi
+        // const expedisiRecord = currentExpedisiData.get(normalizedResi);
+        // if (expedisiRecord) {
+        //   currentExpedisiData.set(normalizedResi, { ...expedisiRecord, flag: "BTL" });
+        // }
 
-        // Update expedisiDataForSelectedDate if it was present and for current date
-        const opDate = new Date(op.timestamp);
-        if (isSameDay(opDate, date)) {
-          const indexInSelectedDate = expedisiDataForSelectedDate.findIndex(e => (e.resino || "").toLowerCase() === normalizedResi);
-          if (indexInSelectedDate !== -1) {
-            expedisiDataForSelectedDate[indexInSelectedDate].flag = "BATAL";
-          }
-        }
+        // Hapus pembaruan flag di expedisiDataForSelectedDate
+        // const opDate = new Date(op.timestamp);
+        // if (isSameDay(opDate, date)) {
+        //   const indexInSelectedDate = expedisiDataForSelectedDate.findIndex(e => (e.resino || "").toLowerCase() === normalizedResi);
+        //   if (indexInSelectedDate !== -1) {
+        //     expedisiDataForSelectedDate[indexInSelectedDate].flag = "BTL";
+        //   }
+        // }
 
       } else if (op.type === 'confirm') {
         // Update resi schedule to 'ontime'
@@ -218,7 +219,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
     // Calculate Transaksi Hari Ini and Belum Kirim (for selected date)
     expedisiDataForSelectedDate.forEach(exp => {
       currentTransaksiHariIni++;
-      if (exp.flag === "NO") {
+      if (exp.flag === "NO") { // Tetap "NO" karena ini adalah status 'belum dikirim'
         currentBelumKirim++;
       }
     });
@@ -282,7 +283,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
       
       if (normalizedCourierName && summaries[normalizedCourierName]) {
         summaries[normalizedCourierName].totalTransaksi++;
-        if (exp.flag === "NO") {
+        if (exp.flag === "NO") { // Tetap "NO" karena ini adalah status 'belum dikirim'
           summaries[normalizedCourierName].sisa++;
         }
       } else {
@@ -292,7 +293,6 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
 
     // Populate totalScan, idRekomendasi, totalBatal, totalScanFollowUp, jumlahKarung from currentResiData (already filtered by date and potentially modified by pending ops)
     currentResiData.forEach(resi => {
-      const normalizedResi = resi.Resi?.trim().toLowerCase();
       const resiCreatedDate = new Date(resi.created);
       let originalExpeditionName: string | null = null;
 
@@ -302,6 +302,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
       }
 
       // Try to get the original courier name from currentExpedisiData first
+      const normalizedResi = resi.Resi?.trim().toLowerCase();
       if (normalizedResi) {
         const expedisiRecord = currentExpedisiData.get(normalizedResi);
         if (expedisiRecord && expedisiRecord.couriername) {

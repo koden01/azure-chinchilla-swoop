@@ -38,42 +38,33 @@ export const useBackgroundSync = () => {
         try {
           let success = false;
           if (op.type === 'batal') {
-            const { error: resiError } = await supabase
+            // Menggunakan upsert untuk memastikan resi ada dan memperbarui schedule, created, dan Keterangan
+            const { error: resiUpsertError } = await supabase
               .from("tbl_resi")
-              .update({ schedule: "batal" })
-              .eq("Resi", op.payload.resiNumber);
+              .upsert({
+                Resi: op.payload.resiNumber,
+                created: op.payload.createdTimestampFromExpedisi || new Date(op.timestamp).toISOString(), // Gunakan created dari expedisi
+                Keterangan: op.payload.keteranganValue || null, // Set Keterangan menjadi 'BATAL'
+                schedule: "batal",
+              }, { onConflict: 'Resi', ignoreDuplicates: false });
 
-            if (resiError) throw resiError;
-
-            // Hapus pembaruan flag di tbl_expedisi karena dikelola oleh trigger
-            // const { error: expedisiError } = await supabase
-            //   .from("tbl_expedisi")
-            //   .update({ flag: "BTL" })
-            //   .eq("resino", op.payload.resiNumber);
-            // if (expedisiError) throw expedisiError;
+            if (resiUpsertError) throw resiUpsertError;
 
             success = true;
             console.log(`Successfully synced 'batal' for resi: ${op.payload.resiNumber}`);
 
           } else if (op.type === 'confirm') {
-            const { error: resiError } = await supabase
+            const { error: resiUpsertError } = await supabase
               .from("tbl_resi")
               .upsert({
                 Resi: op.payload.resiNumber,
-                nokarung: null,
-                created: op.payload.expedisiCreatedTimestamp || new Date().toISOString(),
-                Keterangan: op.payload.courierNameFromExpedisi,
+                nokarung: null, // Set null jika tidak ada karung saat konfirmasi
+                created: op.payload.expedisiCreatedTimestamp || new Date(op.timestamp).toISOString(), // Gunakan created dari expedisi
+                Keterangan: op.payload.keteranganValue || op.payload.courierNameFromExpedisi, // Gunakan Keterangan dari payload atau courierName
                 schedule: "ontime",
               }, { onConflict: 'Resi', ignoreDuplicates: false });
 
-            if (resiError) throw resiError;
-
-            // Hapus pembaruan flag di tbl_expedisi karena dikelola oleh trigger
-            // const { error: expedisiError } = await supabase
-            //   .from("tbl_expedisi")
-            //   .update({ flag: "YES" })
-            //   .eq("resino", op.payload.resiNumber);
-            // if (expedisiError) throw expedisiError;
+            if (resiUpsertError) throw resiUpsertError;
 
             success = true;
             console.log(`Successfully synced 'confirm' for resi: ${op.payload.resiNumber}`);

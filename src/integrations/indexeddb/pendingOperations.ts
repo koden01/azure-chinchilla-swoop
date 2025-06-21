@@ -11,6 +11,7 @@ export interface PendingOperation {
     newCekfuStatus?: boolean; // For 'cekfu'
     selectedKarung?: string; // For 'scan'
     isRescan?: boolean; // NEW: Added for 'scan' type to indicate if it's an update
+    keteranganValue?: string; // NEW: Added for 'batal' and 'confirm' to explicitly set Keterangan
   };
   timestamp: number; // Timestamp when the operation was added
   retries?: number; // Number of retry attempts

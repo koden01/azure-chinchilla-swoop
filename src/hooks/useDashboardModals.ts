@@ -1,11 +1,9 @@
 import React from "react";
-// import { useQueryClient } from "@tanstack/react-query"; // REMOVED: No longer directly used here
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
 import { showSuccess, showError } from "@/utils/toast";
 import { ModalDataItem } from "@/types/data";
 import { normalizeExpeditionName } from "@/utils/expeditionUtils";
-import { addPendingOperation } from "@/integrations/indexeddb/pendingOperations"; // Removed PendingOperation from import as it's not directly used as a type here
+import { addPendingOperation } from "@/integrations/indexeddb/pendingOperations";
 
 interface UseDashboardModalsProps {
   date: Date | undefined;
@@ -33,8 +31,6 @@ interface UseDashboardModalsReturn {
 }
 
 export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: UseDashboardModalsProps): UseDashboardModalsReturn => {
-  // const queryClient = useQueryClient(); // REMOVED: No longer directly used here
-
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [modalTitle, setModalTitle] = React.useState("");
   const [modalData, setModalData] = React.useState<ModalDataItem[]>([]); // Use the new interface here
@@ -192,7 +188,8 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         type: "batal",
         payload: {
           resiNumber,
-          createdTimestampFromExpedisi,
+          createdTimestampFromExpedisi, // Use created from tbl_expedisi
+          keteranganValue: "BATAL", // Set Keterangan to BATAL
         },
         timestamp: Date.now(),
       });
@@ -253,6 +250,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
           resiNumber,
           courierNameFromExpedisi,
           expedisiCreatedTimestamp,
+          keteranganValue: courierNameFromExpedisi, // Set Keterangan to couriername
         },
         timestamp: Date.now(),
       });

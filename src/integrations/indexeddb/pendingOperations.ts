@@ -10,6 +10,7 @@ export interface PendingOperation {
     expedisiCreatedTimestamp?: string; // For 'confirm'
     newCekfuStatus?: boolean; // For 'cekfu'
     selectedKarung?: string; // For 'scan'
+    isRescan?: boolean; // NEW: Added for 'scan' type to indicate if it's an update
   };
   timestamp: number; // Timestamp when the operation was added
   retries?: number; // Number of retry attempts

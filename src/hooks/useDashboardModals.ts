@@ -5,6 +5,7 @@ import { ModalDataItem } from "@/types/data";
 import { normalizeExpeditionName } from "@/utils/expeditionUtils";
 import { addPendingOperation } from "@/integrations/indexeddb/pendingOperations";
 import { useBackgroundSync } from "@/hooks/useBackgroundSync"; // Import useBackgroundSync
+import { format } from "date-fns"; // Import format
 
 interface UseDashboardModalsProps {
   date: Date | undefined;

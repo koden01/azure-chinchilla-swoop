@@ -54,25 +54,10 @@ const HistoryPage = () => {
     const headers = table.getHeaderGroups()[0].headers
       .filter(header => header.column.id !== "rowNumber")
       .map(header => {
-        // Get the header text from the column definition
-        const headerDef = header.column.columnDef.header;
-        if (typeof headerDef === 'string') {
-          return headerDef;
-        }
-        // If header is a function or ReactNode, try to render it to a string
-        // This is a simplified approach; for complex ReactNodes, you might need a more robust solution
-        const renderedHeader = header.column.columnDef.header;
-        if (typeof renderedHeader === 'function') {
-          // Attempt to get a string representation if it's a function
-          const context = header.getContext();
-          const result = renderedHeader(context);
-          if (typeof result === 'string') {
-            return result;
-          }
-          // Fallback for React elements or other types
-          return ''; 
-        }
-        return ''; 
+        // Directly get the header text. For simple string headers, this is sufficient.
+        // For more complex headers (ReactNode), this might need a more sophisticated approach
+        // but based on the column definitions, they are simple strings.
+        return String(header.column.columnDef.header || "");
       });
     const headerRow = headers.join('\t');
 
@@ -85,8 +70,8 @@ const HistoryPage = () => {
             return format(new Date(dateValue), "dd/MM/yyyy HH:mm");
           }
           // For 'Keterangan' column, extract the text content from the badge
+          // The cell.getValue() for 'Keterangan' should already be the string value
           if (cell.column.id === "Keterangan") {
-            // Assuming the cell value is directly the string 'Keterangan'
             return String(cell.getValue() || "");
           }
           return String(cell.getValue() || "");

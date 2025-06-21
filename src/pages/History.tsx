@@ -15,6 +15,8 @@ import { useHistoryTable } from "@/hooks/history/useHistoryTable";
 import { useResiDeletion } from "@/hooks/history/useResiDeletion";
 
 const HistoryPage = () => {
+  console.log("HistoryPage component is being loaded."); // Added for debugging/cache busting
+
   const [startDate, setStartDate] = useState<Date | undefined>(new Date());
   const [endDate, setEndDate] = useState<Date | undefined>(new Date());
   const [globalFilter, setGlobalFilter] = useState<string>("");
@@ -54,9 +56,6 @@ const HistoryPage = () => {
     const headers = table.getHeaderGroups()[0].headers
       .filter(header => header.column.id !== "rowNumber")
       .map(header => {
-        // Directly get the header text. For simple string headers, this is sufficient.
-        // For more complex headers (ReactNode), this might need a more sophisticated approach
-        // but based on the column definitions, they are simple strings.
         return String(header.column.columnDef.header || "");
       });
     const headerRow = headers.join('\t');
@@ -69,8 +68,6 @@ const HistoryPage = () => {
             const dateValue = cell.getValue() as string;
             return format(new Date(dateValue), "dd/MM/yyyy HH:mm");
           }
-          // For 'Keterangan' column, extract the text content from the badge
-          // The cell.getValue() for 'Keterangan' should already be the string value
           if (cell.column.id === "Keterangan") {
             return String(cell.getValue() || "");
           }

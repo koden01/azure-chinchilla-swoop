@@ -271,7 +271,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         nokarung: selectedKarung,
         created: new Date().toISOString(),
         Keterangan: actualCourierName, // Use validated courier name
-        schedule: "ontime", // Optimistic schedule (will be corrected by DB trigger if 'late')
+        // schedule: "ontime", // REMOVED: Let DB trigger handle this
         optimisticId: currentOptimisticId,
       };
 

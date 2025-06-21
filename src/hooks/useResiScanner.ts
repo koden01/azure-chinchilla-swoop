@@ -55,7 +55,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       // console.log(`[useResiScanner] Fetched recentResiNumbersForValidation (initial/refetch):`, resiSet); // Removed log
       return resiSet;
     },
-    staleTime: 1000 * 60 * 10, // Keep this data fresh for 10 minutes
+    staleTime: 1000 * 60 * 60, // Increased to 1 hour for better performance
     gcTime: 1000 * 60 * 60 * 24 * 2, // Garbage collect after 2 days
     enabled: true, // Always enabled for local validation
   });
@@ -81,7 +81,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       // console.log(`[useResiScanner] Fetched allFlagNoExpedisiData (initial/refetch):`, expedisiMap); // Removed log
       return expedisiMap;
     },
-    staleTime: 1000 * 60 * 60, // Changed to 60 minutes
+    staleTime: 1000 * 60 * 60 * 4, // Increased to 4 hours
     gcTime: 1000 * 60 * 60 * 24, // Garbage collect after 24 hours
     enabled: true, // Always enabled
   });

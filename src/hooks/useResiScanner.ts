@@ -7,7 +7,7 @@ import { format, subDays } from "date-fns";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 import { normalizeExpeditionName } from "@/utils/expeditionUtils";
 import { addPendingOperation } from "@/integrations/indexeddb/pendingOperations";
-import { useBackgroundSync } from "./useBackgroundSync";
+// import { useBackgroundSync } from "./useBackgroundSync"; // Removed import as triggerSync is no longer called directly
 
 // Define the type for ResiExpedisiData to match useResiInputData
 interface ResiExpedisiData {
@@ -31,7 +31,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
   const [isProcessing, setIsProcessing] = React.useState<boolean>(false);
   const resiInputRef = React.useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
-  const { triggerSync } = useBackgroundSync();
+  // const { triggerSync } = useBackgroundSync(); // Removed direct use of triggerSync
 
   // Calculate date range for 2 days back for local validation data
   const today = new Date();
@@ -149,7 +149,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       // console.log(`[handleScanResi] Checking for local duplicate (recent): ${normalizedCurrentResi}`); // Removed log
       if (recentResiNumbersForValidation?.has(normalizedCurrentResi)) {
         // Fetch the created date for the duplicate resi
-        const { data: existingResiDetail, error: _detailError } = await supabase // Changed detailError to _detailError
+        const { data: existingResiDetail, error: _detailError } = await supabase
           .from("tbl_resi")
           .select("created")
           .eq("Resi", currentResi)
@@ -190,7 +190,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       }
 
       // Only proceed with further checks if not already a duplicate
-      if (validationStatus === 'OK') {
+      if (validationStatus === 'OK') { // Only proceed if not already a duplicate
         // 3. Attempt to find expedisiRecord from caches or direct RPC call
         // console.log(`[handleScanResi] Checking allExpedisiDataUnfiltered for ${normalizedCurrentResi}`); // Removed log
         expedisiRecord = allExpedisiDataUnfiltered?.get(normalizedCurrentResi);
@@ -394,7 +394,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       // Clear the optimistic ref as the operation was successfully added to IndexedDB
       lastOptimisticIdRef.current = null;
       
-      triggerSync(); // Manually trigger background sync immediately
+      // triggerSync(); // Removed direct call to triggerSync()
 
     } catch (error: any) {
       console.error("Error during resi input (before IndexedDB save or during optimistic update):", error); // Log the full error object

@@ -44,8 +44,8 @@ export const useBackgroundSync = () => {
               .upsert({
                 Resi: op.payload.resiNumber,
                 created: op.payload.createdTimestampFromExpedisi || new Date(op.timestamp).toISOString(), // Gunakan created dari expedisi
-                Keterangan: op.payload.keteranganValue || null, // Set Keterangan menjadi 'BATAL'
-                schedule: "batal",
+                Keterangan: op.payload.keteranganValue, // Set Keterangan menjadi nama ekspedisi asli
+                schedule: "batal", // Tetap set schedule ke "batal"
               }, { onConflict: 'Resi', ignoreDuplicates: false });
 
             if (resiUpsertError) throw resiUpsertError;

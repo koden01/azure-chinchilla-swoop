@@ -194,8 +194,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         payload: {
           resiNumber,
           createdTimestampFromExpedisi, // Use created from tbl_expedisi
-          keteranganValue: "BATAL", // Set Keterangan to BATAL
-          originalCourierName: normalizeExpeditionName(originalCourierName), // Store normalized original courier name
+          keteranganValue: normalizeExpeditionName(originalCourierName), // Set Keterangan to original courier name
         },
         timestamp: Date.now(),
       });

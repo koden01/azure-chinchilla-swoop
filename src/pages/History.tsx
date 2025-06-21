@@ -60,7 +60,7 @@ interface HistoryData {
   schedule: string | null;
 }
 
-const HistoryPage = () => {
+const HistoryPage = () => { // Definisi komponen dimulai di sini
   const [startDate, setStartDate] = useState<Date | undefined>(new Date());
   const [endDate, setEndDate] = useState<Date | undefined>(new Date());
   const [globalFilter, setGlobalFilter] = useState<string>("");

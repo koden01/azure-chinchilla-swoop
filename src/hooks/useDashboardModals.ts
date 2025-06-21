@@ -199,7 +199,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         timestamp: Date.now(),
       });
 
-      showSuccess(`Resi ${resiNumber} berhasil dibatalkan (disimpan secara lokal).`);
+      showSuccess(`Resi ${resiNumber} berhasil dibatalkan.`);
       triggerSync(); // Panggil triggerSync setelah operasi ditambahkan
 
     } catch (error: any) {
@@ -261,7 +261,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         timestamp: Date.now(),
       });
 
-      showSuccess(`Resi ${resiNumber} berhasil dikonfirmasi (disimpan secara lokal).`);
+      showSuccess(`Resi ${resiNumber} berhasil dikonfirmasi.`);
       triggerSync(); // Panggil triggerSync setelah operasi ditambahkan
 
     } catch (error: any) {
@@ -318,7 +318,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         timestamp: Date.now(),
       });
 
-      showSuccess(`Status CEKFU resi ${resiNumber} berhasil diperbarui (disimpan secara lokal).`);
+      showSuccess(`Status CEKFU resi ${resiNumber} berhasil diperbarui.`);
       triggerSync(); // Panggil triggerSync setelah operasi ditambahkan
     } catch (error: any) {
       // Revert optimistic update on error

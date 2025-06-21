@@ -15,7 +15,7 @@ import { useHistoryTable } from "@/hooks/history/useHistoryTable";
 import { useResiDeletion } from "@/hooks/history/useResiDeletion";
 
 const HistoryPage = () => {
-  console.log("HistoryPage component is being loaded."); // Added for debugging/cache busting
+  console.log("HistoryPage component is being loaded. Attempting to fix dynamic import issue."); 
 
   const [startDate, setStartDate] = useState<Date | undefined>(new Date());
   const [endDate, setEndDate] = useState<Date | undefined>(new Date());

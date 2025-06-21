@@ -49,7 +49,7 @@ const InputPage = () => {
 
   const {
     isLoadingAllResiForExpedition,
-    currentCount: getCountForSelectedKarung,
+    currentCount: getCountForSelectedKarung, // Renamed to avoid conflict with memoized value
     lastKarung,
     highestKarung,
     karungOptions,
@@ -57,6 +57,12 @@ const InputPage = () => {
     karungSummary,
     expeditionOptions,
   } = useResiInputData(expedition, false);
+
+  // Memoize the result of getCountForSelectedKarung
+  const currentCount = React.useMemo(() => {
+    return getCountForSelectedKarung(selectedKarung);
+  }, [getCountForSelectedKarung, selectedKarung]);
+
 
   const {
     resiNumber,
@@ -72,8 +78,6 @@ const InputPage = () => {
     formattedDate,
     allExpedisiDataUnfiltered,
   });
-
-  const currentCount = getCountForSelectedKarung(selectedKarung);
 
   React.useEffect(() => {
     if (expedition) {

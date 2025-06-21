@@ -20,7 +20,8 @@ export const fetchAllDataPaginated = async (
   selectColumns: string = "*",
   queryModifier?: (query: any) => any
 ) => {
-  console.time(`fetchAllDataPaginated_${tableName}`);
+  const timerName = `fetchAllDataPaginated_${tableName}`;
+  console.time(timerName); // Start timer once at the beginning
   let allRecords: any[] = [];
   let offset = 0;
   const limit = 1000; // Fetch 1000 records at a time
@@ -30,7 +31,7 @@ export const fetchAllDataPaginated = async (
 
   while (hasMore && currentIteration < maxIterations) {
     currentIteration++;
-    console.log(`[fetchAllDataPaginated_${tableName}] Iteration ${currentIteration}: Fetching range ${offset} to ${offset + limit - 1}`);
+    console.log(`[${timerName}] Iteration ${currentIteration}: Fetching range ${offset} to ${offset + limit - 1}`);
 
     let query = supabase.from(tableName).select(selectColumns).range(offset, offset + limit - 1);
 
@@ -49,32 +50,32 @@ export const fetchAllDataPaginated = async (
       query = queryModifier(query);
     }
 
-    console.log(`[fetchAllDataPaginated_${tableName}] BEFORE await query for offset ${offset}...`);
+    console.log(`[${timerName}] BEFORE await query for offset ${offset}...`);
     const { data, error } = await query;
-    console.log(`[fetchAllDataPaginated_${tableName}] AFTER await query for offset ${offset}. Data length: ${data?.length || 0}, Error: ${error?.message || 'none'}`);
+    console.log(`[${timerName}] AFTER await query for offset ${offset}. Data length: ${data?.length || 0}, Error: ${error?.message || 'none'}`);
 
     if (error) {
-      console.error(`[fetchAllDataPaginated_${tableName}] Error fetching paginated data from ${tableName} at offset ${offset}:`, error);
-      console.timeEnd(`fetchAllDataPaginated_${tableName}`);
+      console.error(`[${timerName}] Error fetching paginated data from ${tableName} at offset ${offset}:`, error);
+      console.timeEnd(timerName); // End timer on error
       throw error;
     }
 
     if (data && data.length > 0) {
-      console.log(`[fetchAllDataPaginated_${tableName}] Fetched ${data.length} records in this iteration.`);
+      console.log(`[${timerName}] Fetched ${data.length} records in this iteration.`);
       allRecords = allRecords.concat(data);
       offset += data.length;
       hasMore = data.length === limit;
     } else {
-      console.log(`[fetchAllDataPaginated_${tableName}] No more data or empty response in this iteration (data.length: ${data?.length || 0}).`);
+      console.log(`[${timerName}] No more data or empty response in this iteration (data.length: ${data?.length || 0}).`);
       hasMore = false;
     }
   }
 
   if (currentIteration >= maxIterations) {
-    console.warn(`[fetchAllDataPaginated_${tableName}] Reached maxIterations (${maxIterations}). Stopping fetch early.`);
+    console.warn(`[${timerName}] Reached maxIterations (${maxIterations}). Stopping fetch early.`);
   }
 
-  console.log(`[fetchAllDataPaginated_${tableName}] Total records fetched: ${allRecords.length}`);
-  console.timeEnd(`fetchAllDataPaginated_${tableName}`);
+  console.log(`[${timerName}] Total records fetched: ${allRecords.length}`);
+  console.timeEnd(timerName); // End timer once at the end
   return allRecords;
 };

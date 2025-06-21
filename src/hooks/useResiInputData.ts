@@ -50,7 +50,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       return data || [];
     },
     enabled: !!expedition,
-    staleTime: 1000 * 60, // Changed to 1 minute (from 10 seconds)
+    staleTime: 1000 * 60 * 60, // Changed to 60 minutes (from 1 minute)
   });
 
   // NEW: Query to fetch ALL karung summaries directly from database using new RPC
@@ -69,7 +69,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       return data || [];
     },
     enabled: showAllExpeditionSummary, // Only enabled when explicitly requested
-    staleTime: 1000 * 60, // Changed to 1 minute (from 10 seconds)
+    staleTime: 1000 * 60 * 60, // Changed to 60 minutes (from 1 minute)
   });
 
   // Query to fetch unique expedition names

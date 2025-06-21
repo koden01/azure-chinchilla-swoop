@@ -3,7 +3,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { CalendarIcon, Copy, CalendarDays } from "lucide-react";
-import { format } from "date-fns"; // Perbaikan di sini: '=>' diganti dengan 'from'
+import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import {
@@ -60,7 +60,7 @@ interface HistoryData {
   schedule: string | null;
 }
 
-const HistoryPage = () => { // Definisi komponen dimulai di sini
+const HistoryPage = () => {
   const [startDate, setStartDate] = useState<Date | undefined>(new Date());
   const [endDate, setEndDate] = useState<Date | undefined>(new Date());
   const [globalFilter, setGlobalFilter] = useState<string>("");
@@ -69,11 +69,9 @@ const HistoryPage = () => { // Definisi komponen dimulai di sini
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [resiToDelete, setResiToDelete] = useState<string | null>(null);
 
-  // State untuk melacak klik terakhir untuk deteksi double-click
   const [lastClickInfo, setLastClickInfo] = useState<{ resi: string | null; timestamp: number | null } | null>(null);
   const clickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // State untuk mengelola status buka/tutup Popover
   const [isStartDatePopoverOpen, setIsStartDatePopoverOpen] = useState(false);
   const [isEndDatePopoverOpen, setIsEndDatePopoverOpen] = useState(false);
 
@@ -82,17 +80,16 @@ const HistoryPage = () => { // Definisi komponen dimulai di sini
   const formattedStartDate = startDate ? format(startDate, "yyyy-MM-dd") : "";
   const formattedEndDate = endDate ? format(endDate, "yyyy-MM-dd") : "";
 
-  // Function to fetch all data from tbl_resi with pagination for a given date range
   const fetchAllResiDataPaginated = useCallback(async (startIso: string, endIso: string) => {
     let allRecords: HistoryData[] = [];
     let offset = 0;
-    const limit = 1000; // Fetch 1000 records at a time
+    const limit = 1000;
     let hasMore = true;
 
     while (hasMore) {
       const { data, error } = await supabase
         .from("tbl_resi")
-        .select("Resi, Keterangan, nokarung, created, schedule") // Only select necessary columns
+        .select("Resi, Keterangan, nokarung, created, schedule")
         .gte("created", startIso)
         .lte("created", endIso)
         .order("created", { ascending: false })
@@ -106,7 +103,7 @@ const HistoryPage = () => { // Definisi komponen dimulai di sini
       if (data && data.length > 0) {
         allRecords = allRecords.concat(data);
         offset += data.length;
-        hasMore = data.length === limit; // If less than limit, no more data
+        hasMore = data.length === limit;
       } else {
         hasMore = false;
       }
@@ -206,13 +203,13 @@ const HistoryPage = () => { // Definisi komponen dimulai di sini
     getPaginationRowModel: getPaginationRowModel(),
     initialState: {
       pagination: {
-        pageSize: 10, // Default page size
+        pageSize: 10,
       },
     },
   });
 
   useEffect(() => {
-    table.setPageIndex(0); // Reset to first page when filters or dates change
+    table.setPageIndex(0);
   }, [debouncedGlobalFilter, startDate, endDate, table]);
 
   const handleDeleteClick = useCallback((resi: string) => {
@@ -220,26 +217,23 @@ const HistoryPage = () => { // Definisi komponen dimulai di sini
     setIsDeleteDialogOpen(true);
   }, []);
 
-  // New handler for row clicks to detect double-click
   const handleRowClick = useCallback((resi: string) => {
     const now = Date.now();
 
-    if (lastClickInfo && lastClickInfo.resi === resi && (now - lastClickInfo.timestamp!) < 300) { // 300ms for double click
-      // Double click detected
+    if (lastClickInfo && lastClickInfo.resi === resi && (now - lastClickInfo.timestamp!) < 300) {
       if (clickTimeoutRef.current) {
         clearTimeout(clickTimeoutRef.current);
         clickTimeoutRef.current = null;
       }
-      setLastClickInfo(null); // Reset for next double click
-      handleDeleteClick(resi); // Trigger the delete confirmation
+      setLastClickInfo(null);
+      handleDeleteClick(resi);
     } else {
-      // First click or different resi
       if (clickTimeoutRef.current) {
         clearTimeout(clickTimeoutRef.current);
       }
       setLastClickInfo({ resi, timestamp: now });
       clickTimeoutRef.current = setTimeout(() => {
-        setLastClickInfo(null); // Clear after timeout if no second click
+        setLastClickInfo(null);
       }, 300);
     }
   }, [lastClickInfo, handleDeleteClick]);
@@ -247,10 +241,9 @@ const HistoryPage = () => { // Definisi komponen dimulai di sini
   const confirmDeleteResi = useCallback(async () => {
     if (!resiToDelete) return;
 
-    // Find the item to get its creation date and Keterangan (expedition)
     const itemToDelete = historyData?.find(item => item.Resi === resiToDelete);
     const dateOfDeletedResi = itemToDelete ? new Date(itemToDelete.created) : undefined;
-    const expeditionOfDeletedResi = itemToDelete?.Keterangan || undefined; // Get expedition name
+    const expeditionOfDeletedResi = itemToDelete?.Keterangan || undefined;
 
     const { error } = await supabase
       .from("tbl_resi")
@@ -263,19 +256,15 @@ const HistoryPage = () => { // Definisi komponen dimulai di sini
     } else {
       showSuccess(`Resi ${resiToDelete} berhasil dihapus.`);
 
-      // Force refetch history data for the current date range
       await queryClient.refetchQueries({ queryKey: ["historyData", formattedStartDate, formattedEndDate] });
 
-      // Force refetch allResiForExpedition (used by Input page)
       await queryClient.refetchQueries({
         queryKey: ["allResiForExpedition"],
-        exact: false, // Ensure it refetches all variations of this query key
+        exact: false,
       });
 
-      // NEW: Force refetch the comprehensive resi data cache
       await queryClient.refetchQueries({ queryKey: ["allResiDataComprehensive"] });
 
-      // Invalidate dashboard queries and karungSummary/lastKarung for the date and expedition of the deleted resi
       invalidateDashboardQueries(queryClient, dateOfDeletedResi, expeditionOfDeletedResi); 
     }
     setIsDeleteDialogOpen(false);
@@ -289,15 +278,14 @@ const HistoryPage = () => { // Definisi komponen dimulai di sini
       return;
     }
 
-    // Headers without "Aksi" (which is not present in History table anyway)
     const headers = table.getHeaderGroups()[0].headers
-      .filter(header => header.column.id !== "rowNumber") // Exclude the "No" column
+      .filter(header => header.column.id !== "rowNumber")
       .map(header => flexRender(header.column.columnDef.header, header.getContext()));
     const headerRow = headers.join('\t');
 
     const dataRows = rowsToCopy.map(row => {
       const rowValues = row.getVisibleCells()
-        .filter(cell => cell.column.id !== "rowNumber") // Exclude the "No" column from cell values
+        .filter(cell => cell.column.id !== "rowNumber")
         .map(cell => {
           if (cell.column.id === "created") {
             const dateValue = cell.getValue() as string;
@@ -371,15 +359,14 @@ const HistoryPage = () => { // Definisi komponen dimulai di sini
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
                   <Calendar
-                    key={startDate?.toISOString() || 'start-date-empty'} {/* Added key */}
+                    key={startDate?.toISOString() || 'start-date-empty'}
                     mode="single"
                     selected={startDate}
                     onSelect={(date) => {
                       console.log("Selected start date:", date);
                       setStartDate(date);
-                      setIsStartDatePopoverOpen(false); // Close popover on select
+                      setIsStartDatePopoverOpen(false);
                     }}
-                    // initialFocus // Dihapus
                   />
                 </PopoverContent>
               </Popover>
@@ -407,15 +394,14 @@ const HistoryPage = () => { // Definisi komponen dimulai di sini
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
                   <Calendar
-                    key={endDate?.toISOString() || 'end-date-empty'} {/* Added key */}
+                    key={endDate?.toISOString() || 'end-date-empty'}
                     mode="single"
                     selected={endDate}
                     onSelect={(date) => {
                       console.log("Selected end date:", date);
                       setEndDate(date);
-                      setIsEndDatePopoverOpen(false); // Close popover on select
+                      setIsEndDatePopoverOpen(false);
                     }}
-                    // initialFocus // Dihapus
                   />
                 </PopoverContent>
               </Popover>

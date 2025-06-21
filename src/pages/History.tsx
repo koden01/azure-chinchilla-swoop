@@ -73,6 +73,10 @@ const HistoryPage = () => {
   const [lastClickInfo, setLastClickInfo] = useState<{ resi: string | null; timestamp: number | null } | null>(null);
   const clickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // NEW: State untuk mengelola status buka/tutup Popover
+  const [isStartDatePopoverOpen, setIsStartDatePopoverOpen] = useState(false);
+  const [isEndDatePopoverOpen, setIsEndDatePopoverOpen] = useState(false);
+
   const queryClient = useQueryClient();
 
   const formattedStartDate = startDate ? format(startDate, "yyyy-MM-dd") : "";
@@ -110,11 +114,11 @@ const HistoryPage = () => {
     return allRecords;
   }, []);
 
-  const { data: historyData, isLoading: isLoadingHistory } = useQuery<HistoryData[]>({ // Renamed historyError to _historyError
+  const { data: historyData, isLoading: isLoadingHistory } = useQuery<HistoryData[]>({
     queryKey: ["historyData", formattedStartDate, formattedEndDate],
     queryFn: async () => {
       if (!startDate || !endDate) {
-        console.log("HistoryPage: Skipping fetch, startDate or endDate is undefined."); // Added log
+        console.log("HistoryPage: Skipping fetch, startDate or endDate is undefined.");
         return [];
       }
 
@@ -127,15 +131,14 @@ const HistoryPage = () => {
       const startIso = startOfSelectedStartDate.toISOString();
       const endIso = endOfSelectedEndDate.toISOString();
       
-      console.log(`HistoryPage: Fetching data for range ${startIso} to ${endIso}`); // Added log
+      console.log(`HistoryPage: Fetching data for range ${startIso} to ${endIso}`);
       const data = await fetchAllResiDataPaginated(startIso, endIso);
-      console.log(`HistoryPage: Fetched ${data.length} records.`); // Added log
+      console.log(`HistoryPage: Fetched ${data.length} records.`);
       return data || [];
     },
     enabled: !!startDate && !!endDate,
   });
 
-  // Added useEffect to log historyData changes
   useEffect(() => {
     console.log("HistoryPage: historyData updated:", historyData);
   }, [historyData]);
@@ -349,7 +352,7 @@ const HistoryPage = () => {
               <label htmlFor="start-date-picker" className="block text-left text-sm font-medium text-white mb-1">
                 Tanggal Mulai
               </label>
-              <Popover>
+              <Popover open={isStartDatePopoverOpen} onOpenChange={setIsStartDatePopoverOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     id="start-date-picker"
@@ -367,7 +370,11 @@ const HistoryPage = () => {
                   <Calendar
                     mode="single"
                     selected={startDate}
-                    onSelect={setStartDate}
+                    onSelect={(date) => {
+                      console.log("Selected start date:", date);
+                      setStartDate(date);
+                      setIsStartDatePopoverOpen(false); // Close popover on select
+                    }}
                     initialFocus
                   />
                 </PopoverContent>
@@ -377,7 +384,7 @@ const HistoryPage = () => {
               <label htmlFor="end-date-picker" className="block text-left text-sm font-medium text-white mb-1">
                 Tanggal Selesai
               </label>
-              <Popover>
+              <Popover open={isEndDatePopoverOpen} onOpenChange={setIsEndDatePopoverOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     id="end-date-picker"
@@ -395,7 +402,11 @@ const HistoryPage = () => {
                   <Calendar
                     mode="single"
                     selected={endDate}
-                    onSelect={setEndDate}
+                    onSelect={(date) => {
+                      console.log("Selected end date:", date);
+                      setEndDate(date);
+                      setIsEndDatePopoverOpen(false); // Close popover on select
+                    }}
                     initialFocus
                   />
                 </PopoverContent>

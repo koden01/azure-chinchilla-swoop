@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import { normalizeExpeditionName, KNOWN_EXPEDITIONS } from "@/utils/expeditionUtils";
-import { supabase } => "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client"; // Memperbaiki impor ini
 import { usePendingOperations } from "@/hooks/usePendingOperations";
 
 // Import base data hooks

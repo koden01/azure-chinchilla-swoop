@@ -11,17 +11,20 @@ export const invalidateDashboardQueries = (queryClient: QueryClient, date: Date 
   const twoDaysAgoFormatted = format(twoDaysAgo, "yyyy-MM-dd");
   const endOfTodayFormatted = format(actualCurrentDate, "yyyy-MM-dd");
 
-  // Invalidate dashboard summary queries
+  // Invalidate dashboard summary queries for the specific date provided (dateOfDeletedResi)
+  // These are usually tied to a specific date.
   queryClient.invalidateQueries({ queryKey: ["transaksiHariIni", formattedDate] });
   queryClient.invalidateQueries({ queryKey: ["totalScan", formattedDate] });
   queryClient.invalidateQueries({ queryKey: ["idRekCount", formattedDate] });
   queryClient.invalidateQueries({ queryKey: ["belumKirim", formattedDate] });
-  queryClient.invalidateQueries({ queryKey: ["followUpFlagNoCount", actualCurrentFormattedDate] });
   queryClient.invalidateQueries({ queryKey: ["scanFollowupLateCount", formattedDate] });
   queryClient.invalidateQueries({ queryKey: ["batalCount", formattedDate] });
   queryClient.invalidateQueries({ queryKey: ["followUpData", formattedDate] });
-  queryClient.invalidateQueries({ queryKey: ["expedisiDataForSelectedDate", formattedDate] }); // This is expedisiDataForSelectedDate
-  queryClient.invalidateQueries({ queryKey: ["allResiData", formattedDate] }); // This is allResiData for selected date
+
+  // Invalidate date-specific data queries, but make them non-exact to catch any date
+  // This is the key change for the bug fix.
+  queryClient.invalidateQueries({ queryKey: ["expedisiDataForSelectedDate"], exact: false }); // Invalidate for any date
+  queryClient.invalidateQueries({ queryKey: ["allResiData"], exact: false }); // Invalidate for any date
   
   // Invalidate queries specific to the Input page and comprehensive data
   // Normalize expedition name for invalidation if it's ID_REKOMENDASI, as Input page treats it as 'ID'
@@ -44,4 +47,7 @@ export const invalidateDashboardQueries = (queryClient: QueryClient, date: Date 
 
   // NEW: Invalidate the allFlagNoExpedisiData query
   queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] });
+
+  // Also invalidate the followUpFlagNoCount which is global (except today)
+  queryClient.invalidateQueries({ queryKey: ["followUpFlagNoCount", actualCurrentFormattedDate] });
 };

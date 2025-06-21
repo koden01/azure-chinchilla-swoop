@@ -54,6 +54,7 @@ const HistoryDatePicker: React.FC<HistoryDatePickerProps> = ({
                   setStartDate(date);
                   setIsStartDatePopoverOpen(false);
                 }}
+                // initialFocus // Dihapus
               />
             </PopoverContent>
           </Popover>
@@ -84,6 +85,7 @@ const HistoryDatePicker: React.FC<HistoryDatePickerProps> = ({
                   setEndDate(date);
                   setIsEndDatePopoverOpen(false);
                 }}
+                // initialFocus // Dihapus
               />
             </PopoverContent>
           </Popover>

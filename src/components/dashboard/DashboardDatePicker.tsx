@@ -6,7 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Button } from "@/components/ui/button";
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
-import { cn } from "@/lib/utils";
+import { cn } => "@/lib/utils";
 
 interface DashboardDatePickerProps {
   selectedDate: Date | undefined;
@@ -41,7 +41,7 @@ const DashboardDatePicker: React.FC<DashboardDatePickerProps> = ({
             mode="single"
             selected={selectedDate}
             onSelect={setSelectedDate}
-            initialFocus
+            // initialFocus // Dihapus
           />
         </PopoverContent>
       </Popover>

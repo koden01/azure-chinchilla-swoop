@@ -20,6 +20,7 @@ import {
   Table as ReactTableType, // Import Table type from @tanstack/react-table
 } from "@tanstack/react-table";
 import { HistoryData } from "@/components/columns/historyColumns"; // Import HistoryData type
+import { Loader2 } from "lucide-react"; // Import Loader2 icon
 
 interface HistoryTableProps {
   table: ReactTableType<HistoryData>;
@@ -74,7 +75,14 @@ const HistoryTable: React.FC<HistoryTableProps> = ({
           </TableHeader>
           <TableBody>
             {isLoadingHistory ? (
-              <TableRow><TableCell colSpan={columns.length} className="h-24 text-center">Memuat data...</TableCell></TableRow>
+              <TableRow>
+                <TableCell colSpan={columns.length} className="h-24 text-center">
+                  <div className="flex items-center justify-center">
+                    <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                    Memuat data...
+                  </div>
+                </TableCell>
+              </TableRow>
             ) : table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow 

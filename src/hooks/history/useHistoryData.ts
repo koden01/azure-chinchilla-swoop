@@ -26,14 +26,13 @@ export const useHistoryData = (startDate: Date | undefined, endDate: Date | unde
     while (hasMore) {
       let data, error;
       try {
-        console.log(`[fetchAllResiDataPaginated] Attempting Supabase query for offset ${offset}...`); // NEW LOG
+        console.log(`[fetchAllResiDataPaginated] Attempting Supabase query for offset ${offset}...`);
+        // TEMPORARY: Simplify query to test basic connectivity to tbl_resi
         ({ data, error } = await supabase
           .from("tbl_resi")
-          .select("Resi, Keterangan, nokarung, created, schedule")
-          .gte("created", startIso)
-          .lte("created", endIso)
-          .order("created", { ascending: false })
-          .range(offset, offset + limit - 1));
+          .select("*") // Disimplifikasi untuk memilih semua kolom
+          .limit(limit) // Tambahkan limit secara eksplisit untuk tes ini
+          .offset(offset)); // Tambahkan offset secara eksplisit untuk tes ini
       } catch (e: any) {
         console.error(`[fetchAllResiDataPaginated] Critical error during Supabase fetch for offset ${offset}:`, e.message, e);
         throw e; // Re-throw to be caught by useQuery

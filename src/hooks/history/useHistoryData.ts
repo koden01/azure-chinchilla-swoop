@@ -24,13 +24,19 @@ export const useHistoryData = (startDate: Date | undefined, endDate: Date | unde
     console.log(`[fetchAllResiDataPaginated] Fetching from tbl_resi between ${startIso} and ${endIso}`);
 
     while (hasMore) {
-      const { data, error } = await supabase
-        .from("tbl_resi")
-        .select("Resi, Keterangan, nokarung, created, schedule")
-        .gte("created", startIso)
-        .lte("created", endIso)
-        .order("created", { ascending: false })
-        .range(offset, offset + limit - 1);
+      let data, error;
+      try {
+        ({ data, error } = await supabase
+          .from("tbl_resi")
+          .select("Resi, Keterangan, nokarung, created, schedule")
+          .gte("created", startIso)
+          .lte("created", endIso)
+          .order("created", { ascending: false })
+          .range(offset, offset + limit - 1));
+      } catch (e: any) {
+        console.error(`[fetchAllResiDataPaginated] Critical error during Supabase fetch for offset ${offset}:`, e.message, e);
+        throw e; // Re-throw to be caught by useQuery
+      }
 
       console.log(`[fetchAllResiDataPaginated] Supabase response for offset ${offset}:`, { data, error });
 

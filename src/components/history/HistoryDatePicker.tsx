@@ -3,7 +3,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { CalendarIcon, CalendarDays } from "lucide-react";
-import { format } from "date-fns";
+import { format, isAfter, isBefore } from "date-fns"; // Import date-fns utilities
 import { cn } from "@/lib/utils";
 
 interface HistoryDatePickerProps {
@@ -21,6 +21,36 @@ const HistoryDatePicker: React.FC<HistoryDatePickerProps> = ({
 }) => {
   const [isStartDatePopoverOpen, setIsStartDatePopoverOpen] = React.useState(false);
   const [isEndDatePopoverOpen, setIsEndDatePopoverOpen] = React.useState(false);
+
+  const handleStartDateSelect = (date: Date | undefined) => {
+    console.log("Start Date selected:", date);
+    setStartDate(date);
+    // If start date is set and it's after current end date, adjust end date
+    if (date && endDate && isAfter(date, endDate)) {
+      setEndDate(date);
+    } else if (date && !endDate) { // If start date is set but end date is not, set end date to start date
+      setEndDate(date);
+    }
+    setTimeout(() => {
+      setIsStartDatePopoverOpen(false);
+      console.log("isStartDatePopoverOpen set to false via setTimeout");
+    }, 0);
+  };
+
+  const handleEndDateSelect = (date: Date | undefined) => {
+    console.log("End Date selected:", date);
+    setEndDate(date);
+    // If end date is set and it's before current start date, adjust start date
+    if (date && startDate && isBefore(date, startDate)) {
+      setStartDate(date);
+    } else if (date && !startDate) { // If end date is set but start date is not, set start date to end date
+      setStartDate(date);
+    }
+    setTimeout(() => {
+      setIsEndDatePopoverOpen(false);
+      console.log("isEndDatePopoverOpen set to false via setTimeout");
+    }, 0);
+  };
 
   return (
     <div className="bg-gradient-to-r from-green-500 to-blue-600 p-6 rounded-lg shadow-md">
@@ -50,15 +80,7 @@ const HistoryDatePicker: React.FC<HistoryDatePickerProps> = ({
               <Calendar
                 mode="single"
                 selected={startDate}
-                onSelect={(date) => {
-                  console.log("Start Date selected:", date);
-                  setStartDate(date);
-                  // Menambahkan setTimeout untuk memastikan popover menutup setelah state diperbarui
-                  setTimeout(() => {
-                    setIsStartDatePopoverOpen(false);
-                    console.log("isStartDatePopoverOpen set to false via setTimeout");
-                  }, 0);
-                }}
+                onSelect={handleStartDateSelect} // Use the new handler
               />
             </PopoverContent>
           </Popover>
@@ -85,15 +107,7 @@ const HistoryDatePicker: React.FC<HistoryDatePickerProps> = ({
               <Calendar
                 mode="single"
                 selected={endDate}
-                onSelect={(date) => {
-                  console.log("End Date selected:", date);
-                  setEndDate(date);
-                  // Menambahkan setTimeout untuk memastikan popover menutup setelah state diperbarui
-                  setTimeout(() => {
-                    setIsEndDatePopoverOpen(false);
-                    console.log("isEndDatePopoverOpen set to false via setTimeout");
-                  }, 0);
-                }}
+                onSelect={handleEndDateSelect} // Use the new handler
               />
             </PopoverContent>
           </Popover>

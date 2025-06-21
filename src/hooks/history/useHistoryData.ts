@@ -49,7 +49,9 @@ export const useHistoryData = (startDate: Date | undefined, endDate: Date | unde
   const { data: historyData, isLoading: isLoadingHistory } = useQuery<HistoryData[]>({
     queryKey: ["historyData", formattedStartDate, formattedEndDate],
     queryFn: async () => {
+      console.log(`[useHistoryData queryFn] startDate: ${startDate?.toISOString()}, endDate: ${endDate?.toISOString()}`);
       if (!startDate || !endDate) {
+        console.log("[useHistoryData queryFn] startDate or endDate is undefined, returning empty array.");
         return [];
       }
 
@@ -63,6 +65,7 @@ export const useHistoryData = (startDate: Date | undefined, endDate: Date | unde
       const endIso = endOfSelectedEndDate.toISOString();
       
       const data = await fetchAllResiDataPaginated(startIso, endIso);
+      console.log(`[useHistoryData queryFn] Fetched data length: ${data?.length || 0}`);
       return data || [];
     },
     enabled: !!startDate && !!endDate,

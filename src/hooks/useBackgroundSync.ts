@@ -47,7 +47,7 @@ export const useBackgroundSync = () => {
 
             const { error: expedisiError } = await supabase
               .from("tbl_expedisi")
-              .update({ flag: "BATAL" })
+              .update({ flag: "BTL" }) // Diubah dari "BATAL" menjadi "BTL"
               .eq("resino", op.payload.resiNumber);
 
             if (expedisiError) throw expedisiError;

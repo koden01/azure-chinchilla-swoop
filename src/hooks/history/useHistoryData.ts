@@ -26,6 +26,7 @@ export const useHistoryData = (startDate: Date | undefined, endDate: Date | unde
     while (hasMore) {
       let data, error;
       try {
+        console.log(`[fetchAllResiDataPaginated] Attempting Supabase query for offset ${offset}...`); // NEW LOG
         ({ data, error } = await supabase
           .from("tbl_resi")
           .select("Resi, Keterangan, nokarung, created, schedule")

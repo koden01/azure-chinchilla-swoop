@@ -3,11 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, showError, dismissToast } from "@/utils/toast";
 import { beepSuccess, beepFailure, beepDouble } from "@/utils/audio";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { format, subDays } from "date-fns"; // Removed startOfDay, endOfDay
+import { format, subDays } from "date-fns";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
-import { normalizeExpeditionName } from "@/utils/expeditionUtils";
+import { normalizeExpeditionName } => "@/utils/expeditionUtils";
 import { addPendingOperation } from "@/integrations/indexeddb/pendingOperations";
-import { useBackgroundSync } from "./useBackgroundSync"; // Import useBackgroundSync
+import { useBackgroundSync } from "./useBackgroundSync";
 
 // Define the type for ResiExpedisiData to match useResiInputData
 interface ResiExpedisiData {
@@ -31,11 +31,11 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
   const [isProcessing, setIsProcessing] = React.useState<boolean>(false);
   const resiInputRef = React.useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
-  const { triggerSync } = useBackgroundSync(); // Get the triggerSync function
+  const { triggerSync } = useBackgroundSync();
 
   // Calculate date range for 2 days back for local validation data
   const today = new Date();
-  const twoDaysAgo = subDays(today, 2); // Covers today, yesterday, and the day before yesterday
+  const twoDaysAgo = subDays(today, 2);
   const twoDaysAgoFormatted = format(twoDaysAgo, "yyyy-MM-dd");
   const endOfTodayFormatted = format(today, "yyyy-MM-dd");
 
@@ -145,18 +145,37 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
     let expedisiRecord: any = null; // Will hold the record from tbl_expedisi if found
 
     try {
-      // 1. Local Duplicate Check
-      console.log(`[handleScanResi] Checking for local duplicate: ${normalizedCurrentResi}`);
-      console.log(`[handleScanResi] recentResiNumbersForValidation current state:`, recentResiNumbersForValidation);
+      // 1. Local Duplicate Check (for recent scans)
+      console.log(`[handleScanResi] Checking for local duplicate (recent): ${normalizedCurrentResi}`);
       if (recentResiNumbersForValidation?.has(normalizedCurrentResi)) {
         validationStatus = 'DUPLICATE_RESI';
-        validationMessage = `DOUBLE! Resi ini sudah discan sebelumnya.`;
-        console.log(`[handleScanResi] Validation Failed: DUPLICATE_RESI. Message: ${validationMessage}`);
+        validationMessage = `DOUBLE! Resi ini sudah discan sebelumnya (recent).`;
+        console.log(`[handleScanResi] Validation Failed: DUPLICATE_RESI (recent). Message: ${validationMessage}`);
+      }
+
+      // 2. Database Duplicate Check (for older scans, if not found locally)
+      if (validationStatus === 'OK') {
+        console.log(`[handleScanResi] Checking for database duplicate (all history): ${currentResi}`);
+        const { data: existingResiInDb, error: dbCheckError } = await supabase
+          .from("tbl_resi")
+          .select("Resi")
+          .eq("Resi", currentResi)
+          .maybeSingle(); // Use maybeSingle to get null if not found, or data if found
+
+        if (dbCheckError && dbCheckError.code !== 'PGRST116') { // PGRST116 means "no rows found"
+          throw dbCheckError; // Re-throw other errors
+        }
+
+        if (existingResiInDb) {
+          validationStatus = 'DUPLICATE_RESI';
+          validationMessage = `DOUBLE! Resi ini sudah discan sebelumnya (history).`;
+          console.log(`[handleScanResi] Validation Failed: DUPLICATE_RESI (history). Message: ${validationMessage}`);
+        }
       }
 
       // Only proceed with further checks if not already a duplicate
       if (validationStatus === 'OK') {
-        // 2. Attempt to find expedisiRecord from caches or direct RPC call
+        // 3. Attempt to find expedisiRecord from caches or direct RPC call
         console.log(`[handleScanResi] Checking allExpedisiDataUnfiltered for ${normalizedCurrentResi}`);
         expedisiRecord = allExpedisiDataUnfiltered?.get(normalizedCurrentResi);
 
@@ -199,11 +218,10 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
                   );
                 }
             }
-            // IMPORTANT: Do NOT set NOT_FOUND_EXPEDISI here. It will be handled in the next step based on `expedition`.
         }
       }
 
-      // 3. Determine actualCourierName and final validationStatus based on `expedition` and `expedisiRecord` presence
+      // 4. Determine actualCourierName and final validationStatus based on `expedition` and `expedisiRecord` presence
       if (validationStatus === 'OK') { // Only proceed if not already a duplicate
         console.log(`[handleScanResi] Performing courier name check. Selected expedition: ${expedition}`);
         if (expedition === 'ID') {

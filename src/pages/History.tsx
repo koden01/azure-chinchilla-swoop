@@ -320,7 +320,7 @@ const HistoryPage = () => {
                       "w-full justify-start text-left font-normal bg-white text-gray-800",
                       !startDate && "text-muted-foreground"
                     )}
-                    onClick={() => setIsStartDatePickerOpen(true)}
+                    // Removed onClick={() => setIsStartDatePickerOpen(true)}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {startDate ? format(startDate, "dd/MM/yyyy") : <span>Pilih tanggal</span>}
@@ -352,7 +352,7 @@ const HistoryPage = () => {
                       "w-full justify-start text-left font-normal bg-white text-gray-800",
                       !endDate && "text-muted-foreground"
                     )}
-                    onClick={() => setIsEndDatePickerOpen(true)}
+                    // Removed onClick={() => setIsEndDatePickerOpen(true)}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {endDate ? format(endDate, "dd/MM/yyyy") : <span>Pilih tanggal</span>}

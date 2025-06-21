@@ -5,7 +5,7 @@ import { beepSuccess, beepFailure, beepDouble } from "@/utils/audio";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { format, subDays } from "date-fns";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
-import { normalizeExpeditionName } from "@/utils/expeditionUtils"; // Perbaikan di sini: '=>' diganti menjadi 'from'
+import { normalizeExpeditionName } from "@/utils/expeditionUtils";
 import { addPendingOperation } from "@/integrations/indexeddb/pendingOperations";
 import { useBackgroundSync } from "./useBackgroundSync";
 
@@ -148,8 +148,20 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       // 1. Local Duplicate Check (for recent scans)
       console.log(`[handleScanResi] Checking for local duplicate (recent): ${normalizedCurrentResi}`);
       if (recentResiNumbersForValidation?.has(normalizedCurrentResi)) {
+        // Fetch the created date for the duplicate resi
+        const { data: existingResiDetail, error: detailError } = await supabase
+          .from("tbl_resi")
+          .select("created")
+          .eq("Resi", currentResi)
+          .maybeSingle();
+
+        let createdDateStr = "";
+        if (existingResiDetail && existingResiDetail.created) {
+          createdDateStr = format(new Date(existingResiDetail.created), "dd/MM/yyyy HH:mm");
+        }
+
         validationStatus = 'DUPLICATE_RESI';
-        validationMessage = `DOUBLE! Resi ini sudah discan sebelumnya (recent).`;
+        validationMessage = `DOUBLE! Resi ini sudah discan sebelumnya pada ${createdDateStr}.`;
         console.log(`[handleScanResi] Validation Failed: DUPLICATE_RESI (recent). Message: ${validationMessage}`);
       }
 
@@ -158,7 +170,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         console.log(`[handleScanResi] Checking for database duplicate (all history): ${currentResi}`);
         const { data: existingResiInDb, error: dbCheckError } = await supabase
           .from("tbl_resi")
-          .select("Resi")
+          .select("Resi, created") // Select created as well
           .eq("Resi", currentResi)
           .maybeSingle(); // Use maybeSingle to get null if not found, or data if found
 
@@ -167,8 +179,12 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         }
 
         if (existingResiInDb) {
+          let createdDateStr = "";
+          if (existingResiInDb.created) {
+            createdDateStr = format(new Date(existingResiInDb.created), "dd/MM/yyyy HH:mm");
+          }
           validationStatus = 'DUPLICATE_RESI';
-          validationMessage = `DOUBLE! Resi ini sudah discan sebelumnya (history).`;
+          validationMessage = `DOUBLE! Resi ini sudah discan sebelumnya pada ${createdDateStr}.`;
           console.log(`[handleScanResi] Validation Failed: DUPLICATE_RESI (history). Message: ${validationMessage}`);
         }
       }

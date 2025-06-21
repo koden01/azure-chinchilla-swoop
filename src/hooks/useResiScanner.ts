@@ -384,7 +384,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         timestamp: Date.now(),
       });
 
-      showSuccess(`Resi ${currentResi} berhasil discan (disimpan secara lokal).`);
+      showSuccess(`Resi ${currentResi} Berhasil`); // Updated toast message
       try {
         beepSuccess.play();
       } catch (e) {

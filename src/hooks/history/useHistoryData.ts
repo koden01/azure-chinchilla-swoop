@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+// import { supabase } from "@/integrations/supabase/client"; // Removed unused import
 import { format, startOfDay, endOfDay } from "date-fns"; // Import startOfDay and endOfDay
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch"; // Import the shared utility
 

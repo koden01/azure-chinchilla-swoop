@@ -18,4 +18,8 @@ export interface ModalDataItem {
   created_resi?: string; // For followUp RPC (timestamp with time zone)
   created_expedisi?: string; // For followUp RPC (timestamp without time zone)
   optimisticId?: string; // Used for optimistic UI updates
+  // NEW: Added properties from tbl_resi and tbl_expedisi that were missing
+  nokarung?: string | null;
+  schedule?: string | null;
+  Keterangan?: string | null; // This is from tbl_resi, often used as courier name
 }

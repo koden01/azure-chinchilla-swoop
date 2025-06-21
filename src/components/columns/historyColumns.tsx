@@ -2,7 +2,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { getKeteranganBadgeClasses } from "@/utils/expeditionUtils";
-import React from "react"; // Import React for JSX
+// import React from "react"; // Removed unused import
 
 export interface HistoryData {
   Resi: string;

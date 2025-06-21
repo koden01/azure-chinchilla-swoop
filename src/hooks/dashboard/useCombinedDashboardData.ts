@@ -4,15 +4,9 @@ import { useEffect, useState } from "react";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import { normalizeExpeditionName, KNOWN_EXPEDITIONS } from "@/utils/expeditionUtils";
-import { supabase } from "@/integrations/supabase/client"; // Memperbaiki impor ini
+import { supabase } from "@/integrations/supabase/client";
 import { usePendingOperations } from "@/hooks/usePendingOperations";
 import { ModalDataItem } from "@/types/data"; // Import ModalDataItem
-
-// Import base data hooks
-import { useFollowUpRecords } from "./useFollowUpRecords";
-import { useExpedisiRecordsForSelectedDate } from "./useExpedisiRecordsForSelectedDate";
-import { useAllResiRecords } from "./useAllResiRecords";
-import { useAllExpedisiRecordsUnfiltered } from "./useAllExpedisiRecordsUnfiltered";
 
 // Define the return type interface for useCombinedDashboardData
 interface DashboardDataReturn {
@@ -145,7 +139,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
           // If resi not found in currentResiData, add it as a 'batal' entry
           currentResiData.push({
             Resi: op.payload.resiNumber,
-            nokarung: null,
+            nokarung: "0", // Set nokarung to "0" for batal
             created: op.payload.createdTimestampFromExpedisi || new Date(op.timestamp).toISOString(),
             Keterangan: op.payload.keteranganValue, // Now this is the original courier name
             schedule: "batal",
@@ -170,7 +164,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
           // If resi not found in currentResiData, add it (e.g., if it was deleted but then confirmed)
           currentResiData.push({
             Resi: op.payload.resiNumber,
-            nokarung: null, // Assuming no karung for confirmed items if not provided
+            nokarung: "0", // Set nokarung to "0" for confirm
             created: op.payload.expedisiCreatedTimestamp || new Date(op.timestamp).toISOString(),
             Keterangan: op.payload.courierNameFromExpedisi,
             schedule: "ontime",
@@ -220,8 +214,8 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
     let currentFollowUpFlagNoCount = 0; // This one is special, it's for *except today*
 
     const today = new Date();
-    const startOfSelectedDate = startOfDay(date);
-    const endOfSelectedDate = endOfDay(date);
+    const startOfSelectedDate = date ? startOfDay(date) : null;
+    const endOfSelectedDate = date ? endOfDay(date) : null;
 
     // Calculate Transaksi Hari Ini and Belum Kirim (for selected date)
     expedisiDataForSelectedDate.forEach(exp => {
@@ -233,9 +227,12 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
 
     // Calculate Total Scan, ID Rek, Batal, Scan Follow Up Late (for selected date)
     currentResiData.forEach(resi => {
-      const resiCreatedDate = new Date(resi.created);
+      // Ensure resi.created is a valid date string before creating a Date object
+      const resiCreatedDate = resi.created ? new Date(resi.created) : null;
+
       // Only consider resi records for the selected date for overall counts
-      if (resiCreatedDate >= startOfSelectedDate && resiCreatedDate <= endOfSelectedDate) {
+      if (resiCreatedDate && startOfSelectedDate && endOfSelectedDate && 
+          resiCreatedDate >= startOfSelectedDate && resiCreatedDate <= endOfSelectedDate) {
         if (resi.schedule === "ontime") {
           currentTotalScan++;
         }
@@ -254,8 +251,8 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
     // Calculate Follow Up (Flag NO except today)
     // This count needs to iterate through allExpedisiDataUnfiltered and check dates
     currentExpedisiData.forEach(exp => {
-      const expedisiCreatedDate = new Date(exp.created);
-      if (exp.flag === "NO" && !isSameDay(expedisiCreatedDate, today)) {
+      const expedisiCreatedDate = exp.created ? new Date(exp.created) : null;
+      if (exp.flag === "NO" && expedisiCreatedDate && !isSameDay(expedisiCreatedDate, today)) {
         currentFollowUpFlagNoCount++;
       }
     });
@@ -301,12 +298,12 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
 
     // Populate totalScan, idRekomendasi, totalBatal, totalScanFollowUp, jumlahKarung from currentResiData (already filtered by date and potentially modified by pending ops)
     currentResiData.forEach(resi => {
-      const resiCreatedDate = new Date(resi.created);
+      const resiCreatedDate = resi.created ? new Date(resi.created) : null;
       let attributedExpeditionName: string | null = null;
 
       // Only consider resi records for the selected date for per-expedition summaries
-      if (!isSameDay(resiCreatedDate, date)) {
-        return; // Skip if not for the selected date
+      if (!resiCreatedDate || !date || !isSameDay(resiCreatedDate, date)) {
+        return; // Skip if not for the selected date or date is invalid
       }
 
       // Determine the expedition name for attribution

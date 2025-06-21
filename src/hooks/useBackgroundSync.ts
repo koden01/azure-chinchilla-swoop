@@ -43,6 +43,7 @@ export const useBackgroundSync = () => {
               .from("tbl_resi")
               .upsert({
                 Resi: op.payload.resiNumber,
+                nokarung: "0", // Set nokarung to "0" for batal
                 created: op.payload.createdTimestampFromExpedisi || new Date(op.timestamp).toISOString(), // Gunakan created dari expedisi
                 Keterangan: op.payload.keteranganValue, // Set Keterangan menjadi nama ekspedisi asli
                 schedule: "batal", // Tetap set schedule ke "batal"
@@ -58,7 +59,7 @@ export const useBackgroundSync = () => {
               .from("tbl_resi")
               .upsert({
                 Resi: op.payload.resiNumber,
-                nokarung: null, // Set null jika tidak ada karung saat konfirmasi
+                nokarung: "0", // Set nokarung to "0" for confirm
                 created: op.payload.expedisiCreatedTimestamp || new Date(op.timestamp).toISOString(), // Gunakan created dari expedisi
                 Keterangan: op.payload.keteranganValue || op.payload.courierNameFromExpedisi, // Gunakan Keterangan dari payload atau courierName
                 schedule: "ontime",

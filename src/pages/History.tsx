@@ -38,6 +38,7 @@ import { showSuccess, showError } from "@/utils/toast";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
 import { useDebounce } from "@/hooks/useDebounce";
 import { getKeteranganBadgeClasses } from "@/utils/expeditionUtils";
+import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 
 import {
   ColumnDef,
@@ -69,7 +70,6 @@ const HistoryPage = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [resiToDelete, setResiToDelete] = useState<string | null>(null);
 
-  // State untuk melacak klik terakhir untuk deteksi double-click
   const [lastClickInfo, setLastClickInfo] = useState<{ resi: string | null; timestamp: number | null } | null>(null);
   const clickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -78,64 +78,35 @@ const HistoryPage = () => {
   const formattedStartDate = startDate ? format(startDate, "yyyy-MM-dd") : "";
   const formattedEndDate = endDate ? format(endDate, "yyyy-MM-dd") : "";
 
-  // Function to fetch all data from tbl_resi with pagination for a given date range
-  const fetchAllResiDataPaginated = useCallback(async (startIso: string, endIso: string) => {
-    let allRecords: HistoryData[] = [];
-    let offset = 0;
-    const limit = 1000; // Fetch 1000 records at a time
-    let hasMore = true;
+  // State untuk mengontrol popover tanggal
+  const [isStartDatePickerOpen, setIsStartDatePickerOpen] = useState(false);
+  const [isEndDatePickerOpen, setIsEndDatePickerOpen] = useState(false);
 
-    while (hasMore) {
-      const { data, error } = await supabase
-        .from("tbl_resi")
-        .select("Resi, Keterangan, nokarung, created, schedule") // Only select necessary columns
-        .gte("created", startIso)
-        .lte("created", endIso)
-        .order("created", { ascending: false })
-        .range(offset, offset + limit - 1);
-
-      if (error) {
-        console.error(`Error fetching paginated history data:`, error);
-        throw error;
-      }
-
-      if (data && data.length > 0) {
-        allRecords = allRecords.concat(data);
-        offset += data.length;
-        hasMore = data.length === limit; // If less than limit, no more data
-      } else {
-        hasMore = false;
-      }
-    }
-    return allRecords;
-  }, []);
-
-  const { data: historyData, isLoading: isLoadingHistory } = useQuery<HistoryData[]>({ // Renamed historyError to _historyError
+  const { data: historyData, isLoading: isLoadingHistory } = useQuery<HistoryData[]>({
     queryKey: ["historyData", formattedStartDate, formattedEndDate],
     queryFn: async () => {
       if (!startDate || !endDate) {
-        console.log("HistoryPage: Skipping fetch, startDate or endDate is undefined."); // Added log
+        console.log("HistoryPage: Skipping fetch, startDate or endDate is undefined.");
         return [];
       }
 
-      const startOfSelectedStartDate = new Date(startDate);
-      startOfSelectedStartDate.setHours(0, 0, 0, 0);
-
-      const endOfSelectedEndDate = new Date(endDate);
-      endOfSelectedEndDate.setHours(23, 59, 59, 999);
-
-      const startIso = startOfSelectedStartDate.toISOString();
-      const endIso = endOfSelectedEndDate.toISOString();
+      const startOfSelectedStartDateUTC = new Date(Date.UTC(startDate.getFullYear(), startDate.getMonth(), startDate.getDate(), 0, 0, 0, 0));
+      const endOfSelectedEndDateUTC = new Date(Date.UTC(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 23, 59, 59, 999));
       
-      console.log(`HistoryPage: Fetching data for range ${startIso} to ${endIso}`); // Added log
-      const data = await fetchAllResiDataPaginated(startIso, endIso);
-      console.log(`HistoryPage: Fetched ${data.length} records.`); // Added log
+      console.log(`HistoryPage: Fetching data for range ${startOfSelectedStartDateUTC.toISOString()} to ${endOfSelectedEndDateUTC.toISOString()} (UTC)`);
+      const data = await fetchAllDataPaginated(
+        "tbl_resi",
+        "created",
+        startOfSelectedStartDateUTC,
+        endOfSelectedEndDateUTC,
+        "Resi, Keterangan, nokarung, created, schedule"
+      );
+      console.log(`HistoryPage: Fetched ${data.length} records.`);
       return data || [];
     },
     enabled: !!startDate && !!endDate,
   });
 
-  // Added useEffect to log historyData changes
   useEffect(() => {
     console.log("HistoryPage: historyData updated:", historyData);
   }, [historyData]);
@@ -203,13 +174,13 @@ const HistoryPage = () => {
     getPaginationRowModel: getPaginationRowModel(),
     initialState: {
       pagination: {
-        pageSize: 10, // Default page size
+        pageSize: 10,
       },
     },
   });
 
   useEffect(() => {
-    table.setPageIndex(0); // Reset to first page when filters or dates change
+    table.setPageIndex(0);
   }, [debouncedGlobalFilter, startDate, endDate, table]);
 
   const handleDeleteClick = useCallback((resi: string) => {
@@ -217,26 +188,23 @@ const HistoryPage = () => {
     setIsDeleteDialogOpen(true);
   }, []);
 
-  // New handler for row clicks to detect double-click
   const handleRowClick = useCallback((resi: string) => {
     const now = Date.now();
 
-    if (lastClickInfo && lastClickInfo.resi === resi && (now - lastClickInfo.timestamp!) < 300) { // 300ms for double click
-      // Double click detected
+    if (lastClickInfo && lastClickInfo.resi === resi && (now - lastClickInfo.timestamp!) < 300) {
       if (clickTimeoutRef.current) {
         clearTimeout(clickTimeoutRef.current);
         clickTimeoutRef.current = null;
       }
-      setLastClickInfo(null); // Reset for next double click
-      handleDeleteClick(resi); // Trigger the delete confirmation
+      setLastClickInfo(null);
+      handleDeleteClick(resi);
     } else {
-      // First click or different resi
       if (clickTimeoutRef.current) {
         clearTimeout(clickTimeoutRef.current);
       }
       setLastClickInfo({ resi, timestamp: now });
       clickTimeoutRef.current = setTimeout(() => {
-        setLastClickInfo(null); // Clear after timeout if no second click
+        setLastClickInfo(null);
       }, 300);
     }
   }, [lastClickInfo, handleDeleteClick]);
@@ -244,10 +212,9 @@ const HistoryPage = () => {
   const confirmDeleteResi = useCallback(async () => {
     if (!resiToDelete) return;
 
-    // Find the item to get its creation date and Keterangan (expedition)
     const itemToDelete = historyData?.find(item => item.Resi === resiToDelete);
     const dateOfDeletedResi = itemToDelete ? new Date(itemToDelete.created) : undefined;
-    const expeditionOfDeletedResi = itemToDelete?.Keterangan || undefined; // Get expedition name
+    const expeditionOfDeletedResi = itemToDelete?.Keterangan || undefined;
 
     const { error } = await supabase
       .from("tbl_resi")
@@ -260,19 +227,15 @@ const HistoryPage = () => {
     } else {
       showSuccess(`Resi ${resiToDelete} berhasil dihapus.`);
 
-      // Force refetch history data for the current date range
       await queryClient.refetchQueries({ queryKey: ["historyData", formattedStartDate, formattedEndDate] });
 
-      // Force refetch allResiForExpedition (used by Input page)
       await queryClient.refetchQueries({
         queryKey: ["allResiForExpedition"],
-        exact: false, // Ensure it refetches all variations of this query key
+        exact: false,
       });
 
-      // NEW: Force refetch the comprehensive resi data cache
       await queryClient.refetchQueries({ queryKey: ["allResiDataComprehensive"] });
 
-      // Invalidate dashboard queries and karungSummary/lastKarung for the date and expedition of the deleted resi
       invalidateDashboardQueries(queryClient, dateOfDeletedResi, expeditionOfDeletedResi); 
     }
     setIsDeleteDialogOpen(false);
@@ -286,15 +249,14 @@ const HistoryPage = () => {
       return;
     }
 
-    // Headers without "Aksi" (which is not present in History table anyway)
     const headers = table.getHeaderGroups()[0].headers
-      .filter(header => header.column.id !== "rowNumber") // Exclude the "No" column
+      .filter(header => header.column.id !== "rowNumber")
       .map(header => flexRender(header.column.columnDef.header, header.getContext()));
     const headerRow = headers.join('\t');
 
     const dataRows = rowsToCopy.map(row => {
       const rowValues = row.getVisibleCells()
-        .filter(cell => cell.column.id !== "rowNumber") // Exclude the "No" column from cell values
+        .filter(cell => cell.column.id !== "rowNumber")
         .map(cell => {
           if (cell.column.id === "created") {
             const dateValue = cell.getValue() as string;
@@ -349,7 +311,7 @@ const HistoryPage = () => {
               <label htmlFor="start-date-picker" className="block text-left text-sm font-medium text-white mb-1">
                 Tanggal Mulai
               </label>
-              <Popover>
+              <Popover open={isStartDatePickerOpen} onOpenChange={setIsStartDatePickerOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     id="start-date-picker"
@@ -358,6 +320,7 @@ const HistoryPage = () => {
                       "w-full justify-start text-left font-normal bg-white text-gray-800",
                       !startDate && "text-muted-foreground"
                     )}
+                    onClick={() => setIsStartDatePickerOpen(true)}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {startDate ? format(startDate, "dd/MM/yyyy") : <span>Pilih tanggal</span>}
@@ -367,8 +330,11 @@ const HistoryPage = () => {
                   <Calendar
                     mode="single"
                     selected={startDate}
-                    onSelect={setStartDate}
-                    initialFocus
+                    onSelect={(date) => {
+                      setStartDate(date);
+                      setIsStartDatePickerOpen(false); // Close popover on date selection
+                    }}
+                    // initialFocus // Removed initialFocus
                   />
                 </PopoverContent>
               </Popover>
@@ -377,7 +343,7 @@ const HistoryPage = () => {
               <label htmlFor="end-date-picker" className="block text-left text-sm font-medium text-white mb-1">
                 Tanggal Selesai
               </label>
-              <Popover>
+              <Popover open={isEndDatePickerOpen} onOpenChange={setIsEndDatePickerOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     id="end-date-picker"
@@ -386,6 +352,7 @@ const HistoryPage = () => {
                       "w-full justify-start text-left font-normal bg-white text-gray-800",
                       !endDate && "text-muted-foreground"
                     )}
+                    onClick={() => setIsEndDatePickerOpen(true)}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {endDate ? format(endDate, "dd/MM/yyyy") : <span>Pilih tanggal</span>}
@@ -395,8 +362,11 @@ const HistoryPage = () => {
                   <Calendar
                     mode="single"
                     selected={endDate}
-                    onSelect={setEndDate}
-                    initialFocus
+                    onSelect={(date) => {
+                      setEndDate(date);
+                      setIsEndDatePickerOpen(false); // Close popover on date selection
+                    }}
+                    // initialFocus // Removed initialFocus
                   />
                 </PopoverContent>
               </Popover>

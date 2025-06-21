@@ -3,7 +3,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, showError } from "@/utils/toast";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
-import { format, flexRender } from "date-fns"; // Import flexRender for copy data
+import { format } from "date-fns"; 
+import { flexRender } from "@tanstack/react-table"; // Corrected import for flexRender
 import { HistoryData } from "@/components/columns/historyColumns"; // Import HistoryData type
 import { Table as ReactTableType } from "@tanstack/react-table"; // Import Table type
 

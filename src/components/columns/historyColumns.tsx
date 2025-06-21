@@ -1,4 +1,4 @@
-import { ColumnDef, flexRender } from "@tanstack/react-table";
+import { ColumnDef } from "@tanstack/react-table";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { getKeteranganBadgeClasses } from "@/utils/expeditionUtils";
@@ -43,7 +43,6 @@ export const columns: ColumnDef<HistoryData>[] = [
   {
     accessorKey: "schedule",
     header: "Schedule",
-    cell: ({ row }) => row.original.schedule || "-",
   },
   {
     accessorKey: "created",

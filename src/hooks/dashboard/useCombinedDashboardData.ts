@@ -10,7 +10,7 @@ import { usePendingOperations } from "@/hooks/usePendingOperations";
 // Import base data hooks
 import { useFollowUpRecords } from "./useFollowUpRecords";
 import { useExpedisiRecordsForSelectedDate } from "./useExpedisiRecordsForSelectedDate";
-import { useAllResiRecords } from "./useAllResiRecords";
+import { useAllResiRecords } = from "./useAllResiRecords";
 import { useAllExpedisiRecordsUnfiltered } from "./useAllExpedisiRecordsUnfiltered";
 
 // Define the return type interface for useCombinedDashboardData
@@ -66,6 +66,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
 
   // Process data to create all dashboard summaries and counts
   useEffect(() => {
+    console.time("useCombinedDashboardData_useEffect_processing");
     if (!date || isLoadingAllExpedisiUnfiltered || isLoadingExpedisiDataForSelectedDate || isLoadingAllResi || !allExpedisiDataUnfiltered || !expedisiDataForSelectedDate || !allResiData) {
       setTransaksiHariIni(0);
       setTotalScan(0);
@@ -75,6 +76,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
       setScanFollowupLateCount(0);
       setBatalCount(0);
       setExpeditionSummaries([]);
+      console.timeEnd("useCombinedDashboardData_useEffect_processing");
       return;
     }
 
@@ -353,6 +355,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
     }));
 
     setExpeditionSummaries(finalSummaries);
+    console.timeEnd("useCombinedDashboardData_useEffect_processing");
   }, [date, allExpedisiDataUnfiltered, expedisiDataForSelectedDate, allResiData, pendingOperations, isLoadingAllExpedisiUnfiltered, isLoadingExpedisiDataForSelectedDate, isLoadingAllResi]);
 
   const debouncedInvalidateDashboardQueries = useDebouncedCallback(() => {

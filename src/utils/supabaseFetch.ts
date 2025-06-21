@@ -28,7 +28,7 @@ export const fetchAllDataPaginated = async (
   const maxIterations = 10; // Safety break: max 10 iterations (10,000 records) for debugging
   let currentIteration = 0;
 
-  while (hasMore && currentIteration < maxIterations) { // Add maxIterations check
+  while (hasMore && currentIteration < maxIterations) {
     currentIteration++;
     console.log(`[fetchAllDataPaginated_${tableName}] Iteration ${currentIteration}: Fetching range ${offset} to ${offset + limit - 1}`);
 
@@ -45,13 +45,13 @@ export const fetchAllDataPaginated = async (
       }
     }
 
-    if (queryModifier) { // Apply custom modifier if provided
+    if (queryModifier) {
       query = queryModifier(query);
     }
 
-    console.log(`[fetchAllDataPaginated_${tableName}] Executing query for offset ${offset}...`);
+    console.log(`[fetchAllDataPaginated_${tableName}] BEFORE await query for offset ${offset}...`);
     const { data, error } = await query;
-    console.log(`[fetchAllDataPaginated_${tableName}] Query response received for offset ${offset}. Data length: ${data?.length || 0}, Error: ${error?.message || 'none'}`);
+    console.log(`[fetchAllDataPaginated_${tableName}] AFTER await query for offset ${offset}. Data length: ${data?.length || 0}, Error: ${error?.message || 'none'}`);
 
     if (error) {
       console.error(`[fetchAllDataPaginated_${tableName}] Error fetching paginated data from ${tableName} at offset ${offset}:`, error);
@@ -63,7 +63,7 @@ export const fetchAllDataPaginated = async (
       console.log(`[fetchAllDataPaginated_${tableName}] Fetched ${data.length} records in this iteration.`);
       allRecords = allRecords.concat(data);
       offset += data.length;
-      hasMore = data.length === limit; // If less than limit, no more data
+      hasMore = data.length === limit;
     } else {
       console.log(`[fetchAllDataPaginated_${tableName}] No more data or empty response in this iteration (data.length: ${data?.length || 0}).`);
       hasMore = false;

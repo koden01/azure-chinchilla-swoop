@@ -102,7 +102,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
         // Update or add expedisi record in currentExpedisiData
         const existingExpedisi = currentExpedisiData.get(normalizedResi);
         currentExpedisiData.set(normalizedResi, {
-          ...existingExpedisi,
+          ...(existingExpedisi || {}), // Ensure existingExpedisi is an object
           resino: op.payload.resiNumber,
           couriername: op.payload.courierNameFromExpedisi,
           flag: "YES", // Optimistically set to YES (akan dikelola trigger)
@@ -254,7 +254,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
 
     // Calculate Follow Up (Flag NO except today)
     // This count needs to iterate through allExpedisiDataUnfiltered and check dates
-    currentExpedisiData.forEach((exp: any) => { // Explicitly type exp as any for now, as it's from Map<string, any>
+    currentExpedisiData.forEach((exp: ModalDataItem) => { // Explicitly type exp as ModalDataItem
       const expedisiCreatedDate = exp.created ? new Date(exp.created) : null;
       if (exp.flag === "NO" && expedisiCreatedDate && !isSameDay(expedisiCreatedDate, today)) {
         currentFollowUpFlagNoCount++;

@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns"; // Menghapus startOfDay dan endOfDay
+import { format } from "date-fns";
 import React from "react";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 import { normalizeExpeditionName, KNOWN_EXPEDITIONS } from "@/utils/expeditionUtils"; // Import new utility
@@ -50,7 +50,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       return data || [];
     },
     enabled: !!expedition,
-    staleTime: 1000 * 10, // Keep data fresh for 10 seconds to allow optimistic updates to persist
+    staleTime: 1000 * 60, // Changed to 1 minute (from 10 seconds)
   });
 
   // NEW: Query to fetch ALL karung summaries directly from database using new RPC
@@ -69,7 +69,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       return data || [];
     },
     enabled: showAllExpeditionSummary, // Only enabled when explicitly requested
-    staleTime: 1000 * 10, // Keep data fresh for 10 seconds
+    staleTime: 1000 * 60, // Changed to 1 minute (from 10 seconds)
   });
 
   // Query to fetch unique expedition names

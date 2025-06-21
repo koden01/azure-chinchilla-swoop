@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useTransition } from "react"; // Import useTransition
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,6 +23,7 @@ const HistoryPage: React.FC = () => {
   const [startDate, setStartDate] = useState<Date | undefined>(new Date());
   const [endDate, setEndDate] = useState<Date | undefined>(new Date());
   const [globalFilter, setGlobalFilter] = useState<string>("");
+  const [isPending, startTransition] = useTransition(); // Initialize useTransition
 
   // Use custom hook for data fetching
   const { historyData, isLoadingHistory, formattedStartDate, formattedEndDate } = useHistoryData(startDate, endDate);
@@ -51,21 +52,40 @@ const HistoryPage: React.FC = () => {
     table,
   });
 
+  // Wrap state updates in startTransition
+  const handleSetStartDate = (date: Date | undefined) => {
+    startTransition(() => {
+      setStartDate(date);
+    });
+  };
+
+  const handleSetEndDate = (date: Date | undefined) => {
+    startTransition(() => {
+      setEndDate(date);
+    });
+  };
+
+  const handleSetGlobalFilter = (filter: string) => {
+    startTransition(() => {
+      setGlobalFilter(filter);
+    });
+  };
+
   return (
     <React.Fragment>
       <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
         {/* Date Picker Section */}
         <HistoryDatePicker
           startDate={startDate}
-          setStartDate={setStartDate}
+          setStartDate={handleSetStartDate} // Use wrapped setter
           endDate={endDate}
-          setEndDate={setEndDate}
+          setEndDate={handleSetEndDate}   // Use wrapped setter
         />
 
         {/* Search and Actions Section */}
         <HistorySearchAndActions
           globalFilter={globalFilter}
-          setGlobalFilter={setGlobalFilter}
+          setGlobalFilter={handleSetGlobalFilter} // Use wrapped setter
           handleCopyTableData={handleCopyTableData}
           filteredRowCount={table.getFilteredRowModel().rows.length}
         />
@@ -73,7 +93,7 @@ const HistoryPage: React.FC = () => {
         {/* History Table Section */}
         <HistoryTable
           table={table}
-          isLoadingHistory={isLoadingHistory}
+          isLoadingHistory={isLoadingHistory || isPending} // Combine loading states
           columns={columns}
           handleRowClick={handleRowClick}
           getPaginationPages={getPaginationPages}

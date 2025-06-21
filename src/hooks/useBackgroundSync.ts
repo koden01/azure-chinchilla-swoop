@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getPendingOperations, deletePendingOperation, updatePendingOperation } from '@/integrations/indexeddb/pendingOperations';
 import { supabase } from '@/integrations/supabase/client';
-import { showError } => '@/utils/toast';
+import { showError } from '@/utils/toast'; // Perbaikan di sini: '=>' diganti menjadi 'from'
 import { invalidateDashboardQueries } from '@/utils/dashboardQueryInvalidation';
 import { format } from 'date-fns';
 

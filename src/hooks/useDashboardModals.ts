@@ -4,6 +4,7 @@ import { showSuccess, showError } from "@/utils/toast";
 import { ModalDataItem } from "@/types/data";
 import { normalizeExpeditionName } from "@/utils/expeditionUtils";
 import { addPendingOperation } from "@/integrations/indexeddb/pendingOperations";
+import { useBackgroundSync } from "@/hooks/useBackgroundSync"; // Import useBackgroundSync
 
 interface UseDashboardModalsProps {
   date: Date | undefined;
@@ -38,6 +39,8 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
     "belumKirim" | "followUp" | "expeditionDetail" | "transaksiHariIni" | null
   >(null);
   const [selectedCourier, setSelectedCourier] = React.useState<string | null>(null);
+
+  const { triggerSync } = useBackgroundSync(); // Dapatkan triggerSync dari useBackgroundSync
 
   const openResiModal = (
     title: string,
@@ -195,6 +198,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       });
 
       showSuccess(`Resi ${resiNumber} berhasil dibatalkan (disimpan secara lokal).`);
+      triggerSync(); // Panggil triggerSync setelah operasi ditambahkan
 
     } catch (error: any) {
       // Revert optimistic update on error
@@ -256,6 +260,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       });
 
       showSuccess(`Resi ${resiNumber} berhasil dikonfirmasi (disimpan secara lokal).`);
+      triggerSync(); // Panggil triggerSync setelah operasi ditambahkan
 
     } catch (error: any) {
       // Revert optimistic update on error
@@ -312,6 +317,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       });
 
       showSuccess(`Status CEKFU resi ${resiNumber} berhasil diperbarui (disimpan secara lokal).`);
+      triggerSync(); // Panggil triggerSync setelah operasi ditambahkan
     } catch (error: any) {
       // Revert optimistic update on error
       setModalData(originalModalData); // Revert to original data

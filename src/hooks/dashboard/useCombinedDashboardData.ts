@@ -133,14 +133,13 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
         }
 
       } else if (op.type === 'batal') {
-        // Update resi schedule to 'batal' and Keterangan to 'BATAL'
+        // Update resi schedule to 'batal' and Keterangan to original courier name
         const resiIndex = currentResiData.findIndex(r => (r.Resi || "").toLowerCase() === normalizedResi);
         if (resiIndex !== -1) {
           currentResiData[resiIndex] = { 
             ...currentResiData[resiIndex], 
             schedule: "batal", 
-            Keterangan: op.payload.keteranganValue, // Should be "BATAL"
-            originalCourierNameForBatal: op.payload.originalCourierName // Store original courier
+            Keterangan: op.payload.keteranganValue, // Now this is the original courier name
           };
         } else {
           // If resi not found in currentResiData, add it as a 'batal' entry
@@ -148,9 +147,8 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
             Resi: op.payload.resiNumber,
             nokarung: null,
             created: op.payload.createdTimestampFromExpedisi || new Date(op.timestamp).toISOString(),
-            Keterangan: op.payload.keteranganValue, // Should be "BATAL"
+            Keterangan: op.payload.keteranganValue, // Now this is the original courier name
             schedule: "batal",
-            originalCourierNameForBatal: op.payload.originalCourierName // Store original courier
           });
         }
 
@@ -167,7 +165,6 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
             ...currentResiData[resiIndex], 
             schedule: "ontime", 
             Keterangan: op.payload.keteranganValue, // Should be original courier name
-            originalCourierNameForBatal: undefined // Clear this if it was a batal item
           };
         } else {
           // If resi not found in currentResiData, add it (e.g., if it was deleted but then confirmed)
@@ -313,14 +310,9 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
       }
 
       // Determine the expedition name for attribution
-      if (resi.schedule === "batal") {
-        // For 'batal' items, use the stored originalCourierNameForBatal from the pending operation
-        attributedExpeditionName = resi.originalCourierNameForBatal;
-      } else {
-        // For other items, use the Keterangan from tbl_resi, normalized
-        attributedExpeditionName = normalizeExpeditionName(resi.Keterangan);
-      }
-
+      // Now, Keterangan directly holds the original courier name for 'batal' items
+      attributedExpeditionName = normalizeExpeditionName(resi.Keterangan);
+      
       // Handle ID_REKOMENDASI special case for 'ID' expedition
       if (resi.Keterangan === "ID_REKOMENDASI") {
         if (summaries["ID"]) {

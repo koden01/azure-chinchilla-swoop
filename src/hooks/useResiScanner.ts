@@ -248,7 +248,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
               console.log(`[handleScanResi] Courier match: ID (from expedisiRecord).`);
             } else {
               validationStatus = 'MISMATCH_EXPEDISI';
-              validationMessage = `Resi ini bukan milik ekspedisi ${expedition}, melainkan milik ekspedisi ${expedisiRecord.couriername}.`;
+              validationMessage = `Resi milik ${expedisiRecord.couriername}`; // Updated message
               console.log(`[handleScanResi] Validation Failed: MISMATCH_EXPEDISI (ID). Message: ${validationMessage}`);
             }
           } else {
@@ -266,7 +266,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
             const normalizedExpedisiCourier = normalizeExpeditionName(expedisiRecord.couriername);
             if (normalizedExpedisiCourier !== expedition.toUpperCase()) {
               validationStatus = 'MISMATCH_EXPEDISI';
-              validationMessage = `Resi ini bukan milik ekspedisi ${expedition}, melainkan milik ekspedisi ${expedisiRecord.couriername}.`;
+              validationMessage = `Resi milik ${expedisiRecord.couriername}`; // Updated message
               console.log(`[handleScanResi] Validation Failed: MISMATCH_EXPEDISI (non-ID). Message: ${validationMessage}`);
             } else {
               actualCourierName = expedisiRecord.couriername;

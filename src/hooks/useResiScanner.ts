@@ -161,7 +161,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         }
 
         validationStatus = 'DUPLICATE_RESI';
-        validationMessage = `DOUBLE! Resi ini sudah discan sebelumnya pada ${createdDateStr}.`;
+        validationMessage = `DOUBLE! Resi ini sudah discan ${createdDateStr}.`; // Updated message
         console.log(`[handleScanResi] Validation Failed: DUPLICATE_RESI (recent). Message: ${validationMessage}`);
       }
 
@@ -184,7 +184,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
             createdDateStr = format(new Date(existingResiInDb.created), "dd/MM/yyyy HH:mm");
           }
           validationStatus = 'DUPLICATE_RESI';
-          validationMessage = `DOUBLE! Resi ini sudah discan sebelumnya pada ${createdDateStr}.`;
+          validationMessage = `DOUBLE! Resi ini sudah discan ${createdDateStr}.`; // Updated message
           console.log(`[handleScanResi] Validation Failed: DUPLICATE_RESI (history). Message: ${validationMessage}`);
         }
       }

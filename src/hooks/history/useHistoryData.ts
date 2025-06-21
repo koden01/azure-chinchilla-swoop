@@ -21,6 +21,8 @@ export const useHistoryData = (startDate: Date | undefined, endDate: Date | unde
     const limit = 1000;
     let hasMore = true;
 
+    console.log(`[fetchAllResiDataPaginated] Fetching from tbl_resi between ${startIso} and ${endIso}`);
+
     while (hasMore) {
       const { data, error } = await supabase
         .from("tbl_resi")
@@ -31,18 +33,21 @@ export const useHistoryData = (startDate: Date | undefined, endDate: Date | unde
         .range(offset, offset + limit - 1);
 
       if (error) {
-        console.error(`Error fetching paginated history data:`, error);
+        console.error(`[fetchAllResiDataPaginated] Error fetching paginated history data:`, error);
         throw error;
       }
 
       if (data && data.length > 0) {
+        console.log(`[fetchAllResiDataPaginated] Fetched ${data.length} records (offset: ${offset}).`);
         allRecords = allRecords.concat(data);
         offset += data.length;
         hasMore = data.length === limit;
       } else {
+        console.log(`[fetchAllResiDataPaginated] No more data or empty response (offset: ${offset}).`);
         hasMore = false;
       }
     }
+    console.log(`[fetchAllResiDataPaginated] Total records fetched: ${allRecords.length}`);
     return allRecords;
   }, []);
 

@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getPendingOperations, deletePendingOperation, updatePendingOperation } from '@/integrations/indexeddb/pendingOperations';
 import { supabase } from '@/integrations/supabase/client';
-import { showError } from '@/utils/toast';
+import { showError } => '@/utils/toast';
 import { invalidateDashboardQueries } from '@/utils/dashboardQueryInvalidation';
 import { format } from 'date-fns';
 
@@ -63,7 +63,7 @@ export const useBackgroundSync = () => {
                 nokarung: null,
                 created: op.payload.expedisiCreatedTimestamp || new Date().toISOString(),
                 Keterangan: op.payload.courierNameFromExpedisi,
-                schedule: "ontime",
+                schedule: "ontime", // This should be fine as it's a 'confirm' action
               }, { onConflict: 'Resi' });
 
             if (resiError) throw resiError;
@@ -89,7 +89,7 @@ export const useBackgroundSync = () => {
             success = true;
             console.log(`Successfully synced 'cekfu' toggle for resi: ${op.payload.resiNumber} to ${op.payload.newCekfuStatus}`);
           } else if (op.type === 'scan') {
-            const { resiNumber, selectedKarung, courierNameFromExpedisi, isRescan } = op.payload;
+            const { resiNumber, selectedKarung, courierNameFromExpedisi } = op.payload;
 
             // 1. Insert or Update into tbl_resi using upsert
             const { error: resiUpsertError } = await supabase
@@ -99,7 +99,7 @@ export const useBackgroundSync = () => {
                 nokarung: selectedKarung,
                 created: new Date(op.timestamp).toISOString(), // Use operation timestamp for consistency
                 Keterangan: courierNameFromExpedisi,
-                schedule: "ontime", // Default to ontime, trigger will adjust if needed
+                // schedule: "ontime", // REMOVED: Let DB trigger handle this
               }, { onConflict: 'Resi', ignoreDuplicates: false }); // Use onConflict to update if exists
 
             if (resiUpsertError) {
@@ -113,13 +113,13 @@ export const useBackgroundSync = () => {
               .eq("resino", resiNumber);
 
             if (expedisiUpdateError) {
-              if (expedisiUpdateError.code !== 'PGRST116') {
+              if (expedisiUpdateError.code !== 'PGRST116') { // PGRST116 means "no rows found"
                 console.warn(`Warning: Failed to update tbl_expedisi for resi ${resiNumber}: ${expedisiUpdateError.message}`);
               }
             }
 
             success = true;
-            console.log(`Successfully synced 'scan' for resi: ${resiNumber} (isRescan: ${isRescan})`);
+            console.log(`Successfully synced 'scan' for resi: ${resiNumber}`);
           }
 
           if (success) {

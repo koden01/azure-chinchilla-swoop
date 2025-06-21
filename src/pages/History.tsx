@@ -3,7 +3,64 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { CalendarIcon, Copy, CalendarDays } from "lucide-react";
-import { format } => {
+import { format } from "date-fns"; // Perbaikan di sini: '=>' diganti dengan 'from'
+import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { showSuccess, showError } from "@/utils/toast";
+import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
+import { useDebounce } from "@/hooks/useDebounce";
+import { getKeteranganBadgeClasses } from "@/utils/expeditionUtils";
+
+import {
+  ColumnDef,
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+  SortingState,
+  ColumnFiltersState,
+  VisibilityState,
+} from "@tanstack/react-table";
+
+interface HistoryData {
+  Resi: string;
+  Keterangan: string | null;
+  nokarung: string | null;
+  created: string;
+  schedule: string | null;
+}
+
+const HistoryPage = () => {
   const [startDate, setStartDate] = useState<Date | undefined>(new Date());
   const [endDate, setEndDate] = useState<Date | undefined>(new Date());
   const [globalFilter, setGlobalFilter] = useState<string>("");

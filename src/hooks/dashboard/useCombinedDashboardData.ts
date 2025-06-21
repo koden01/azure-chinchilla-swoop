@@ -6,6 +6,7 @@ import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import { normalizeExpeditionName, KNOWN_EXPEDITIONS } from "@/utils/expeditionUtils";
 import { supabase } from "@/integrations/supabase/client"; // Memperbaiki impor ini
 import { usePendingOperations } from "@/hooks/usePendingOperations";
+import { ModalDataItem } from "@/types/data"; // Import ModalDataItem
 
 // Import base data hooks
 import { useFollowUpRecords } from "./useFollowUpRecords";
@@ -82,7 +83,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
 
     // Create mutable copies of data for merging
     const currentExpedisiData = new Map(allExpedisiDataUnfiltered);
-    const currentResiData = [...allResiData];
+    const currentResiData: ModalDataItem[] = [...allResiData]; // Cast to ModalDataItem[]
 
     // Apply pending operations to the data
     pendingOperations.forEach(op => {
@@ -91,7 +92,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
 
       if (op.type === 'scan') {
         // Add new resi to currentResiData
-        const newResiEntry = {
+        const newResiEntry: ModalDataItem = {
           Resi: op.payload.resiNumber,
           nokarung: op.payload.selectedKarung,
           created: new Date(op.timestamp).toISOString(), // Use operation timestamp for consistency
@@ -132,33 +133,42 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
         }
 
       } else if (op.type === 'batal') {
-        // Update resi schedule to 'batal'
+        // Update resi schedule to 'batal' and Keterangan to 'BATAL'
         const resiIndex = currentResiData.findIndex(r => (r.Resi || "").toLowerCase() === normalizedResi);
         if (resiIndex !== -1) {
-          currentResiData[resiIndex] = { ...currentResiData[resiIndex], schedule: "batal" };
+          currentResiData[resiIndex] = { 
+            ...currentResiData[resiIndex], 
+            schedule: "batal", 
+            Keterangan: op.payload.keteranganValue, // Should be "BATAL"
+            originalCourierNameForBatal: op.payload.originalCourierName // Store original courier
+          };
+        } else {
+          // If resi not found in currentResiData, add it as a 'batal' entry
+          currentResiData.push({
+            Resi: op.payload.resiNumber,
+            nokarung: null,
+            created: op.payload.createdTimestampFromExpedisi || new Date(op.timestamp).toISOString(),
+            Keterangan: op.payload.keteranganValue, // Should be "BATAL"
+            schedule: "batal",
+            originalCourierNameForBatal: op.payload.originalCourierName // Store original courier
+          });
         }
 
-        // Hapus pembaruan flag di tbl_expedisi karena dikelola oleh trigger
-        // flag seharusnya tetap 'YES' karena resi masih ada di tbl_resi
-        // const expedisiRecord = currentExpedisiData.get(normalizedResi);
-        // if (expedisiRecord) {
-        //   currentExpedisiData.set(normalizedResi, { ...expedisiRecord, flag: "BTL" });
-        // }
-
-        // Hapus pembaruan flag di expedisiDataForSelectedDate
-        // const opDate = new Date(op.timestamp);
-        // if (isSameDay(opDate, date)) {
-        //   const indexInSelectedDate = expedisiDataForSelectedDate.findIndex(e => (e.resino || "").toLowerCase() === normalizedResi);
-        //   if (indexInSelectedDate !== -1) {
-        //     expedisiDataForSelectedDate[indexInSelectedDate].flag = "BTL";
-        //   }
-        // }
+        // No direct flag update on tbl_expedisi here, as it's handled by trigger.
+        // The expedisi record's flag should remain 'YES' if the resi exists in tbl_resi.
+        // If the resi is deleted from tbl_resi, the trigger will set flag to 'NO'.
+        // For optimistic UI, we assume it's still 'YES' in tbl_expedisi unless explicitly deleted.
 
       } else if (op.type === 'confirm') {
-        // Update resi schedule to 'ontime'
+        // Update resi schedule to 'ontime' and Keterangan to original courier name
         const resiIndex = currentResiData.findIndex(r => (r.Resi || "").toLowerCase() === normalizedResi);
         if (resiIndex !== -1) {
-          currentResiData[resiIndex] = { ...currentResiData[resiIndex], schedule: "ontime" };
+          currentResiData[resiIndex] = { 
+            ...currentResiData[resiIndex], 
+            schedule: "ontime", 
+            Keterangan: op.payload.keteranganValue, // Should be original courier name
+            originalCourierNameForBatal: undefined // Clear this if it was a batal item
+          };
         } else {
           // If resi not found in currentResiData, add it (e.g., if it was deleted but then confirmed)
           currentResiData.push({
@@ -227,6 +237,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
     // Calculate Total Scan, ID Rek, Batal, Scan Follow Up Late (for selected date)
     currentResiData.forEach(resi => {
       const resiCreatedDate = new Date(resi.created);
+      // Only consider resi records for the selected date for overall counts
       if (resiCreatedDate >= startOfSelectedDate && resiCreatedDate <= endOfSelectedDate) {
         if (resi.schedule === "ontime") {
           currentTotalScan++;
@@ -294,20 +305,20 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
     // Populate totalScan, idRekomendasi, totalBatal, totalScanFollowUp, jumlahKarung from currentResiData (already filtered by date and potentially modified by pending ops)
     currentResiData.forEach(resi => {
       const resiCreatedDate = new Date(resi.created);
-      let originalExpeditionName: string | null = null;
+      let attributedExpeditionName: string | null = null;
 
       // Only consider resi records for the selected date for per-expedition summaries
       if (!isSameDay(resiCreatedDate, date)) {
         return; // Skip if not for the selected date
       }
 
-      // Try to get the original courier name from currentExpedisiData first
-      const normalizedResi = resi.Resi?.trim().toLowerCase();
-      if (normalizedResi) {
-        const expedisiRecord = currentExpedisiData.get(normalizedResi);
-        if (expedisiRecord && expedisiRecord.couriername) {
-          originalExpeditionName = normalizeExpeditionName(expedisiRecord.couriername);
-        }
+      // Determine the expedition name for attribution
+      if (resi.schedule === "batal") {
+        // For 'batal' items, use the stored originalCourierNameForBatal from the pending operation
+        attributedExpeditionName = resi.originalCourierNameForBatal;
+      } else {
+        // For other items, use the Keterangan from tbl_resi, normalized
+        attributedExpeditionName = normalizeExpeditionName(resi.Keterangan);
       }
 
       // Handle ID_REKOMENDASI special case for 'ID' expedition
@@ -327,23 +338,22 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
       }
       // Handle BATAL special case
       else if (resi.schedule === "batal") {
-        // Attribute 'batal' to the original expedition if known, otherwise it's a global count
-        if (originalExpeditionName && summaries[originalExpeditionName]) {
-          summaries[originalExpeditionName].totalBatal++;
+        if (attributedExpeditionName && summaries[attributedExpeditionName]) {
+          summaries[attributedExpeditionName].totalBatal++;
         } else {
-          console.warn(`Resi ${resi.Resi} is 'batal' but original expedition could not be determined. Not counted in per-expedition 'totalBatal'.`);
+          console.warn(`Resi ${resi.Resi} is 'batal' but original expedition '${attributedExpeditionName}' not found in summaries or is null/empty. Not counted in per-expedition 'totalBatal'.`);
         }
       }
       // Handle regular 'ontime' or 'late' scans for known original expeditions
-      else if (originalExpeditionName && summaries[originalExpeditionName]) {
+      else if (attributedExpeditionName && summaries[attributedExpeditionName]) {
         if (resi.schedule === "ontime") {
-          summaries[originalExpeditionName].totalScan++;
+          summaries[attributedExpeditionName].totalScan++;
         }
         if (resi.schedule === "late") {
-          summaries[originalExpeditionName].totalScanFollowUp++;
+          summaries[attributedExpeditionName].totalScanFollowUp++;
         }
         if (resi.nokarung) {
-          summaries[originalExpeditionName].jumlahKarung.add(resi.nokarung);
+          summaries[attributedExpeditionName].jumlahKarung.add(resi.nokarung);
         }
       } else {
         console.warn(`Resi ${resi.Resi} (Keterangan: ${resi.Keterangan}, Schedule: ${resi.schedule}) not attributed to any known expedition summary.`);

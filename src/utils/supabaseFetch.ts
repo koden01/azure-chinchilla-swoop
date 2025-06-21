@@ -6,8 +6,8 @@ import { format, startOfDay, endOfDay } from "date-fns";
  *
  * @param tableName The name of the table to fetch data from.
  * @param dateFilterColumn Optional: The column name to filter by date (e.g., 'created').
- * @param selectedStartDate Optional: The start date for the date filter.
- * @param selectedEndDate Optional: The end date for the date filter.
+ * @param selectedStartDate Optional: The start date for the date filter (should be a Date object, preferably UTC-adjusted for 'timestamp with time zone' columns).
+ * @param selectedEndDate Optional: The end date for the date filter (should be a Date object, preferably UTC-adjusted for 'timestamp with time zone' columns).
  * @param selectColumns Optional: Specific columns to select (default: '*').
  * @param queryModifier Optional: A function to apply additional filters or orders to the query.
  * @returns An array of all records from the table.
@@ -29,17 +29,19 @@ export const fetchAllDataPaginated = async (
     let query = supabase.from(tableName).select(selectColumns).range(offset, offset + limit - 1);
 
     if (dateFilterColumn && selectedStartDate && selectedEndDate) {
-      // Handle different timestamp types for 'created' column
+      // Check if the column is 'created' in 'tbl_expedisi' (timestamp without time zone)
+      // or if it's any other timestamp column (like 'created' in 'tbl_resi' which is timestamp with time zone)
       if (tableName === "tbl_expedisi" && dateFilterColumn === "created") {
         // For tbl_expedisi.created (timestamp without time zone), filter by date part
         query = query.gte(dateFilterColumn, format(selectedStartDate, "yyyy-MM-dd")).lt(dateFilterColumn, format(selectedEndDate, "yyyy-MM-dd"));
       } else {
-        // For tbl_resi.created (timestamp with time zone), use ISO strings for range
-        query = query.gte(dateFilterColumn, startOfDay(selectedStartDate).toISOString()).lt(dateFilterColumn, endOfDay(selectedEndDate).toISOString());
+        // For timestamp with time zone columns (like tbl_resi.created), use ISO strings directly.
+        // selectedStartDate and selectedEndDate are expected to be already adjusted to UTC start/end of day.
+        query = query.gte(dateFilterColumn, selectedStartDate.toISOString()).lte(dateFilterColumn, selectedEndDate.toISOString());
       }
     }
 
-    if (queryModifier) { // Apply custom modifier if provided
+    if (queryModifier) {
       query = queryModifier(query);
     }
 
@@ -53,7 +55,7 @@ export const fetchAllDataPaginated = async (
     if (data && data.length > 0) {
       allRecords = allRecords.concat(data);
       offset += data.length;
-      hasMore = data.length === limit; // If less than limit, no more data
+      hasMore = data.length === limit;
     } else {
       hasMore = false;
     }

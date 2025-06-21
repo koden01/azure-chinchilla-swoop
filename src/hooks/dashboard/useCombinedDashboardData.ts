@@ -7,6 +7,10 @@ import { normalizeExpeditionName, KNOWN_EXPEDITIONS } from "@/utils/expeditionUt
 import { supabase } from "@/integrations/supabase/client";
 import { usePendingOperations } from "@/hooks/usePendingOperations";
 import { ModalDataItem } from "@/types/data"; // Import ModalDataItem
+import { useFollowUpRecords } from "@/hooks/dashboard/useFollowUpRecords"; // Import missing hook
+import { useExpedisiRecordsForSelectedDate } from "@/hooks/dashboard/useExpedisiRecordsForSelectedDate"; // Import missing hook
+import { useAllResiRecords } from "@/hooks/dashboard/useAllResiRecords"; // Import missing hook
+import { useAllExpedisiRecordsUnfiltered } from "@/hooks/dashboard/useAllExpedisiRecordsUnfiltered"; // Import missing hook
 
 // Define the return type interface for useCombinedDashboardData
 interface DashboardDataReturn {
@@ -29,9 +33,9 @@ interface DashboardDataReturn {
   expeditionSummaries: any[];
   formattedDate: string;
   allExpedisiData: Map<string, any> | undefined;
-  expedisiDataForSelectedDate: any[] | undefined;
+  expedisiDataForSelectedDate: ModalDataItem[] | undefined; // Explicitly type as ModalDataItem[]
   isLoadingExpedisiDataForSelectedDate: boolean;
-  allResiData: any[] | undefined;
+  allResiData: ModalDataItem[] | undefined; // Explicitly type as ModalDataItem[]
   isLoadingAllResi: boolean;
   isLoadingAllExpedisiUnfiltered: boolean;
 }
@@ -109,7 +113,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
         // Update expedisiDataForSelectedDate if it's for the current date
         const opDate = new Date(op.timestamp);
         if (isSameDay(opDate, date)) {
-          const existingExpedisiForSelectedDate = expedisiDataForSelectedDate.find(e => (e.resino || "").toLowerCase() === normalizedResi);
+          const existingExpedisiForSelectedDate = expedisiDataForSelectedDate.find((e: ModalDataItem) => (e.resino || "").toLowerCase() === normalizedResi);
           if (!existingExpedisiForSelectedDate) {
             expedisiDataForSelectedDate.push({
               resino: op.payload.resiNumber,
@@ -180,7 +184,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
         // Update expedisiDataForSelectedDate if it was present and for current date
         const opDate = new Date(op.timestamp);
         if (isSameDay(opDate, date)) {
-          const indexInSelectedDate = expedisiDataForSelectedDate.findIndex(e => (e.resino || "").toLowerCase() === normalizedResi);
+          const indexInSelectedDate = expedisiDataForSelectedDate.findIndex((e: ModalDataItem) => (e.resino || "").toLowerCase() === normalizedResi);
           if (indexInSelectedDate !== -1) {
             expedisiDataForSelectedDate[indexInSelectedDate].flag = "YES";
           }
@@ -196,7 +200,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
         // Update expedisiDataForSelectedDate if it was present and for current date
         const opDate = new Date(op.timestamp);
         if (isSameDay(opDate, date)) {
-          const indexInSelectedDate = expedisiDataForSelectedDate.findIndex(e => (e.resino || "").toLowerCase() === normalizedResi);
+          const indexInSelectedDate = expedisiDataForSelectedDate.findIndex((e: ModalDataItem) => (e.resino || "").toLowerCase() === normalizedResi);
           if (indexInSelectedDate !== -1) {
             expedisiDataForSelectedDate[indexInSelectedDate].cekfu = op.payload.newCekfuStatus;
           }
@@ -218,7 +222,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
     const endOfSelectedDate = date ? endOfDay(date) : null;
 
     // Calculate Transaksi Hari Ini and Belum Kirim (for selected date)
-    expedisiDataForSelectedDate.forEach(exp => {
+    expedisiDataForSelectedDate.forEach((exp: ModalDataItem) => { // Explicitly type exp
       currentTransaksiHariIni++;
       if (exp.flag === "NO") { // Tetap "NO" karena ini adalah status 'belum dikirim'
         currentBelumKirim++;
@@ -226,7 +230,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
     });
 
     // Calculate Total Scan, ID Rek, Batal, Scan Follow Up Late (for selected date)
-    currentResiData.forEach(resi => {
+    currentResiData.forEach((resi: ModalDataItem) => { // Explicitly type resi
       // Ensure resi.created is a valid date string before creating a Date object
       const resiCreatedDate = resi.created ? new Date(resi.created) : null;
 
@@ -250,7 +254,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
 
     // Calculate Follow Up (Flag NO except today)
     // This count needs to iterate through allExpedisiDataUnfiltered and check dates
-    currentExpedisiData.forEach(exp => {
+    currentExpedisiData.forEach((exp: any) => { // Explicitly type exp as any for now, as it's from Map<string, any>
       const expedisiCreatedDate = exp.created ? new Date(exp.created) : null;
       if (exp.flag === "NO" && expedisiCreatedDate && !isSameDay(expedisiCreatedDate, today)) {
         currentFollowUpFlagNoCount++;
@@ -283,7 +287,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
     });
 
     // Populate totalTransaksi and sisa from expedisiDataForSelectedDate (already filtered by date and potentially modified by pending ops)
-    expedisiDataForSelectedDate.forEach(exp => {
+    expedisiDataForSelectedDate.forEach((exp: ModalDataItem) => { // Explicitly type exp
       const normalizedCourierName = normalizeExpeditionName(exp.couriername);
       
       if (normalizedCourierName && summaries[normalizedCourierName]) {
@@ -297,7 +301,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
     });
 
     // Populate totalScan, idRekomendasi, totalBatal, totalScanFollowUp, jumlahKarung from currentResiData (already filtered by date and potentially modified by pending ops)
-    currentResiData.forEach(resi => {
+    currentResiData.forEach((resi: ModalDataItem) => { // Explicitly type resi
       const resiCreatedDate = resi.created ? new Date(resi.created) : null;
       let attributedExpeditionName: string | null = null;
 

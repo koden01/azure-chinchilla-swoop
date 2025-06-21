@@ -233,10 +233,9 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
       return;
     }
 
-    // Extract headers directly from columnDef.header as they are simple strings
     const headers = table.getHeaderGroups()[0].headers
       .filter(header => header.id !== "actions") // Exclude the "Aksi" column
-      .map(header => String(header.column.columnDef.header)); // Directly get string header
+      .map(header => flexRender(header.column.columnDef.header, header.getContext()));
     const headerRow = headers.join('\t');
 
     const dataRows = rowsToCopy.map(row => {

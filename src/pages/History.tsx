@@ -17,7 +17,7 @@ import HistoryTable from "@/components/history/HistoryTable";
 import { useHistoryData } from "@/hooks/history/useHistoryData";
 import { useHistoryTable } from "@/hooks/history/useHistoryTable";
 import { useHistoryActions } from "@/hooks/history/useHistoryActions";
-import { columns, HistoryData } from "@/components/columns/historyColumns"; // Import columns and HistoryData type
+import { columns } from "@/components/columns/historyColumns"; // Import columns and HistoryData type
 
 const HistoryPage: React.FC = () => {
   const [startDate, setStartDate] = useState<Date | undefined>(new Date());

@@ -4,6 +4,7 @@ import { getPendingOperations, deletePendingOperation, updatePendingOperation } 
 import { supabase } from '@/integrations/supabase/client';
 import { showError } from '@/utils/toast';
 import { invalidateDashboardQueries } from '@/utils/dashboardQueryInvalidation';
+import { format } from 'date-fns'; // Pastikan format diimpor
 
 const SYNC_INTERVAL_MS = 1000 * 60; // Sync every 1 minute
 const MAX_RETRIES = 5; // Max attempts before giving up on an operation
@@ -20,7 +21,7 @@ export const useBackgroundSync = () => {
     }
 
     isSyncingRef.current = true;
-    console.time(`[BackgroundSync] Total sync duration`); // Fixed timer label
+    console.time(`[BackgroundSync] Total sync duration`);
     console.log(`[${new Date().toISOString()}] [BackgroundSync] Starting background sync...`);
 
     let operationsSynced = 0;
@@ -29,9 +30,9 @@ export const useBackgroundSync = () => {
     const affectedExpeditions = new Set<string>(); // To collect unique expeditions affected
 
     try {
-      console.time(`[BackgroundSync] Fetching pending operations`); // Fixed timer label
+      console.time(`[BackgroundSync] Fetching pending operations`);
       const pendingOperations = await getPendingOperations();
-      console.timeEnd(`[BackgroundSync] Fetching pending operations`); // Fixed timer label
+      console.timeEnd(`[BackgroundSync] Fetching pending operations`);
 
       if (pendingOperations.length === 0) {
         console.log(`[${new Date().toISOString()}] [BackgroundSync] No pending operations found. Exiting sync.`);
@@ -42,7 +43,7 @@ export const useBackgroundSync = () => {
 
       for (const op of pendingOperations) {
         console.log(`[${new Date().toISOString()}] [BackgroundSync] Processing operation ${op.id} (type: ${op.type}, resi: ${op.payload.resiNumber || 'N/A'})`);
-        console.time(`[BackgroundSync] Operation ${op.id} processing time`); // Fixed timer label
+        console.time(`[BackgroundSync] Operation ${op.id} processing time`);
         try {
           let success = false;
           if (op.type === 'batal') {
@@ -163,7 +164,7 @@ export const useBackgroundSync = () => {
           }
           operationsFailed++;
         } finally {
-          console.timeEnd(`[BackgroundSync] Operation ${op.id} processing time`); // Fixed timer label
+          console.timeEnd(`[BackgroundSync] Operation ${op.id} processing time`);
         }
       }
 
@@ -198,7 +199,7 @@ export const useBackgroundSync = () => {
     } finally {
       isSyncingRef.current = false;
       console.log(`[${new Date().toISOString()}] [BackgroundSync] Background sync finished.`);
-      console.timeEnd(`[BackgroundSync] Total sync duration`); // Fixed timer label
+      console.timeEnd(`[BackgroundSync] Total sync duration`);
     }
   };
 

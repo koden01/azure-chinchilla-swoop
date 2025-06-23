@@ -45,6 +45,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
   const { data: recentResiNumbersForValidation, isLoading: isLoadingRecentResiNumbersForValidation } = useQuery<Set<string>>({
     queryKey: ["recentResiNumbersForValidation", yesterdayFormatted, formattedDate],
     queryFn: async () => {
+      console.log(`[${new Date().toISOString()}] [useResiScanner] Fetching recentResiNumbersForValidation...`);
       const data = await fetchAllDataPaginated(
         "tbl_resi",
         "created", // dateFilterColumn
@@ -53,6 +54,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         "Resi" // Only select the Resi column
       );
       const resiSet = new Set(data.map((item: { Resi: string }) => item.Resi.toLowerCase().trim()));
+      console.log(`[${new Date().toISOString()}] [useResiScanner] Finished fetching recentResiNumbersForValidation. Count: ${resiSet.size}`);
       return resiSet;
     },
     staleTime: 1000 * 60 * 60, // Increased to 1 hour for better performance
@@ -64,6 +66,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
   const { data: allFlagNoExpedisiData, isLoading: isLoadingAllFlagNoExpedisiData } = useQuery<Map<string, any>>({
     queryKey: ["allFlagNoExpedisiData"],
     queryFn: async () => {
+      console.log(`[${new Date().toISOString()}] [useResiScanner] Fetching allFlagNoExpedisiData...`);
       const data = await fetchAllDataPaginated(
         "tbl_expedisi",
         undefined, // No date filter
@@ -78,6 +81,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
           expedisiMap.set(item.resino.toLowerCase(), item);
         }
       });
+      console.log(`[${new Date().toISOString()}] [useResiScanner] Finished fetching allFlagNoExpedisiData. Count: ${expedisiMap.size}`);
       return expedisiMap;
     },
     staleTime: 1000 * 60 * 60 * 4, // Increased to 4 hours
@@ -103,6 +107,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       } catch (e) {
         console.error("Error playing beepFailure:", e);
       }
+      console.log(`[${new Date().toISOString()}] [useResiScanner] Validation failed: Empty resi.`);
       return false;
     }
     if (!expedition || !selectedKarung) {
@@ -112,18 +117,26 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       } catch (e) {
         console.error("Error playing beepFailure:", e);
       }
+      console.log(`[${new Date().toISOString()}] [useResiScanner] Validation failed: Expedition or Karung not selected.`);
       return false;
     }
+    console.log(`[${new Date().toISOString()}] [useResiScanner] Input validation passed.`);
     return true;
   };
 
   const handleScanResi = async () => {
+    console.time(`[${new Date().toISOString()}] [useResiScanner] handleScanResi execution time`);
     dismissToast(); // Memanggil dismissToast tanpa argumen untuk menutup semua toast
     const currentResi = resiNumber.trim();
     const normalizedCurrentResi = currentResi.toLowerCase().trim();
     setResiNumber("");
 
+    console.log(`[${new Date().toISOString()}] [useResiScanner] Starting scan for resi: ${currentResi}`);
+
     if (!validateInput(currentResi)) {
+      setIsProcessing(false); // Ensure processing state is reset
+      keepFocus(); // Ensure focus is returned to input
+      console.timeEnd(`[${new Date().toISOString()}] [useResiScanner] handleScanResi execution time`);
       return;
     }
 
@@ -142,7 +155,9 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
     let expedisiRecord: any = null; // Will hold the record from tbl_expedisi if found
 
     try {
+      console.time(`[${new Date().toISOString()}] [useResiScanner] Validation checks`);
       // 1. Local Duplicate Check (for recent scans)
+      console.log(`[${new Date().toISOString()}] [useResiScanner] Performing local duplicate check...`);
       if (recentResiNumbersForValidation?.has(normalizedCurrentResi)) {
         // Fetch the created date for the duplicate resi
         const { data: existingResiDetail, error: _detailError } = await supabase
@@ -158,10 +173,12 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
 
         validationStatus = 'DUPLICATE_RESI';
         validationMessage = `DOUBLE! Resi ini sudah discan ${createdDateStr}.`; // Updated message
+        console.log(`[${new Date().toISOString()}] [useResiScanner] Local duplicate found.`);
       }
 
       // 2. Database Duplicate Check (for older scans, if not found locally)
       if (validationStatus === 'OK') {
+        console.log(`[${new Date().toISOString()}] [useResiScanner] Performing database duplicate check...`);
         const { data: existingResiInDb, error: dbCheckError } = await supabase
           .from("tbl_resi")
           .select("Resi, created") // Select created as well
@@ -179,12 +196,14 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
           }
           validationStatus = 'DUPLICATE_RESI';
           validationMessage = `DOUBLE! Resi ini sudah discan ${createdDateStr}.`; // Updated message
+          console.log(`[${new Date().toISOString()}] [useResiScanner] Database duplicate found.`);
         }
       }
 
       // Only proceed with further checks if not already a duplicate
       if (validationStatus === 'OK') { // Only proceed if not already a duplicate
         // 3. Attempt to find expedisiRecord from caches or direct RPC call
+        console.log(`[${new Date().toISOString()}] [useResiScanner] Checking expedisi record in caches...`);
         expedisiRecord = allExpedisiDataUnfiltered?.get(normalizedCurrentResi);
 
         if (!expedisiRecord) {
@@ -192,17 +211,19 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         }
 
         if (!expedisiRecord) {
+            console.log(`[${new Date().toISOString()}] [useResiScanner] Expedisi record not in cache, fetching directly via RPC...`);
             const { data: directExpedisiDataArray, error: directExpedisiError } = await supabase.rpc("get_expedisi_by_resino_case_insensitive", {
               p_resino: currentResi,
             });
 
             if (directExpedisiError) {
-                console.error(`[handleScanResi] Error during direct fetch via RPC:`, directExpedisiError);
+                console.error(`[${new Date().toISOString()}] [useResiScanner] Error during direct fetch via RPC:`, directExpedisiError);
                 throw directExpedisiError; // Re-throw other errors
             }
             
             if (directExpedisiDataArray && directExpedisiDataArray.length > 0) {
                 expedisiRecord = directExpedisiDataArray[0]; // Take the first one if multiple
+                console.log(`[${new Date().toISOString()}] [useResiScanner] Expedisi record fetched directly. Updating cache.`);
                 // Optionally, update the cache with this fresh data to prevent future direct fetches for this item
                 queryClient.setQueryData(
                     ["allExpedisiDataUnfiltered", yesterdayFormatted, endOfTodayFormatted],
@@ -222,41 +243,53 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
                     }
                   );
                 }
+            } else {
+              console.log(`[${new Date().toISOString()}] [useResiScanner] No expedisi record found directly via RPC.`);
             }
+        } else {
+          console.log(`[${new Date().toISOString()}] [useResiScanner] Expedisi record found in cache.`);
         }
       }
 
       // 4. Determine actualCourierName and final validationStatus based on `expedition` and `expedisiRecord` presence
       if (validationStatus === 'OK') { // Only proceed if not already a duplicate
+        console.log(`[${new Date().toISOString()}] [useResiScanner] Determining courier name and final validation status...`);
         if (expedition === 'ID') {
           if (expedisiRecord) {
             const normalizedExpedisiCourier = normalizeExpeditionName(expedisiRecord.couriername);
             if (normalizedExpedisiCourier === 'ID') {
               actualCourierName = 'ID';
+              console.log(`[${new Date().toISOString()}] [useResiScanner] Matched to ID (from expedisi record).`);
             } else {
               validationStatus = 'MISMATCH_EXPEDISI';
               validationMessage = `Resi milik ${expedisiRecord.couriername}`; // Corrected variable name
+              console.log(`[${new Date().toISOString()}] [useResiScanner] Mismatch: Expected ID, got ${expedisiRecord.couriername}.`);
             }
           } else {
             // If expedition is 'ID' and resi was NOT found in tbl_expedisi, treat as ID_REKOMENDASI
             actualCourierName = 'ID_REKOMENDASI';
+            console.log(`[${new Date().toISOString()}] [useResiScanner] Resi not found in expedisi, treating as ID_REKOMENDASI.`);
           }
         } else { // For non-ID expeditions (JNE, SPX, etc.)
           if (!expedisiRecord) {
             // If expedition is NOT 'ID' and resi was NOT found in tbl_expedisi, then it's a true NOT_FOUND_EXPEDISI
             validationStatus = 'NOT_FOUND_EXPEDISI';
             validationMessage = 'Data tidak ada di database ekspedisi.';
+            console.log(`[${new Date().toISOString()}] [useResiScanner] Not found in expedisi for non-ID expedition.`);
           } else {
             const normalizedExpedisiCourier = normalizeExpeditionName(expedisiRecord.couriername);
             if (normalizedExpedisiCourier !== expedition.toUpperCase()) {
               validationStatus = 'MISMATCH_EXPEDISI';
               validationMessage = `Resi milik ${expedisiRecord.couriername}`; // Corrected variable name
+              console.log(`[${new Date().toISOString()}] [useResiScanner] Mismatch: Expected ${expedition}, got ${expedisiRecord.couriername}.`);
             } else {
               actualCourierName = expedisiRecord.couriername;
+              console.log(`[${new Date().toISOString()}] [useResiScanner] Matched to ${expedition}.`);
             }
           }
         }
       }
+      console.timeEnd(`[${new Date().toISOString()}] [useResiScanner] Validation checks`);
 
       // --- FINAL ERROR HANDLING BLOCK ---
       if (validationStatus !== 'OK') {
@@ -275,12 +308,16 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
               break;
           }
         } catch (e) {
-          console.error("Error playing beep sound:", e);
+          console.error(`[${new Date().toISOString()}] [useResiScanner] Error playing beep sound:`, e);
         }
+        setIsProcessing(false); // Ensure processing state is reset
+        keepFocus(); // Ensure focus is returned to input
+        console.timeEnd(`[${new Date().toISOString()}] [useResiScanner] handleScanResi execution time`);
         return; // Exit after handling error
       }
 
       // --- If all OK, proceed with optimistic update and saving to IndexedDB ---
+      console.log(`[${new Date().toISOString()}] [useResiScanner] Validation OK. Proceeding with optimistic updates and IndexedDB.`);
       const newResiEntry: ResiExpedisiData = {
         Resi: currentResi,
         nokarung: selectedKarung,
@@ -290,6 +327,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         optimisticId: currentOptimisticId,
       };
 
+      console.time(`[${new Date().toISOString()}] [useResiScanner] Optimistic UI updates`);
       // Optimistic UI update for the input page's display
       queryClient.setQueryData(queryKeyForInputPageDisplay, (oldData: ResiExpedisiData[] | undefined) => {
         const newData = [...(oldData || []), newResiEntry]; // Ensure oldData is an array
@@ -345,9 +383,11 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         }
         return newSummary;
       });
+      console.timeEnd(`[${new Date().toISOString()}] [useResiScanner] Optimistic UI updates`);
 
       lastOptimisticIdRef.current = currentOptimisticId;
       
+      console.time(`[${new Date().toISOString()}] [useResiScanner] Add to IndexedDB`);
       // Add operation to IndexedDB for background sync
       await addPendingOperation({
         id: `scan-${currentResi}-${Date.now()}`,
@@ -359,21 +399,23 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         },
         timestamp: Date.now(),
       });
+      console.timeEnd(`[${new Date().toISOString()}] [useResiScanner] Add to IndexedDB`);
 
       showSuccess(`Resi ${currentResi} Berhasil`); // Updated toast message
       try {
         beepSuccess.play();
       } catch (e) {
-        console.error("Error playing beepSuccess:", e);
+        console.error(`[${new Date().toISOString()}] [useResiScanner] Error playing beepSuccess:`, e);
       }
 
       // Clear the optimistic ref as the operation was successfully added to IndexedDB
       lastOptimisticIdRef.current = null;
       
+      console.log(`[${new Date().toISOString()}] [useResiScanner] Triggering background sync.`);
       triggerSync(); // Re-enabled direct call to triggerSync()
 
     } catch (error: any) {
-      console.error("Error during resi input (before IndexedDB save or during optimistic update):", error); // Log the full error object
+      console.error(`[${new Date().toISOString()}] [useResiScanner] Error during resi input (before IndexedDB save or during optimistic update):`, error); // Log the full error object
 
       let errorMessage = "Terjadi kesalahan yang tidak diketahui. Silakan coba lagi.";
       if (error instanceof TypeError && error.message === "Failed to fetch") {
@@ -387,9 +429,10 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       try {
         beepFailure.play();
       } catch (e) {
-        console.error("Error playing beepFailure:", e);
+        console.error(`[${new Date().toISOString()}] [useResiScanner] Error playing beepFailure:`, e);
       }
 
+      console.time(`[${new Date().toISOString()}] [useResiScanner] Revert optimistic updates on error`);
       // Revert optimistic update on error
       if (lastOptimisticIdRef.current) {
           queryClient.setQueryData(queryKeyForInputPageDisplay, (oldData: ResiExpedisiData[] | undefined) => {
@@ -439,10 +482,12 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
             return newSummary;
           });
       }
+      console.timeEnd(`[${new Date().toISOString()}] [useResiScanner] Revert optimistic updates on error`);
       lastOptimisticIdRef.current = null; // Clear the ref after attempting revert
     } finally {
       setIsProcessing(false); // Ensure processing state is reset
       keepFocus(); // Ensure focus is returned to input
+      console.timeEnd(`[${new Date().toISOString()}] [useResiScanner] handleScanResi execution time`);
     }
   };
 

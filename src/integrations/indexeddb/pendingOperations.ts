@@ -21,21 +21,34 @@ export interface PendingOperation {
 const STORE_NAME = 'pending-operations';
 
 export const addPendingOperation = async (operation: PendingOperation) => {
+  console.log(`[${new Date().toISOString()}] [IndexedDB] Adding pending operation: ${operation.type} for resi ${operation.payload.resiNumber}`);
+  console.time(`[${new Date().toISOString()}] [IndexedDB] addPendingOperation`);
   const db = await initDB();
   await db.add(STORE_NAME, { ...operation, retries: 0, lastAttempt: Date.now() });
+  console.timeEnd(`[${new Date().toISOString()}] [IndexedDB] addPendingOperation`);
 };
 
 export const getPendingOperations = async (): Promise<PendingOperation[]> => {
+  console.log(`[${new Date().toISOString()}] [IndexedDB] Getting all pending operations.`);
+  console.time(`[${new Date().toISOString()}] [IndexedDB] getPendingOperations`);
   const db = await initDB();
-  return db.getAll(STORE_NAME);
+  const operations = await db.getAll(STORE_NAME);
+  console.timeEnd(`[${new Date().toISOString()}] [IndexedDB] getPendingOperations`);
+  return operations;
 };
 
 export const deletePendingOperation = async (id: string) => {
+  console.log(`[${new Date().toISOString()}] [IndexedDB] Deleting pending operation with ID: ${id}`);
+  console.time(`[${new Date().toISOString()}] [IndexedDB] deletePendingOperation`);
   const db = await initDB();
   await db.delete(STORE_NAME, id);
+  console.timeEnd(`[${new Date().toISOString()}] [IndexedDB] deletePendingOperation`);
 };
 
 export const updatePendingOperation = async (operation: PendingOperation) => {
+  console.log(`[${new Date().toISOString()}] [IndexedDB] Updating pending operation with ID: ${operation.id} (retries: ${operation.retries})`);
+  console.time(`[${new Date().toISOString()}] [IndexedDB] updatePendingOperation`);
   const db = await initDB();
   await db.put(STORE_NAME, operation);
+  console.timeEnd(`[${new Date().toISOString()}] [IndexedDB] updatePendingOperation`);
 };

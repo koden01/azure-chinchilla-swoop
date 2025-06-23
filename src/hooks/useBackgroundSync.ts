@@ -4,10 +4,22 @@ import { getPendingOperations, deletePendingOperation, updatePendingOperation } 
 import { supabase } from '@/integrations/supabase/client';
 import { showError } from '@/utils/toast';
 import { invalidateDashboardQueries } from '@/utils/dashboardQueryInvalidation';
-import { format } from 'date-fns'; // Pastikan format diimpor
+import { format } from 'date-fns';
 
 const SYNC_INTERVAL_MS = 1000 * 60; // Sync every 1 minute
 const MAX_RETRIES = 5; // Max attempts before giving up on an operation
+
+// Define the type for tbl_expedisi records
+interface TblExpedisiRecord {
+  resino: string;
+  orderno: string | null;
+  chanelsales: string | null;
+  couriername: string | null;
+  created: string; // timestamp without time zone
+  flag: string | null;
+  datetrans: string | null;
+  cekfu: boolean | null;
+}
 
 export const useBackgroundSync = () => {
   const queryClient = useQueryClient();
@@ -84,17 +96,19 @@ export const useBackgroundSync = () => {
 
           } else if (op.type === 'cekfu') {
             console.log(`[${new Date().toISOString()}] [BackgroundSync] Executing 'cekfu' for resi: ${op.payload.resiNumber} to ${op.payload.newCekfuStatus}`);
-            const { data: expedisiRecord, error: _fetchExpedisiError } = await supabase // Changed error: fetchExpedisiError to _fetchExpedisiError
+            const { data: expedisiRecord, error: _fetchExpedisiError } = await supabase
               .from("tbl_expedisi")
               .update({ cekfu: op.payload.newCekfuStatus })
-              .eq("resino", op.payload.resiNumber);
+              .eq("resino", op.payload.resiNumber)
+              .select() // Add .select() to ensure data is returned
+              .returns<TblExpedisiRecord[]>(); // Explicitly cast the return type
 
-            if (_fetchExpedisiError) throw _fetchExpedisiError; // Use _fetchExpedisiError here
+            if (_fetchExpedisiError) throw _fetchExpedisiError;
             console.log(`[${new Date().toISOString()}] [BackgroundSync] 'cekfu' operation for ${op.payload.resiNumber} successful.`);
             success = true;
             // For cekfu, we need to find the original created date of the expedisi record
             // The data from the update operation is the updated record, so we can use it directly
-            if (expedisiRecord && expedisiRecord.length > 0) { // Check if expedisiRecord is not null and has data
+            if (expedisiRecord && expedisiRecord.length > 0) {
               affectedDates.add(format(new Date(expedisiRecord[0].created), 'yyyy-MM-dd'));
               if (expedisiRecord[0].couriername) affectedExpeditions.add(expedisiRecord[0].couriername);
             }

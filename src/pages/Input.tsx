@@ -19,7 +19,7 @@ import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 
 const InputPage = () => {
   const { expedition, setExpedition } = useExpedition();
-  const [selectedKarung, setSelectedKarung] = React.useState<string>("1"); // Default to "1"
+  const [selectedKarung, React.useState<string>("1"); // Default to "1"
 
   const [isKarungSummaryModalOpen, setIsKarungSummaryModalOpen] = React.useState(false);
 
@@ -27,11 +27,11 @@ const InputPage = () => {
   const today = new Date();
   const todayFormatted = format(today, "yyyy-MM-dd"); // Use for query key
 
-  // NEW: Query to fetch tbl_expedisi data for today for local validation
+  // NEW: Query to fetch tbl_expedisi data for local validation (now truly unfiltered by date)
   const { data: allExpedisiDataUnfiltered, isLoading: isLoadingAllExpedisiUnfiltered } = useQuery<Map<string, any>>({
-    queryKey: ["allExpedisiDataUnfiltered", todayFormatted], // Updated query key to only include today's date
+    queryKey: ["allExpedisiDataUnfiltered"], // Removed todayFormatted from query key
     queryFn: async () => {
-      const data = await fetchAllDataPaginated("tbl_expedisi", "created", today, today); // Fetch only for today
+      const data = await fetchAllDataPaginated("tbl_expedisi"); // Fetch all data, no date filter
       const expedisiMap = new Map<string, any>();
       data.forEach(item => {
         if (item.resino) {

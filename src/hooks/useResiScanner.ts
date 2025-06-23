@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, showError, dismissToast } from "@/utils/toast";
 import { beepSuccess, beepFailure, beepDouble } from "@/utils/audio";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { format } from "date-fns"; // Removed subDays as it's no longer needed for 'today only'
+import { format } from "date-fns";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 import { normalizeExpeditionName } from "@/utils/expeditionUtils";
 import { addPendingOperation } from "@/integrations/indexeddb/pendingOperations";
@@ -201,7 +201,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
                 expedisiRecord = directExpedisiDataArray[0]; // Take the first one if multiple
                 // Optionally, update the cache with this fresh data to prevent future direct fetches for this item
                 queryClient.setQueryData(
-                    ["allExpedisiDataUnfiltered", todayFormatted], // Updated query key
+                    ["allExpedisiDataUnfiltered"], // Updated query key - NO DATE FILTER
                     (oldMap: Map<string, any> | undefined) => {
                         const newMap = oldMap ? new Map(oldMap) : new Map();
                         newMap.set(normalizedCurrentResi, expedisiRecord);
@@ -298,7 +298,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         return newSet;
       });
       // Optimistic update for allExpedisiDataUnfiltered cache
-      queryClient.setQueryData(["allExpedisiDataUnfiltered", todayFormatted], (oldMap: Map<string, any> | undefined) => { // Updated query key
+      queryClient.setQueryData(["allExpedisiDataUnfiltered"], (oldMap: Map<string, any> | undefined) => { // Updated query key - NO DATE FILTER
         const newMap = oldMap ? new Map(oldMap) : new Map();
         const existingExpedisi = newMap.get(normalizedCurrentResi);
         
@@ -399,7 +399,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
             return newSet;
           });
           // Revert optimistic update for allExpedisiDataUnfiltered cache
-          queryClient.setQueryData(["allExpedisiDataUnfiltered", todayFormatted], (oldMap: Map<string, any> | undefined) => { // Updated query key
+          queryClient.setQueryData(["allExpedisiDataUnfiltered"], (oldMap: Map<string, any> | undefined) => { // Updated query key - NO DATE FILTER
             const newMap = oldMap ? new Map(oldMap) : new Map();
             const existingExpedisi = newMap.get(normalizedCurrentResi);
             if (existingExpedisi && existingExpedisi.optimisticId === lastOptimisticIdRef.current) {

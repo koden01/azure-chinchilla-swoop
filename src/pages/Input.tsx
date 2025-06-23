@@ -14,8 +14,7 @@ import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import KarungSummaryModal from "@/components/KarungSummaryModal";
 import { useQuery } from "@tanstack/react-query";
-import { format, subDays } from "date-fns";
-import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
+import { format } from "date-fns"; // Import format directly
 
 const InputPage = () => {
   const { expedition, setExpedition } = useExpedition();
@@ -23,13 +22,13 @@ const InputPage = () => {
 
   const [isKarungSummaryModalOpen, setIsKarungSummaryModalOpen] = React.useState(false);
 
-  // Calculate date range for today only for allExpedisiDataUnfiltered
+  // Define today and formattedDate at the top level of the component
   const today = new Date();
-  const todayFormatted = format(today, "yyyy-MM-dd"); // Use for query key
+  const todayFormatted = format(today, "yyyy-MM-dd");
 
   // NEW: Query to fetch tbl_expedisi data for today for local validation
   const { data: allExpedisiDataUnfiltered, isLoading: isLoadingAllExpedisiUnfiltered } = useQuery<Map<string, any>>({
-    queryKey: ["allExpedisiDataUnfiltered", todayFormatted, formattedDate], // Changed query key to today only
+    queryKey: ["allExpedisiDataUnfiltered", todayFormatted, todayFormatted], // Use todayFormatted consistently
     queryFn: async () => {
       const data = await fetchAllDataPaginated("tbl_expedisi", "created", today, today); // Changed date range to today only
       const expedisiMap = new Map<string, any>();
@@ -41,7 +40,7 @@ const InputPage = () => {
       return expedisiMap;
     },
     enabled: true, // Always enabled for local validation
-    staleTime: 1000 * 60 * 60 * 4, // Keep this data fresh for 4 hours (changed from 5 minutes)
+    staleTime: 1000 * 60 * 60 * 4, // Keep this data fresh for 4 hours
     gcTime: 1000 * 60 * 60 * 24 * 2, // Garbage collect after 2 days
   });
 
@@ -51,10 +50,9 @@ const InputPage = () => {
     lastKarung,
     highestKarung,
     karungOptions,
-    formattedDate,
     karungSummary,
     expeditionOptions,
-  } = useResiInputData(expedition, false);
+  } = useResiInputData(expedition, false, today); // Pass 'today' to useResiInputData
 
   // Memoize the result of getCountForSelectedKarung
   const currentCount = React.useMemo(() => {
@@ -73,7 +71,7 @@ const InputPage = () => {
   } = useResiScanner({ 
     expedition, 
     selectedKarung, 
-    formattedDate,
+    formattedDate: todayFormatted, // Pass todayFormatted to useResiScanner
     allExpedisiDataUnfiltered,
   });
 
@@ -200,7 +198,7 @@ const InputPage = () => {
         isOpen={isKarungSummaryModalOpen}
         onClose={() => setIsKarungSummaryModalOpen(false)}
         expedition={expedition}
-        date={formattedDate}
+        date={todayFormatted} {/* Pass todayFormatted to modal */}
         summaryData={karungSummary}
       />
     </React.Fragment>

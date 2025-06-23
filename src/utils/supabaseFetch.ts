@@ -12,15 +12,15 @@ import { format, startOfDay, endOfDay, addDays } from "date-fns";
  * @param queryModifier Optional: A function to apply additional filters or orders to the query.
  * @returns An array of all records from the table.
  */
-export const fetchAllDataPaginated = async (
+export const fetchAllDataPaginated = async <T>( // Make it generic
   tableName: string,
   dateFilterColumn?: string,
   selectedStartDate?: Date,
   selectedEndDate?: Date,
   selectColumns: string = "*",
   queryModifier?: (query: any) => any
-) => {
-  let allRecords: any[] = [];
+): Promise<T[]> => { // Return type is T[]
+  let allRecords: T[] = []; // Initialize as T[]
   let offset = 0;
   const limit = 1000; // Fetch 1000 records at a time
   let hasMore = true;
@@ -57,7 +57,7 @@ export const fetchAllDataPaginated = async (
     }
 
     if (data && data.length > 0) {
-      allRecords = allRecords.concat(data);
+      allRecords = allRecords.concat(data as T[]); // Cast data to T[]
       offset += data.length;
       hasMore = data.length === limit; // Continue if we received exactly 'limit' records
     } else {

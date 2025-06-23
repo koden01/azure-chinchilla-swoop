@@ -34,7 +34,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     queryFn: async () => {
       if (!expedition) return [];
       
-      const data = await fetchAllDataPaginated(
+      const data = await fetchAllDataPaginated<ResiExpedisiData>( // Specify type here
         "tbl_resi",
         "created", // dateFilterColumn
         yesterday, // selectedStartDate (fetch from yesterday)

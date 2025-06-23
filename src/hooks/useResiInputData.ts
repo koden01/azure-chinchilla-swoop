@@ -135,21 +135,25 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
 
   // Derive currentCount from allResiForExpedition
   const currentCount = React.useCallback((selectedKarung: string) => {
-    console.log("Calculating current count for expedition:", expedition, "karung:", selectedKarung); // Added this line
+    console.log("Calculating current count for expedition:", expedition, "karung:", selectedKarung);
     if (!allResiForExpedition || !selectedKarung) return 0;
     
-    // Memastikan allResiForExpedition diperlakukan sebagai array ResiExpedisiData
     const resiData: ResiExpedisiData[] = allResiForExpedition;
 
-    const count = resiData.filter((item: ResiExpedisiData) => { // Explicitly type item here
-      // Add defensive checks for null/undefined properties
-      const itemNokarung = item.nokarung ?? ""; // Default to empty string if null
-      const itemKeterangan = item.Keterangan ?? ""; // Default to empty string if null
+    const count = resiData.filter((item: ResiExpedisiData) => {
+      const itemNokarung = item.nokarung ?? "";
+      const itemKeterangan = item.Keterangan ?? "";
 
-      return itemNokarung === selectedKarung && 
-             (expedition === 'ID' ? 
-                (itemKeterangan === 'ID' || itemKeterangan === 'ID_REKOMENDASI') : 
-                itemKeterangan === expedition);
+      const isKarungMatch = itemNokarung === selectedKarung;
+      let isExpeditionMatch = false;
+
+      if (expedition === 'ID') {
+        isExpeditionMatch = (itemKeterangan === 'ID' || itemKeterangan === 'ID_REKOMENDASI');
+      } else {
+        isExpeditionMatch = itemKeterangan === expedition;
+      }
+      
+      return isKarungMatch && isExpeditionMatch;
     }).length;
     return count;
   }, [allResiForExpedition, expedition]);

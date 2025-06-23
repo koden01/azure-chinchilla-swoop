@@ -48,7 +48,6 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
           }
         }
       );
-      console.log(`[useResiInputData] Fetched allResiForExpedition for ${expedition} from ${formattedYesterday} to ${formattedToday}:`, data);
       return data || [];
     },
     enabled: !!expedition,
@@ -69,7 +68,6 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
         console.error("Error fetching karung summary for expedition:", error);
         throw error;
       }
-      console.log(`[useResiInputData] Fetched karungSummaryData for ${expedition} on ${formattedToday}:`, data);
       return data || [];
     },
     enabled: !!expedition, // Only enabled if an expedition is selected
@@ -88,7 +86,6 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
         console.error("Error fetching all karung summaries:", error);
         throw error;
       }
-      console.log(`[useResiInputData] Fetched allKarungSummariesData for ${formattedToday}:`, data);
       return data || [];
     },
     enabled: showAllExpeditionSummary, // Only enabled when explicitly requested
@@ -120,7 +117,6 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       });
       
       const names = Array.from(namesSet);
-      console.log("[useResiInputData] Fetched uniqueExpeditionNames:", names);
       return names.sort((a, b) => a.localeCompare(b));
     },
     staleTime: Infinity, // Data is always fresh
@@ -136,7 +132,6 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       item.nokarung === selectedKarung && 
       (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition)
     ).length;
-    console.log(`[useResiInputData] Recalculating currentCount for karung ${selectedKarung}. New count: ${count}. allResiForExpedition length: ${allResiForExpedition.length}`);
     return count;
   }, [allResiForExpedition, expedition]);
 
@@ -194,8 +189,8 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
   }, [uniqueExpeditionNames]);
 
   return {
-    allResiForExpedition,
-    isLoadingAllResiForExpedition: isLoadingAllResiForExpedition || isLoadingUniqueExpeditionNames, // Combine loading states for main display
+    allResiForExpedition, // Now returned
+    isLoadingAllResiForExpedition: isLoadingAllResiForExpedition || isLoadingAllKarungSummaries || isLoadingUniqueExpeditionNames, // Combine loading states
     currentCount,
     lastKarung,
     highestKarung,
@@ -205,6 +200,6 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     allExpeditionKarungSummary, // NEW: Return all expedition karung summary
     isLoadingKarungSummary: isLoadingKarungSummaryData, // Now depends on the new RPC query
     isLoadingAllKarungSummaries, // NEW: Loading state for all summaries
-    expeditionOptions,
+    expeditionOptions, // NEW: Return expedition options
   };
 };

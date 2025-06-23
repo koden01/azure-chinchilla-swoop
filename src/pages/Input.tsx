@@ -23,17 +23,15 @@ const InputPage = () => {
 
   const [isKarungSummaryModalOpen, setIsKarungSummaryModalOpen] = React.useState(false);
 
-  // Calculate date range for 2 days back for allExpedisiDataUnfiltered
+  // Calculate date range for today only for allExpedisiDataUnfiltered
   const today = new Date();
-  const twoDaysAgo = subDays(today, 2); // Covers today, yesterday, and the day before yesterday
-  const twoDaysAgoFormatted = format(twoDaysAgo, "yyyy-MM-dd");
-  const endOfTodayFormatted = format(today, "yyyy-MM-dd"); // For the end of the range key
+  const todayFormatted = format(today, "yyyy-MM-dd"); // Use for query key
 
-  // NEW: Query to fetch tbl_expedisi data for the last 2 days for local validation
+  // NEW: Query to fetch tbl_expedisi data for today for local validation
   const { data: allExpedisiDataUnfiltered, isLoading: isLoadingAllExpedisiUnfiltered } = useQuery<Map<string, any>>({
-    queryKey: ["allExpedisiDataUnfiltered", twoDaysAgoFormatted, endOfTodayFormatted], // New query key with 2-day range
+    queryKey: ["allExpedisiDataUnfiltered", todayFormatted, formattedDate], // Changed query key to today only
     queryFn: async () => {
-      const data = await fetchAllDataPaginated("tbl_expedisi", "created", twoDaysAgo, today);
+      const data = await fetchAllDataPaginated("tbl_expedisi", "created", today, today); // Changed date range to today only
       const expedisiMap = new Map<string, any>();
       data.forEach(item => {
         if (item.resino) {
@@ -43,7 +41,7 @@ const InputPage = () => {
       return expedisiMap;
     },
     enabled: true, // Always enabled for local validation
-    staleTime: 1000 * 60 * 5, // Keep this data fresh for 5 minutes
+    staleTime: 1000 * 60 * 60 * 4, // Keep this data fresh for 4 hours (changed from 5 minutes)
     gcTime: 1000 * 60 * 60 * 24 * 2, // Garbage collect after 2 days
   });
 

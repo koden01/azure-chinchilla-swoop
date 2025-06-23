@@ -14,7 +14,7 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { HistoryData } from "@/components/columns/historyColumns"; // Import HistoryData type
 
 interface UseHistoryTableProps {
-  data: HistoryData[];
+  data: HistoryData[]; // Ensure this is always an array, not undefined
   columns: ColumnDef<HistoryData>[];
   globalFilter: string;
   startDate: Date | undefined; // Added for resetting page index
@@ -28,7 +28,7 @@ export const useHistoryTable = ({ data, columns, globalFilter, startDate, endDat
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
 
   const table = useReactTable({
-    data,
+    data, // 'data' is guaranteed to be HistoryData[] from props
     columns,
     state: {
       sorting,

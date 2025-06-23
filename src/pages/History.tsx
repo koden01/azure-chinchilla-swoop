@@ -14,10 +14,10 @@ import {
 import HistoryDatePicker from "@/components/history/HistoryDatePicker";
 import HistorySearchAndActions from "@/components/history/HistorySearchAndActions";
 import HistoryTable from "@/components/history/HistoryTable";
-import { useHistoryData, HistoryData } from "@/hooks/history/useHistoryData"; // Import HistoryData
+import { useHistoryData } from "@/hooks/history/useHistoryData"; // HistoryData is used internally by this hook
 import { useHistoryTable } from "@/hooks/history/useHistoryTable";
 import { useHistoryActions } from "@/hooks/history/useHistoryActions";
-import { columns } from "@/components/columns/historyColumns"; // Import columns and HistoryData type
+import { columns } from "@/components/columns/historyColumns"; // columns already imports HistoryData
 
 const HistoryPage: React.FC = () => {
   const [startDate, setStartDate] = useState<Date | undefined>(new Date());

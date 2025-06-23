@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, showError } from "@/utils/toast";
 import { ModalDataItem } from "@/types/data";
@@ -6,6 +6,7 @@ import { normalizeExpeditionName } from "@/utils/expeditionUtils";
 import { addPendingOperation } from "@/integrations/indexeddb/pendingOperations";
 import { useBackgroundSync } from "@/hooks/useBackgroundSync";
 import { format } from "date-fns";
+import { fetchAllDataPaginated } from "@/utils/supabaseFetch"; // Import fetchAllDataPaginated
 
 interface UseDashboardModalsProps {
   date: Date | undefined;
@@ -61,16 +62,21 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       return;
     }
 
-    const { data, error } = await supabase.rpc("get_transaksi_hari_ini_records", {
-      p_selected_date: formattedDate,
-    });
+    try {
+      // Menggunakan fetchAllDataPaginated untuk mengambil semua data dari tbl_expedisi
+      const data = await fetchAllDataPaginated(
+        "tbl_expedisi",
+        "created", // Kolom tanggal untuk filter
+        date,      // Tanggal mulai
+        date,      // Tanggal akhir
+        "resino, orderno, chanelsales, couriername, created, flag, datetrans, cekfu" // Kolom yang relevan
+      );
       
-    if (error) {
+      openResiModal("Transaksi Hari Ini", data || [], "transaksiHariIni");
+    } catch (error) {
       showError("Gagal memuat data transaksi hari ini.");
       console.error("Error fetching Transaksi Hari Ini data:", error);
-      return;
     }
-    openResiModal("Transaksi Hari Ini", data || [], "transaksiHariIni");
   };
 
   const handleOpenBelumKirimModal = async () => {

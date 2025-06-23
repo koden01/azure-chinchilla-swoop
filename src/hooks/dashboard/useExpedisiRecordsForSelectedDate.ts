@@ -10,8 +10,6 @@ export const useExpedisiRecordsForSelectedDate = (date: Date | undefined) => {
     queryFn: async () => {
       if (!date) return [];
       
-      // Menggunakan fetchAllDataPaginated untuk mengambil semua data dari tbl_expedisi
-      // untuk tanggal yang dipilih, mengatasi batasan 1000 baris.
       const data = await fetchAllDataPaginated(
         "tbl_expedisi",
         "created", // Kolom untuk filter tanggal
@@ -20,6 +18,7 @@ export const useExpedisiRecordsForSelectedDate = (date: Date | undefined) => {
         "resino, orderno, chanelsales, couriername, created, flag, datetrans, cekfu" // Kolom yang relevan
       );
       
+      console.log(`[useExpedisiRecordsForSelectedDate] Fetched data length: ${data ? data.length : 0}`);
       return data || [];
     },
     enabled: !!date,

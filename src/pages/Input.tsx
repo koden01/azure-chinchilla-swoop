@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react"; // Import useState
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -14,14 +14,14 @@ import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import KarungSummaryModal from "@/components/KarungSummaryModal";
 import { useQuery } from "@tanstack/react-query";
-import { format } from "date-fns"; // Removed subDays as it's no longer needed for 'today only'
+import { format } from "date-fns";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 
 const InputPage = () => {
   const { expedition, setExpedition } = useExpedition();
-  const [selectedKarung, React.useState<string>("1"); // Default to "1"
+  const [selectedKarung, setSelectedKarung] = useState<string>("1"); // Default to "1"
 
-  const [isKarungSummaryModalOpen, setIsKarungSummaryModalOpen] = React.useState(false);
+  const [isKarungSummaryModalOpen, setIsKarungSummaryModalOpen] = useState(false);
 
   // Calculate date range for today only
   const today = new Date();

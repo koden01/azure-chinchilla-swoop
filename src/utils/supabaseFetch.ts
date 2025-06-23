@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { format, startOfDay, endOfDay } from "date-fns";
+import { format, startOfDay, endOfDay, addDays } from "date-fns"; // Menambahkan addDays
 
 /**
  * Fetches all data from a Supabase table with pagination, handling the 1000-row limit.
@@ -37,7 +37,10 @@ export const fetchAllDataPaginated = async (
       // Handle different timestamp types for 'created' column
       if (tableName === "tbl_expedisi" && dateFilterColumn === "created") {
         // For tbl_expedisi.created (timestamp without time zone), filter by date part
-        query = query.gte(dateFilterColumn, format(selectedStartDate, "yyyy-MM-dd")).lt(dateFilterColumn, format(selectedEndDate, "yyyy-MM-dd"));
+        // Start date is inclusive, end date is exclusive (start of next day)
+        const formattedStart = format(selectedStartDate, "yyyy-MM-dd");
+        const formattedEnd = format(addDays(selectedEndDate, 1), "yyyy-MM-dd"); // Go to the start of the next day
+        query = query.gte(dateFilterColumn, formattedStart).lt(dateFilterColumn, formattedEnd);
       } else {
         // For tbl_resi.created (timestamp with time zone), use ISO strings for range
         query = query.gte(dateFilterColumn, startOfDay(selectedStartDate).toISOString()).lt(dateFilterColumn, endOfDay(selectedEndDate).toISOString());

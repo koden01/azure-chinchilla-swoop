@@ -20,8 +20,6 @@ export const fetchAllDataPaginated = async (
   selectColumns: string = "*",
   queryModifier?: (query: any) => any
 ) => {
-  // const timerName = `fetchAllDataPaginated_${tableName}`; // Removed console.time for performance
-  // console.time(timerName); // Removed console.time for performance
   let allRecords: any[] = [];
   let offset = 0;
   const limit = 1000; // Fetch 1000 records at a time
@@ -31,8 +29,6 @@ export const fetchAllDataPaginated = async (
 
   while (hasMore && currentIteration < maxIterations) {
     currentIteration++;
-    // console.log(`[${timerName}] Iteration ${currentIteration}: Fetching range ${offset} to ${offset + limit - 1}`); // Removed log
-
     let query = supabase.from(tableName).select(selectColumns).range(offset, offset + limit - 1);
 
     if (dateFilterColumn && selectedStartDate && selectedEndDate) {
@@ -50,23 +46,18 @@ export const fetchAllDataPaginated = async (
       query = queryModifier(query);
     }
 
-    // console.log(`[${timerName}] BEFORE await query for offset ${offset}...`); // Removed log
     const { data, error } = await query;
-    // console.log(`[${timerName}] AFTER await query for offset ${offset}. Data length: ${data?.length || 0}, Error: ${error?.message || 'none'}`); // Removed log
 
     if (error) {
       console.error(`Error fetching paginated data from ${tableName} at offset ${offset}:`, error);
-      // console.timeEnd(timerName); // Removed console.timeEnd for performance
       throw error;
     }
 
     if (data && data.length > 0) {
-      // console.log(`[${timerName}] Fetched ${data.length} records in this iteration.`); // Removed log
       allRecords = allRecords.concat(data);
       offset += data.length;
       hasMore = data.length === limit;
     } else {
-      // console.log(`[${timerName}] No more data or empty response in this iteration (data.length: ${data?.length || 0}).`); // Removed log
       hasMore = false;
     }
   }
@@ -75,7 +66,5 @@ export const fetchAllDataPaginated = async (
     console.warn(`Reached maxIterations (${maxIterations}) for ${tableName}. Stopping fetch early.`);
   }
 
-  // console.log(`[${timerName}] Total records fetched: ${allRecords.length}`); // Removed log
-  // console.timeEnd(timerName); // Removed console.timeEnd for performance
   return allRecords;
 };

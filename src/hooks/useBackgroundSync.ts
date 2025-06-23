@@ -84,23 +84,19 @@ export const useBackgroundSync = () => {
 
           } else if (op.type === 'cekfu') {
             console.log(`[${new Date().toISOString()}] [BackgroundSync] Executing 'cekfu' for resi: ${op.payload.resiNumber} to ${op.payload.newCekfuStatus}`);
-            const { error } = await supabase
+            const { data: expedisiRecord, error: _fetchExpedisiError } = await supabase // Changed error: fetchExpedisiError to _fetchExpedisiError
               .from("tbl_expedisi")
               .update({ cekfu: op.payload.newCekfuStatus })
               .eq("resino", op.payload.resiNumber);
 
-            if (error) throw error;
+            if (_fetchExpedisiError) throw _fetchExpedisiError; // Use _fetchExpedisiError here
             console.log(`[${new Date().toISOString()}] [BackgroundSync] 'cekfu' operation for ${op.payload.resiNumber} successful.`);
             success = true;
             // For cekfu, we need to find the original created date of the expedisi record
-            const { data: expedisiRecord, error: fetchExpedisiError } = await supabase
-              .from('tbl_expedisi')
-              .select('created, couriername')
-              .eq('resino', op.payload.resiNumber)
-              .single();
-            if (expedisiRecord) {
-              affectedDates.add(format(new Date(expedisiRecord.created), 'yyyy-MM-dd'));
-              if (expedisiRecord.couriername) affectedExpeditions.add(expedisiRecord.couriername);
+            // The data from the update operation is the updated record, so we can use it directly
+            if (expedisiRecord && expedisiRecord.length > 0) { // Check if expedisiRecord is not null and has data
+              affectedDates.add(format(new Date(expedisiRecord[0].created), 'yyyy-MM-dd'));
+              if (expedisiRecord[0].couriername) affectedExpeditions.add(expedisiRecord[0].couriername);
             }
 
           } else if (op.type === 'scan') {

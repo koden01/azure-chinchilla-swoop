@@ -24,5 +24,17 @@ export const useAllExpedisiRecordsUnfiltered = () => {
     enabled: true,
     staleTime: 1000 * 60 * 60, // Changed to 60 minutes (from 5 minutes)
     gcTime: 1000 * 60 * 60 * 24 * 2, // 2 days
+    select: (data) => { // Add select function to ensure Map instance
+      if (data instanceof Map) {
+        return data;
+      }
+      // Defensive check: if it's a plain object from JSON.parse, try to revive it
+      if (typeof data === 'object' && data !== null && (data as any).dataType === 'Map' && Array.isArray((data as any).value)) {
+        console.warn("allExpedisiDataUnfiltered was not a Map instance, attempting manual revival in select.");
+        return new Map((data as any).value);
+      }
+      console.warn("allExpedisiDataUnfiltered data is not a Map and cannot be revived. Returning empty Map.");
+      return new Map();
+    },
   });
 };

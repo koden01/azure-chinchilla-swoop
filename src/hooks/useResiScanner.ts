@@ -60,6 +60,18 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
     staleTime: 1000 * 60 * 60, // Increased to 1 hour for better performance
     gcTime: 1000 * 60 * 60 * 24 * 2, // Garbage collect after 2 days
     enabled: true, // Always enabled for local validation
+    select: (data) => { // Add select function to ensure Map instance
+      if (data instanceof Map) {
+        return data;
+      }
+      // Defensive check: if it's a plain object from JSON.parse, try to revive it
+      if (typeof data === 'object' && data !== null && (data as any).dataType === 'Map' && Array.isArray((data as any).value)) {
+        console.warn("recentResiNumbersForValidation was not a Map instance, attempting manual revival in select.");
+        return new Map((data as any).value);
+      }
+      console.warn("recentResiNumbersForValidation data is not a Map and cannot be revived. Returning empty Map.");
+      return new Map();
+    },
   });
 
   // NEW: Query to fetch ALL tbl_expedisi data with flag = 'NO' for comprehensive local validation
@@ -87,6 +99,17 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
     staleTime: 1000 * 60 * 60 * 4, // Increased to 4 hours
     gcTime: 1000 * 60 * 60 * 24, // Garbage collect after 24 hours
     enabled: true, // Always enabled
+    select: (data) => { // Add select function to ensure Map instance
+      if (data instanceof Map) {
+        return data;
+      }
+      if (typeof data === 'object' && data !== null && (data as any).dataType === 'Map' && Array.isArray((data as any).value)) {
+        console.warn("allFlagNoExpedisiData was not a Map instance, attempting manual revival in select.");
+        return new Map((data as any).value);
+      }
+      console.warn("allFlagNoExpedisiData data is not a Map and cannot be revived. Returning empty Map.");
+      return new Map();
+    },
   });
 
   const lastOptimisticIdRef = React.useRef<string | null>(null);
@@ -190,7 +213,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
             createdDateStr = format(new Date(existingResiInDb.created), "dd/MM/yyyy HH:mm");
           }
           const nokarungStr = existingResiInDb.nokarung ? ` di nokarung ${existingResiInDb.nokarung}` : "";
-          validationStatus = 'DUPLIKAT_RESI';
+          validationStatus = 'DUPLICATE_RESI';
           validationMessage = `DOUBLE! Resi ini sudah discan${nokarungStr} ${createdDateStr}.`; // Updated message
           console.log(`[${new Date().toISOString()}] [useResiScanner] Database duplicate found.`);
         }

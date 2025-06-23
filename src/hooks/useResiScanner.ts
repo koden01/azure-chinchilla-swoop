@@ -130,8 +130,8 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
     setIsProcessing(true); // Set to true at the very beginning
 
     // Corrected queryKey to match useResiInputData
-    const queryKeyForInputPageDisplay = ["allResiForExpedition", expedition, yesterdayFormatted, formattedDate];
-    const queryKeyForKarungSummary = ["karungSummary", expedition, formattedDate];
+    const queryKeyForInputPageDisplay = ["allResiForExpedition", expedition, yesterdayFormatted, formattedToday];
+    const queryKeyForKarungSummary = ["karungSummary", expedition, formattedToday];
 
 
     const currentOptimisticId = Date.now().toString() + Math.random().toString(36).substring(2, 9);
@@ -235,7 +235,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
               actualCourierName = 'ID';
             } else {
               validationStatus = 'MISMATCH_EXPEDISI';
-              validationMessage = `Resi milik ${expedisiRecord.couriername}`; // Updated message
+              validationMessage = `Resi milik ${expedisiRecord.couriername}`; // Corrected variable name
             }
           } else {
             // If expedition is 'ID' and resi was NOT found in tbl_expedisi, treat as ID_REKOMENDASI
@@ -250,7 +250,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
             const normalizedExpedisiCourier = normalizeExpeditionName(expedisiRecord.couriername);
             if (normalizedExpedisiCourier !== expedition.toUpperCase()) {
               validationStatus = 'MISMATCH_EXPEDISI';
-              validationMessage = `Resi milik ${expedisiCourier}`; // Updated message
+              validationMessage = `Resi milik ${expedisiRecord.couriername}`; // Corrected variable name
             } else {
               actualCourierName = expedisiRecord.couriername;
             }

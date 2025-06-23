@@ -46,7 +46,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
     queryKey: ["recentResiNumbersForValidation", yesterdayFormatted, formattedDate],
     queryFn: async () => {
       console.log(`[${new Date().toISOString()}] [useResiScanner] Fetching recentResiNumbersForValidation...`);
-      const data = await fetchAllDataPaginated(
+      const data = await fetchAllDataPaginated<{ Resi: string }>( // Specify type here
         "tbl_resi",
         "created", // dateFilterColumn
         yesterday, // selectedStartDate
@@ -67,7 +67,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
     queryKey: ["allFlagNoExpedisiData"],
     queryFn: async () => {
       console.log(`[${new Date().toISOString()}] [useResiScanner] Fetching allFlagNoExpedisiData...`);
-      const data = await fetchAllDataPaginated(
+      const data = await fetchAllDataPaginated<any>( // Specify type here, can be more specific if needed
         "tbl_expedisi",
         undefined, // No date filter
         undefined, // No start date

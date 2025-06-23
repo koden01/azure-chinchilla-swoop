@@ -128,20 +128,44 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
   // Derive currentCount from allResiForExpedition
   const currentCount = React.useCallback((selectedKarung: string) => {
     if (!allResiForExpedition || !selectedKarung) return 0;
-    const count = allResiForExpedition.filter(item => 
-      item.nokarung === selectedKarung && 
-      (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition)
-    ).length;
+
+    let count = 0;
+    if (expedition === 'ID') {
+      if (selectedKarung === '0') {
+        // For 'ID' expedition and '0' karung, count all 'ID' and 'ID_REKOMENDASI' resi
+        // where nokarung is null or '0'.
+        count = allResiForExpedition.filter(item => 
+          (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') &&
+          (item.nokarung === null || item.nokarung === '0')
+        ).length;
+      } else {
+        // For 'ID' expedition and a specific karung number, count 'ID' resi with that karung.
+        // ID_REKOMENDASI is not expected to have positive karung numbers.
+        count = allResiForExpedition.filter(item => 
+          item.Keterangan === 'ID' && 
+          item.nokarung === selectedKarung
+        ).length;
+      }
+    } else {
+      // For other expeditions, count resi with the specific karung number and expedition name.
+      count = allResiForExpedition.filter(item => 
+        item.nokarung === selectedKarung && 
+        item.Keterangan === expedition
+      ).length;
+    }
     return count;
   }, [allResiForExpedition, expedition]);
 
   // Derive lastKarung from allResiForExpedition
   const lastKarung = React.useMemo(() => {
     if (!allResiForExpedition || allResiForExpedition.length === 0) return "0";
-    const filteredResi = allResiForExpedition.filter(item => 
-      item.nokarung !== null && 
-      (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition)
-    );
+    const filteredResi = allResiForExpedition.filter(item => {
+      const normalizedKeterangan = normalizeExpeditionName(item.Keterangan);
+      return (
+        (expedition === 'ID' ? (normalizedKeterangan === 'ID') : normalizedKeterangan === expedition) &&
+        (item.nokarung !== null) // Include '0' as a valid nokarung
+      );
+    });
     if (filteredResi.length === 0) return "0";
 
     const sortedResi = [...filteredResi].sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime());
@@ -152,20 +176,53 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
   const highestKarung = React.useMemo(() => {
     if (!allResiForExpedition || allResiForExpedition.length === 0) return 0;
     const validKarungNumbers = allResiForExpedition
-      .filter(item => 
-        item.nokarung !== null && 
-        (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition)
-      )
+      .filter(item => {
+        const normalizedKeterangan = normalizeExpeditionName(item.Keterangan);
+        return (
+          (expedition === 'ID' ? (normalizedKeterangan === 'ID') : normalizedKeterangan === expedition) &&
+          item.nokarung !== null && 
+          item.nokarung !== '0' // Exclude '0' when finding the highest positive karung
+        );
+      })
       .map(item => parseInt(item.nokarung || "0"))
-      .filter(num => !isNaN(num) && num > 0);
+      .filter(num => !isNaN(num) && num > 0); // Ensure it's a positive number
     return validKarungNumbers.length > 0 ? Math.max(...validKarungNumbers) : 0;
   }, [allResiForExpedition, expedition]);
 
   // Karung options based on highestKarung (still client-side generation)
   const karungOptions = React.useMemo(() => {
+    const options = new Set<string>();
+    if (expedition === 'ID') {
+      options.add("0"); // Always include "0" for ID expedition
+    }
+    
+    // Add existing karung numbers from the fetched data
+    allResiForExpedition?.forEach(item => {
+      const normalizedKeterangan = normalizeExpeditionName(item.Keterangan);
+      if (
+        (expedition === 'ID' ? (normalizedKeterangan === 'ID' || normalizedKeterangan === 'ID_REKOMENDASI') : normalizedKeterangan === expedition) &&
+        item.nokarung !== null && item.nokarung !== ''
+      ) {
+        options.add(item.nokarung);
+      }
+    });
+
+    // Add numbers up to highestKarung + 1 (or a default max)
     const maxKarung = Math.max(1, highestKarung, 100); // Ensure at least 1 and up to 100 by default
-    return Array.from({ length: maxKarung }, (_, i) => (i + 1).toString());
-  }, [highestKarung]);
+    for (let i = 1; i <= maxKarung; i++) {
+      options.add(i.toString());
+    }
+
+    const sortedOptions = Array.from(options).sort((a, b) => {
+      const numA = parseInt(a);
+      const numB = parseInt(b);
+      if (isNaN(numA) || isNaN(numB)) { // Handle non-numeric strings if any
+        return a.localeCompare(b);
+      }
+      return numA - numB;
+    });
+    return sortedOptions;
+  }, [highestKarung, allResiForExpedition, expedition]);
 
   // karungSummary for the modal now directly uses karungSummaryData from RPC
   const karungSummary = React.useMemo(() => {

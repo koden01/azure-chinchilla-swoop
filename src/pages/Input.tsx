@@ -82,10 +82,20 @@ const InputPage = () => {
 
   React.useEffect(() => {
     if (expedition) {
-      if (highestKarung > 0) {
-        setSelectedKarung(highestKarung.toString());
+      if (expedition === 'ID') {
+        // For ID, default to "0" if no positive karung numbers exist
+        if (highestKarung === 0) {
+          setSelectedKarung("0");
+        } else {
+          setSelectedKarung(highestKarung.toString());
+        }
       } else {
-        setSelectedKarung("1");
+        // For other expeditions, default to highest or "1"
+        if (highestKarung > 0) {
+          setSelectedKarung(highestKarung.toString());
+        } else {
+          setSelectedKarung("1");
+        }
       }
     } else {
       setSelectedKarung("");

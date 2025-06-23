@@ -1,17 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
-import { format, subDays } from "date-fns";
+import { format } from "date-fns";
 
 export const useAllExpedisiRecordsUnfiltered = () => {
   const today = new Date();
-  const twoDaysAgo = subDays(today, 2);
-  const twoDaysAgoFormatted = format(twoDaysAgo, "yyyy-MM-dd");
-  const endOfTodayFormatted = format(today, "yyyy-MM-dd");
+  const formattedDate = format(today, "yyyy-MM-dd"); // Hanya tanggal hari ini
 
   return useQuery<Map<string, any>>({
-    queryKey: ["allExpedisiDataUnfiltered", twoDaysAgoFormatted, endOfTodayFormatted],
+    queryKey: ["allExpedisiDataUnfiltered", formattedDate], // Kunci kueri hanya untuk hari ini
     queryFn: async () => {
-      const data = await fetchAllDataPaginated("tbl_expedisi", "created", twoDaysAgo, today);
+      // Mengambil data hanya untuk hari ini
+      const data = await fetchAllDataPaginated("tbl_expedisi", "created", today, today);
       const expedisiMap = new Map<string, any>();
       data.forEach(item => {
         if (item.resino) {
@@ -21,7 +20,7 @@ export const useAllExpedisiRecordsUnfiltered = () => {
       return expedisiMap;
     },
     enabled: true,
-    staleTime: 1000 * 60 * 60, // Changed to 60 minutes (from 5 minutes)
-    gcTime: 1000 * 60 * 60 * 24 * 2, // 2 days
+    staleTime: 1000 * 60 * 60 * 4, // Stale time 4 jam
+    gcTime: 1000 * 60 * 60 * 24, // Garbage collect setelah 24 jam
   });
 };

@@ -15,24 +15,36 @@ export const useBackgroundSync = () => {
 
   const performSync = async () => {
     if (isSyncingRef.current) {
+      console.log(`[${new Date().toISOString()}] [BackgroundSync] Sync already in progress. Skipping.`);
       return;
     }
 
     isSyncingRef.current = true;
+    console.time(`[${new Date().toISOString()}] [BackgroundSync] Total sync duration`);
+    console.log(`[${new Date().toISOString()}] [BackgroundSync] Starting background sync...`);
+
     let operationsSynced = 0;
     let operationsFailed = 0;
 
     try {
+      console.time(`[${new Date().toISOString()}] [BackgroundSync] Fetching pending operations`);
       const pendingOperations = await getPendingOperations();
+      console.timeEnd(`[${new Date().toISOString()}] [BackgroundSync] Fetching pending operations`);
+
       if (pendingOperations.length === 0) {
+        console.log(`[${new Date().toISOString()}] [BackgroundSync] No pending operations found. Exiting sync.`);
         return;
       }
 
+      console.log(`[${new Date().toISOString()}] [BackgroundSync] Found ${pendingOperations.length} pending operations.`);
+
       for (const op of pendingOperations) {
+        console.log(`[${new Date().toISOString()}] [BackgroundSync] Processing operation ${op.id} (type: ${op.type}, resi: ${op.payload.resiNumber || 'N/A'})`);
+        console.time(`[${new Date().toISOString()}] [BackgroundSync] Operation ${op.id} processing time`);
         try {
           let success = false;
           if (op.type === 'batal') {
-            // Menggunakan upsert untuk memastikan resi ada dan memperbarui schedule, created, dan Keterangan
+            console.log(`[${new Date().toISOString()}] [BackgroundSync] Executing 'batal' for resi: ${op.payload.resiNumber}`);
             const { error: resiUpsertError } = await supabase
               .from("tbl_resi")
               .upsert({
@@ -44,10 +56,11 @@ export const useBackgroundSync = () => {
               }, { onConflict: 'Resi', ignoreDuplicates: false });
 
             if (resiUpsertError) throw resiUpsertError;
-
+            console.log(`[${new Date().toISOString()}] [BackgroundSync] 'batal' operation for ${op.payload.resiNumber} successful.`);
             success = true;
 
           } else if (op.type === 'confirm') {
+            console.log(`[${new Date().toISOString()}] [BackgroundSync] Executing 'confirm' for resi: ${op.payload.resiNumber}`);
             const { error: resiUpsertError } = await supabase
               .from("tbl_resi")
               .upsert({
@@ -59,22 +72,25 @@ export const useBackgroundSync = () => {
               }, { onConflict: 'Resi', ignoreDuplicates: false });
 
             if (resiUpsertError) throw resiUpsertError;
-
+            console.log(`[${new Date().toISOString()}] [BackgroundSync] 'confirm' operation for ${op.payload.resiNumber} successful.`);
             success = true;
 
           } else if (op.type === 'cekfu') {
+            console.log(`[${new Date().toISOString()}] [BackgroundSync] Executing 'cekfu' for resi: ${op.payload.resiNumber} to ${op.payload.newCekfuStatus}`);
             const { error } = await supabase
               .from("tbl_expedisi")
               .update({ cekfu: op.payload.newCekfuStatus })
               .eq("resino", op.payload.resiNumber);
 
             if (error) throw error;
-
+            console.log(`[${new Date().toISOString()}] [BackgroundSync] 'cekfu' operation for ${op.payload.resiNumber} successful.`);
             success = true;
           } else if (op.type === 'scan') {
+            console.log(`[${new Date().toISOString()}] [BackgroundSync] Executing 'scan' for resi: ${op.payload.resiNumber}`);
             const { resiNumber, selectedKarung, courierNameFromExpedisi } = op.payload;
 
             // 1. Insert or Update into tbl_resi using upsert
+            console.log(`[${new Date().toISOString()}] [BackgroundSync] Upserting tbl_resi for ${resiNumber}`);
             const { error: resiUpsertError } = await supabase
               .from("tbl_resi")
               .upsert({
@@ -87,8 +103,10 @@ export const useBackgroundSync = () => {
             if (resiUpsertError) {
               throw resiUpsertError;
             }
+            console.log(`[${new Date().toISOString()}] [BackgroundSync] tbl_resi upsert for ${resiNumber} successful.`);
 
             // 2. Update tbl_expedisi cekfu to FALSE (flag dikelola oleh trigger)
+            console.log(`[${new Date().toISOString()}] [BackgroundSync] Updating tbl_expedisi cekfu for ${resiNumber}`);
             const { error: expedisiUpdateError } = await supabase
               .from("tbl_expedisi")
               .update({ cekfu: false }) // Hanya update cekfu, flag akan diatur oleh trigger
@@ -96,32 +114,42 @@ export const useBackgroundSync = () => {
 
             if (expedisiUpdateError) {
               if (expedisiUpdateError.code !== 'PGRST116') { // PGRST116 means "no rows found"
-                console.warn(`Warning: Failed to update tbl_expedisi for resi ${resiNumber}: ${expedisiUpdateError.message}`);
+                console.warn(`[${new Date().toISOString()}] [BackgroundSync] Warning: Failed to update tbl_expedisi for resi ${resiNumber}: ${expedisiUpdateError.message}`);
+              } else {
+                console.log(`[${new Date().toISOString()}] [BackgroundSync] tbl_expedisi record for ${resiNumber} not found, no cekfu update needed.`);
               }
+            } else {
+              console.log(`[${new Date().toISOString()}] [BackgroundSync] tbl_expedisi cekfu update for ${resiNumber} successful.`);
             }
 
             success = true;
           }
 
           if (success) {
+            console.log(`[${new Date().toISOString()}] [BackgroundSync] Deleting pending operation ${op.id} from IndexedDB.`);
             await deletePendingOperation(op.id);
             operationsSynced++;
           }
         } catch (error: any) {
-          console.error(`Failed to sync operation ${op.id} (type: ${op.type}, resi: ${op.payload.resiNumber}):`, error.message);
+          console.error(`[${new Date().toISOString()}] [BackgroundSync] Failed to sync operation ${op.id} (type: ${op.type}, resi: ${op.payload.resiNumber || 'N/A'}):`, error.message);
           op.retries = (op.retries || 0) + 1;
           op.lastAttempt = Date.now();
           if (op.retries >= MAX_RETRIES) {
-            console.error(`Operation ${op.id} reached max retries. Deleting.`);
-            showError(`Gagal menyinkronkan resi ${op.payload.resiNumber} setelah beberapa percobaan. Silakan coba lagi secara manual.`);
+            console.error(`[${new Date().toISOString()}] [BackgroundSync] Operation ${op.id} reached max retries (${MAX_RETRIES}). Deleting.`);
+            showError(`Gagal menyinkronkan resi ${op.payload.resiNumber || 'N/A'} setelah beberapa percobaan. Silakan coba lagi secara manual.`);
             await deletePendingOperation(op.id);
           } else {
+            console.log(`[${new Date().toISOString()}] [BackgroundSync] Updating pending operation ${op.id} with new retry count: ${op.retries}.`);
             await updatePendingOperation(op);
           }
+          operationsFailed++;
+        } finally {
+          console.timeEnd(`[${new Date().toISOString()}] [BackgroundSync] Operation ${op.id} processing time`);
         }
       }
 
       if (operationsSynced > 0) {
+        console.log(`[${new Date().toISOString()}] [BackgroundSync] ${operationsSynced} operations synced. Invalidating relevant queries.`);
         const today = new Date();
         invalidateDashboardQueries(queryClient, today);
         queryClient.invalidateQueries({ queryKey: ["historyData"] }); 
@@ -130,23 +158,28 @@ export const useBackgroundSync = () => {
         queryClient.invalidateQueries({ queryKey: ["recentResiNumbersForValidation"] });
         queryClient.refetchQueries({ queryKey: ["karungSummary"] });
         queryClient.refetchQueries({ queryKey: ["lastKarung"] });
+        console.log(`[${new Date().toISOString()}] [BackgroundSync] Queries invalidated.`);
       }
       if (operationsFailed > 0) {
-        // showError(`Gagal menyinkronkan ${operationsFailed} operasi. Akan mencoba lagi nanti.`);
+        console.warn(`[${new Date().toISOString()}] [BackgroundSync] ${operationsFailed} operations failed to sync.`);
       }
 
     } catch (error: any) {
-      console.error("Error fetching pending operations or during sync process:", error.message);
+      console.error(`[${new Date().toISOString()}] [BackgroundSync] Error fetching pending operations or during main sync loop:`, error.message);
     } finally {
       isSyncingRef.current = false;
+      console.log(`[${new Date().toISOString()}] [BackgroundSync] Background sync finished.`);
+      console.timeEnd(`[${new Date().toISOString()}] [BackgroundSync] Total sync duration`);
     }
   };
 
   useEffect(() => {
+    console.log(`[${new Date().toISOString()}] [BackgroundSync] Setting up initial sync and interval.`);
     performSync();
     syncIntervalRef.current = window.setInterval(performSync, SYNC_INTERVAL_MS);
     return () => {
       if (syncIntervalRef.current) {
+        console.log(`[${new Date().toISOString()}] [BackgroundSync] Clearing sync interval.`);
         clearInterval(syncIntervalRef.current);
       }
     };

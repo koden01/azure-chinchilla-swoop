@@ -12,6 +12,7 @@ import { useExpedisiRecordsForSelectedDate } from "@/hooks/dashboard/useExpedisi
 import { useAllResiRecords } from "@/hooks/dashboard/useAllResiRecords";
 import { useAllExpedisiRecordsUnfiltered } from "@/hooks/dashboard/useAllExpedisiRecordsUnfiltered";
 import { useFollowUpFlagNoCount as useActualFollowUpFlagNoCount } from "@/hooks/dashboard/useFollowUpFlagNoCount";
+import { TblExpedisi } from "@/types/supabase"; // Import TblExpedisi
 
 // Define the return type interface for useCombinedDashboardData
 interface DashboardDataReturn {
@@ -103,14 +104,18 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
         currentResiData.push(newResiEntry);
 
         const existingExpedisi = currentExpedisiData.get(normalizedResi);
-        currentExpedisiData.set(normalizedResi, {
-          ...(existingExpedisi || {}),
+        // Ensure all properties match TblExpedisi type
+        const updatedExpedisi: TblExpedisi = {
           resino: op.payload.resiNumber,
-          couriername: op.payload.courierNameFromExpedisi ?? null, // Handle undefined
+          couriername: op.payload.courierNameFromExpedisi ?? null,
           flag: "YES",
           created: existingExpedisi?.created || new Date(op.timestamp).toISOString(),
-          cekfu: existingExpedisi?.cekfu ?? false, // Handle undefined
-        });
+          cekfu: existingExpedisi?.cekfu ?? false,
+          orderno: existingExpedisi?.orderno ?? null, // Explicitly handle undefined
+          chanelsales: existingExpedisi?.chanelsales ?? null, // Explicitly handle undefined
+          datetrans: existingExpedisi?.datetrans ?? null, // Explicitly handle undefined
+        };
+        currentExpedisiData.set(normalizedResi, updatedExpedisi);
 
         const opDate = new Date(op.timestamp);
         if (isSameDay(opDate, date)) {

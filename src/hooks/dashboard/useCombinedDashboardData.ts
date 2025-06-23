@@ -83,7 +83,11 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
       };
     }
 
-    const currentExpedisiData = new Map(allExpedisiDataUnfiltered);
+    // Ensure allExpedisiDataUnfiltered is a Map instance
+    const currentExpedisiData = (allExpedisiDataUnfiltered instanceof Map)
+      ? new Map(allExpedisiDataUnfiltered)
+      : new Map();
+    
     const currentResiData: ModalDataItem[] = [...allResiData];
     const currentExpedisiDataForSelectedDate: ModalDataItem[] = [...expedisiDataForSelectedDate];
 

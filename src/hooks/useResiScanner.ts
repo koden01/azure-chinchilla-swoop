@@ -190,7 +190,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         const nokarungStr = existingResiDetail.nokarung ? ` di nokarung ${existingResiDetail.nokarung}` : "";
 
         validationStatus = 'DUPLICATE_RESI';
-        validationMessage = `DOUBLE! Resi ini sudah discan${nokarungStr} ${createdDateStr}.`; // Updated message
+        validationMessage = `DOUBLE! Resi ini Keterangan sudah discan${nokarungStr} ${createdDateStr}.`; // Updated message
         console.log(`[${new Date().toISOString()}] [useResiScanner] Local duplicate found.`);
       }
 
@@ -214,7 +214,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
           }
           const nokarungStr = existingResiInDb.nokarung ? ` di nokarung ${existingResiInDb.nokarung}` : "";
           validationStatus = 'DUPLICATE_RESI';
-          validationMessage = `DOUBLE! Resi ini sudah discan${nokarungStr} ${createdDateStr}.`; // Updated message
+          validationMessage = `DOUBLE! Resi ini Keterangan sudah discan${nokarungStr} ${createdDateStr}.`; // Updated message
           console.log(`[${new Date().toISOString()}] [useResiScanner] Database duplicate found.`);
         }
       }

@@ -127,6 +127,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
 
   // Derive currentCount from allResiForExpedition
   const currentCount = React.useCallback((selectedKarung: string) => {
+    console.log("Calculating current count for expedition:", expedition, "karung:", selectedKarung); // Added this line
     if (!allResiForExpedition || !selectedKarung) return 0;
     
     // Memastikan allResiForExpedition diperlakukan sebagai array ResiExpedisiData

@@ -16,7 +16,6 @@ import KarungSummaryModal from "@/components/KarungSummaryModal";
 import { useQuery } from "@tanstack/react-query";
 import { format, subDays } from "date-fns";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
-import { TblExpedisi } from "@/types/supabase"; // Import TblExpedisi
 
 const InputPage = () => {
   const { expedition, setExpedition } = useExpedition();
@@ -32,11 +31,11 @@ const InputPage = () => {
   const endOfTodayFormatted = format(today, "yyyy-MM-dd");
 
   // NEW: Query to fetch tbl_expedisi data for the last 2 days for local validation
-  const { data: allExpedisiDataUnfiltered, isLoading: isLoadingAllExpedisiUnfiltered } = useQuery<Map<string, TblExpedisi>>({ // Specify Map value type as TblExpedisi
+  const { data: allExpedisiDataUnfiltered, isLoading: isLoadingAllExpedisiUnfiltered } = useQuery<Map<string, any>>({
     queryKey: ["allExpedisiDataUnfiltered", yesterdayFormatted, endOfTodayFormatted], // New query key with 2-day range
     queryFn: async () => {
-      const data = await fetchAllDataPaginated<TblExpedisi>("tbl_expedisi", "created", yesterday, today); // Specify TblExpedisi
-      const expedisiMap = new Map<string, TblExpedisi>(); // Specify Map value type
+      const data = await fetchAllDataPaginated("tbl_expedisi", "created", yesterday, today);
+      const expedisiMap = new Map<string, any>();
       data.forEach(item => {
         if (item.resino) {
           expedisiMap.set(item.resino.toLowerCase(), item);
@@ -45,7 +44,7 @@ const InputPage = () => {
       return expedisiMap;
     },
     enabled: true, // Always enabled for local validation
-    staleTime: 0, // Set to 0 to ensure immediate refetch on invalidation
+    staleTime: 1000 * 60 * 5, // Keep this data fresh for 5 minutes
     gcTime: 1000 * 60 * 60 * 24 * 2, // Garbage collect after 2 days
   });
 

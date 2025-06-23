@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 import { format, subDays } from "date-fns";
-import { TblExpedisi } from "@/types/supabase"; // Import TblExpedisi
 
 export const useAllExpedisiRecordsUnfiltered = () => {
   const today = new Date();
@@ -10,11 +9,11 @@ export const useAllExpedisiRecordsUnfiltered = () => {
   const yesterdayFormatted = format(yesterday, "yyyy-MM-dd");
   const endOfTodayFormatted = format(today, "yyyy-MM-dd");
 
-  return useQuery<Map<string, TblExpedisi>>({ // Specify Map value type as TblExpedisi
+  return useQuery<Map<string, any>>({
     queryKey: ["allExpedisiDataUnfiltered", yesterdayFormatted, endOfTodayFormatted],
     queryFn: async () => {
-      const data = await fetchAllDataPaginated<TblExpedisi>("tbl_expedisi", "created", yesterday, today); // Specify TblExpedisi
-      const expedisiMap = new Map<string, TblExpedisi>(); // Specify Map value type
+      const data = await fetchAllDataPaginated("tbl_expedisi", "created", yesterday, today);
+      const expedisiMap = new Map<string, any>();
       data.forEach(item => {
         if (item.resino) {
           expedisiMap.set(item.resino.toLowerCase(), item);
@@ -23,7 +22,7 @@ export const useAllExpedisiRecordsUnfiltered = () => {
       return expedisiMap;
     },
     enabled: true,
-    staleTime: 0, // Changed to 0 to ensure immediate refetch on invalidation
+    staleTime: 1000 * 60 * 60, // Changed to 60 minutes (from 5 minutes)
     gcTime: 1000 * 60 * 60 * 24 * 2, // 2 days
   });
 };

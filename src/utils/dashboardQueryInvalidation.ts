@@ -9,7 +9,7 @@ export const invalidateDashboardQueries = (queryClient: QueryClient, date: Date 
   // Calculate date range for "today and yesterday" for relevant invalidations
   const yesterday = subDays(actualCurrentDate, 1); 
   const yesterdayFormatted = format(yesterday, "yyyy-MM-dd");
-  // const endOfTodayFormatted = format(actualCurrentDate, "yyyy-MM-dd"); // This is the same as actualCurrentFormattedDate
+  const endOfTodayFormatted = format(actualCurrentDate, "yyyy-MM-dd");
 
   // Invalidate dashboard summary queries for the specific date provided (dateOfDeletedResi)
   // These are usually tied to a specific date.
@@ -29,7 +29,7 @@ export const invalidateDashboardQueries = (queryClient: QueryClient, date: Date 
   // Invalidate queries specific to the Input page and comprehensive data
   // Normalize expedition name for invalidation if it's ID_REKOMENDASI, as Input page treats it as 'ID'
   let normalizedExpeditionForInput: string | undefined = expedition;
-  if (expedition === 'ID_REKOMENDASI') { // Fixed typo here
+  if (expedition === 'ID_REKOMENDASI') {
     normalizedExpeditionForInput = 'ID';
   }
 
@@ -40,7 +40,7 @@ export const invalidateDashboardQueries = (queryClient: QueryClient, date: Date 
   }
 
   // Invalidate the allExpedisiDataUnfiltered query with its new key (today and yesterday range)
-  queryClient.invalidateQueries({ queryKey: ["allExpedisiDataUnfiltered", yesterdayFormatted, actualCurrentFormattedDate] });
+  queryClient.invalidateQueries({ queryKey: ["allExpedisiDataUnfiltered", yesterdayFormatted, endOfTodayFormatted] });
 
   // Invalidate recentResiNumbersForValidation for local duplicate checks (today and yesterday range)
   queryClient.invalidateQueries({ queryKey: ["recentResiNumbersForValidation", yesterdayFormatted, actualCurrentFormattedDate] });
@@ -50,7 +50,4 @@ export const invalidateDashboardQueries = (queryClient: QueryClient, date: Date 
 
   // Also invalidate the followUpFlagNoCount which is global (except today)
   queryClient.invalidateQueries({ queryKey: ["followUpFlagNoCount", actualCurrentFormattedDate] });
-
-  // Additionally, invalidate uniqueExpeditionNames as a safety measure if a courier name was involved
-  queryClient.invalidateQueries({ queryKey: ["uniqueExpeditionNames"] });
 };

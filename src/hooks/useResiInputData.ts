@@ -4,7 +4,6 @@ import { format, subDays } from "date-fns";
 import React from "react";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 import { normalizeExpeditionName, KNOWN_EXPEDITIONS } from "@/utils/expeditionUtils";
-import { TblResi } from "@/types/supabase"; // Import TblResi
 
 // Define the type for ResiExpedisiData to match useResiInputData
 interface ResiExpedisiData {
@@ -35,7 +34,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     queryFn: async () => {
       if (!expedition) return [];
       
-      const data = await fetchAllDataPaginated<TblResi>( // Specify TblResi as the generic type
+      const data = await fetchAllDataPaginated(
         "tbl_resi",
         "created", // dateFilterColumn
         yesterday, // selectedStartDate (fetch from yesterday)
@@ -49,14 +48,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
           }
         }
       );
-      // Map TblResi to ResiExpedisiData if there are any differences, otherwise just return
-      return data.map(item => ({
-        Resi: item.Resi,
-        nokarung: item.nokarung,
-        created: item.created,
-        Keterangan: item.Keterangan,
-        schedule: item.schedule,
-      })) || [];
+      return data || [];
     },
     enabled: !!expedition,
     staleTime: 1000 * 30, // Data considered fresh for 30 seconds
@@ -135,71 +127,38 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
 
   // Derive currentCount from allResiForExpedition
   const currentCount = React.useCallback((selectedKarung: string) => {
-    console.log("Calculating current count for expedition:", expedition, "karung:", selectedKarung);
     if (!allResiForExpedition || !selectedKarung) return 0;
-    
-    // Explicitly type resiData here
-    const resiData: ResiExpedisiData[] = allResiForExpedition; 
-
-    // Extract the filter logic into a separate function/variable
-    const filterPredicate = (item: ResiExpedisiData) => { // Explicitly typed item here
-      const itemNokarung = item.nokarung ?? "";
-      const itemKeterangan = item.Keterangan ?? "";
-
-      const isKarungMatch = itemNokarung === selectedKarung;
-      let isExpeditionMatch = false;
-
-      if (expedition === 'ID') {
-        isExpeditionMatch = (itemKeterangan === 'ID' || itemKeterangan === 'ID_REKOMENDASI');
-      } else {
-        isExpeditionMatch = itemKeterangan === expedition;
-      }
-      
-      return isKarungMatch && isExpeditionMatch;
-    };
-
-    const count = resiData.filter(filterPredicate).length;
+    const count = allResiForExpedition.filter(item => 
+      item.nokarung === selectedKarung && 
+      (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition)
+    ).length;
     return count;
-  }, [allResiForExpedition, expedition]); // Dependencies remain the same
+  }, [allResiForExpedition, expedition]);
 
-  // Optimized calculation for lastKarung and highestKarung
-  const { lastKarung, highestKarung } = React.useMemo(() => {
-    if (!allResiForExpedition || allResiForExpedition.length === 0) {
-      return { lastKarung: "0", highestKarung: 0 };
-    }
+  // Derive lastKarung from allResiForExpedition
+  const lastKarung = React.useMemo(() => {
+    if (!allResiForExpedition || allResiForExpedition.length === 0) return "0";
+    const filteredResi = allResiForExpedition.filter(item => 
+      item.nokarung !== null && 
+      (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition)
+    );
+    if (filteredResi.length === 0) return "0";
 
-    let maxKarung = 0;
-    let latestResi: ResiExpedisiData | null = null;
-    let latestTimestamp = 0;
+    const sortedResi = [...filteredResi].sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime());
+    return sortedResi[0].nokarung || "0";
+  }, [allResiForExpedition, expedition]);
 
-    allResiForExpedition.forEach((item: ResiExpedisiData) => { // Explicitly type item here
-      const normalizedKeterangan = normalizeExpeditionName(item.Keterangan);
-      const isRelevantExpedition = expedition === 'ID' ? 
-        (normalizedKeterangan === 'ID' || normalizedKeterangan === 'ID_REKOMENDASI') : 
-        normalizedKeterangan === expedition;
-
-      if (isRelevantExpedition) {
-        // For highestKarung
-        if (item.nokarung) { 
-          const karungNum = parseInt(item.nokarung);
-          if (!isNaN(karungNum) && karungNum > maxKarung) {
-            maxKarung = karungNum;
-          }
-        }
-
-        // For lastKarung
-        const itemTimestamp = new Date(item.created).getTime();
-        if (itemTimestamp > latestTimestamp) {
-          latestTimestamp = itemTimestamp;
-          latestResi = item;
-        }
-      }
-    });
-
-    return {
-      lastKarung: latestResi?.nokarung || "0",
-      highestKarung: maxKarung,
-    };
+  // Derive highestKarung from allResiForExpedition
+  const highestKarung = React.useMemo(() => {
+    if (!allResiForExpedition || allResiForExpedition.length === 0) return 0;
+    const validKarungNumbers = allResiForExpedition
+      .filter(item => 
+        item.nokarung !== null && 
+        (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition)
+      )
+      .map(item => parseInt(item.nokarung || "0"))
+      .filter(num => !isNaN(num) && num > 0);
+    return validKarungNumbers.length > 0 ? Math.max(...validKarungNumbers) : 0;
   }, [allResiForExpedition, expedition]);
 
   // Karung options based on highestKarung (still client-side generation)

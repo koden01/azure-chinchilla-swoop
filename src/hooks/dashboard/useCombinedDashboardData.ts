@@ -12,7 +12,6 @@ import { useExpedisiRecordsForSelectedDate } from "@/hooks/dashboard/useExpedisi
 import { useAllResiRecords } from "@/hooks/dashboard/useAllResiRecords";
 import { useAllExpedisiRecordsUnfiltered } from "@/hooks/dashboard/useAllExpedisiRecordsUnfiltered";
 import { useFollowUpFlagNoCount as useActualFollowUpFlagNoCount } from "@/hooks/dashboard/useFollowUpFlagNoCount";
-import { TblExpedisi } from "@/types/supabase"; // Import TblExpedisi
 
 // Define the return type interface for useCombinedDashboardData
 interface DashboardDataReturn {
@@ -96,26 +95,22 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
       if (op.type === 'scan') {
         const newResiEntry: ModalDataItem = {
           Resi: op.payload.resiNumber,
-          nokarung: op.payload.selectedKarung ?? null, // Handle undefined
+          nokarung: op.payload.selectedKarung,
           created: new Date(op.timestamp).toISOString(),
-          Keterangan: op.payload.courierNameFromExpedisi ?? null, // Handle undefined
+          Keterangan: op.payload.courierNameFromExpedisi,
           schedule: "ontime",
         };
         currentResiData.push(newResiEntry);
 
         const existingExpedisi = currentExpedisiData.get(normalizedResi);
-        // Ensure all properties match TblExpedisi type
-        const updatedExpedisi: TblExpedisi = {
+        currentExpedisiData.set(normalizedResi, {
+          ...(existingExpedisi || {}),
           resino: op.payload.resiNumber,
-          couriername: op.payload.courierNameFromExpedisi ?? null,
+          couriername: op.payload.courierNameFromExpedisi,
           flag: "YES",
           created: existingExpedisi?.created || new Date(op.timestamp).toISOString(),
-          cekfu: existingExpedisi?.cekfu ?? false,
-          orderno: existingExpedisi?.orderno ?? null, // Explicitly handle undefined
-          chanelsales: existingExpedisi?.chanelsales ?? null, // Explicitly handle undefined
-          datetrans: existingExpedisi?.datetrans ?? null, // Explicitly handle undefined
-        };
-        currentExpedisiData.set(normalizedResi, updatedExpedisi);
+          cekfu: existingExpedisi?.cekfu || false,
+        });
 
         const opDate = new Date(op.timestamp);
         if (isSameDay(opDate, date)) {
@@ -125,7 +120,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
               resino: op.payload.resiNumber,
               orderno: null,
               chanelsales: null,
-              couriername: op.payload.courierNameFromExpedisi ?? null, // Handle undefined
+              couriername: op.payload.courierNameFromExpedisi,
               created: new Date(op.timestamp).toISOString(),
               flag: "YES",
               datetrans: null,
@@ -142,14 +137,14 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
           currentResiData[resiIndex] = { 
             ...currentResiData[resiIndex], 
             schedule: "batal", 
-            Keterangan: op.payload.keteranganValue ?? null, // Handle undefined
+            Keterangan: op.payload.keteranganValue,
           };
         } else {
           currentResiData.push({
             Resi: op.payload.resiNumber,
-            nokarung: "0", // Set nokarung to "0" for batal
-            created: op.payload.createdTimestampFromExpedisi || new Date(op.timestamp).toISOString(), // Gunakan created dari expedisi
-            Keterangan: op.payload.keteranganValue ?? null, // Set Keterangan menjadi nama ekspedisi asli, handle undefined
+            nokarung: "0",
+            created: op.payload.createdTimestampFromExpedisi || new Date(op.timestamp).toISOString(),
+            Keterangan: op.payload.keteranganValue,
             schedule: "batal",
           });
         }
@@ -160,14 +155,14 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
           currentResiData[resiIndex] = { 
             ...currentResiData[resiIndex], 
             schedule: "ontime", 
-            Keterangan: op.payload.keteranganValue ?? null, // Handle undefined
+            Keterangan: op.payload.keteranganValue,
           };
         } else {
           currentResiData.push({
             Resi: op.payload.resiNumber,
-            nokarung: "0", // Set nokarung to "0" for confirm
-            created: op.payload.expedisiCreatedTimestamp || new Date(op.timestamp).toISOString(), // Gunakan created dari expedisi
-            Keterangan: op.payload.keteranganValue ?? op.payload.courierNameFromExpedisi ?? null, // Handle undefined
+            nokarung: "0",
+            created: op.payload.expedisiCreatedTimestamp || new Date(op.timestamp).toISOString(),
+            Keterangan: op.payload.courierNameFromExpedisi,
             schedule: "ontime",
           });
         }
@@ -188,14 +183,14 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
       } else if (op.type === 'cekfu') {
         const expedisiRecord = currentExpedisiData.get(normalizedResi);
         if (expedisiRecord) {
-          currentExpedisiData.set(normalizedResi, { ...expedisiRecord, cekfu: op.payload.newCekfuStatus ?? false }); // Handle undefined
+          currentExpedisiData.set(normalizedResi, { ...expedisiRecord, cekfu: op.payload.newCekfuStatus });
         }
 
         const opDate = new Date(op.timestamp);
         if (isSameDay(opDate, date)) {
           const indexInSelectedDate = currentExpedisiDataForSelectedDate.findIndex((e: ModalDataItem) => (e.resino || "").toLowerCase() === normalizedResi);
           if (indexInSelectedDate !== -1) {
-            currentExpedisiDataForSelectedDate[indexInSelectedDate].cekfu = op.payload.newCekfuStatus ?? false; // Handle undefined
+            currentExpedisiDataForSelectedDate[indexInSelectedDate].cekfu = op.payload.newCekfuStatus;
           }
         }
       }
@@ -213,7 +208,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
     const endOfSelectedDate = endOfDay(date);
 
     // Calculate Transaksi Hari Ini and Belum Kirim (for selected date)
-    currentExpedisiDataForSelectedDate.forEach((exp: ModalDataItem) => { // Corrected: Use currentExpedisiDataForSelectedDate
+    expedisiDataForSelectedDateWithOptimisticUpdates.forEach((exp: ModalDataItem) => {
       currentTransaksiHariIni++;
       if (exp.flag === "NO") {
         currentBelumKirim++;
@@ -256,7 +251,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
       };
     });
 
-    currentExpedisiDataForSelectedDate.forEach((exp: ModalDataItem) => { // Corrected: Use currentExpedisiDataForSelectedDate
+    expedisiDataForSelectedDateWithOptimisticUpdates.forEach((exp: ModalDataItem) => {
       const normalizedCourierName = normalizeExpeditionName(exp.couriername);
 
       if (normalizedCourierName && summaries[normalizedCourierName]) {
@@ -323,7 +318,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
     return {
       currentResiDataWithOptimisticUpdates: currentResiData,
       currentExpedisiDataWithOptimisticUpdates: currentExpedisiData,
-      expedisiDataForSelectedDateWithOptimisticUpdates: currentExpedisiDataForSelectedDate, // Corrected: Assign the internal variable
+      expedisiDataForSelectedDateWithOptimisticUpdates: currentExpedisiDataForSelectedDate,
       transaksiHariIni: currentTransaksiHariIni,
       totalScan: currentTotalScan,
       idRekCount: currentIdRekCount,

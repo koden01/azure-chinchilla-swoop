@@ -22,8 +22,9 @@ interface AllKarungSummaryItem {
   quantity: number;
 }
 
-export const useResiInputData = (expedition: string, showAllExpeditionSummary: boolean, today: Date) => { // Menerima 'today' sebagai prop
-  const formattedDate = format(today, "yyyy-MM-dd"); // Dihitung dari prop 'today'
+export const useResiInputData = (expedition: string, showAllExpeditionSummary: boolean) => {
+  const today = new Date();
+  const formattedDate = format(today, "yyyy-MM-dd");
 
   // Query to fetch all resi data for the current expedition and date for local validation
   const { data: allResiForExpedition, isLoading: isLoadingAllResiForExpedition } = useQuery<ResiExpedisiData[]>({
@@ -34,8 +35,8 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       const data = await fetchAllDataPaginated(
         "tbl_resi",
         "created", // dateFilterColumn
-        today, // selectedStartDate: today
-        today, // selectedEndDate: today
+        today, // selectedStartDate
+        today, // selectedEndDate
         "Resi, nokarung, created, Keterangan, schedule", // Only select necessary columns
         (baseQuery) => { // Custom filter function
           if (expedition === 'ID') {
@@ -49,7 +50,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       return data || [];
     },
     enabled: !!expedition,
-    staleTime: 1000 * 60 * 60 * 4, // Changed to 60 minutes (from 1 minute)
+    staleTime: 1000 * 60 * 60, // Changed to 60 minutes (from 1 minute)
   });
 
   // NEW: Query to fetch ALL karung summaries directly from database using new RPC
@@ -68,7 +69,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       return data || [];
     },
     enabled: showAllExpeditionSummary, // Only enabled when explicitly requested
-    staleTime: 1000 * 60 * 60 * 4, // Changed to 60 minutes (from 1 minute)
+    staleTime: 1000 * 60 * 60, // Changed to 60 minutes (from 1 minute)
   });
 
   // Query to fetch unique expedition names

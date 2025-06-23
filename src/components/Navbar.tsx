@@ -168,38 +168,32 @@ const Navbar = () => {
     // allExpedisiDataUnfiltered is already persisted and fetched on app load,
     // so explicit prefetch might not be strictly necessary here if it's already in cache.
     // However, including it ensures it's fresh if stale.
-    // Changed to prefetch for today only
+    const twoDaysAgo = new Date();
+    twoDaysAgo.setDate(today.getDate() - 2);
+    const twoDaysAgoFormatted = format(twoDaysAgo, "yyyy-MM-dd");
+    const endOfTodayFormatted = format(today, "yyyy-MM-dd");
+
     queryClient.prefetchQuery({
-      queryKey: ["allExpedisiDataUnfiltered", formattedDate, formattedDate], // Changed to today only
+      queryKey: ["allExpedisiDataUnfiltered", twoDaysAgoFormatted, endOfTodayFormatted],
       queryFn: async () => {
-        const data = await fetchAllDataPaginated("tbl_expedisi", "created", today, today); // Changed date range to today only
-        const expedisiMap = new Map<string, any>();
-        data.forEach(item => {
-          if (item.resino) {
-            expedisiMap.set(item.resino.toLowerCase(), item);
+        let allRecords: any[] = [];
+        let offset = 0;
+        const limit = 1000;
+        let hasMore = true;
+
+        while (hasMore) {
+          const { data, error } = await supabase.from("tbl_expedisi").select("*").range(offset, offset + limit - 1);
+          if (error) throw error;
+          if (data && data.length > 0) {
+            allRecords = allRecords.concat(data);
+            offset += data.length;
+            hasMore = data.length === limit;
+          } else {
+            hasMore = false;
           }
-        });
-        return expedisiMap;
-      },
-    });
-
-    // Prefetch recentResiNumbersForValidation for local duplicate checks (today only)
-    queryClient.prefetchQuery({
-      queryKey: ["recentResiNumbersForValidation", formattedDate], // Changed to today only
-      queryFn: async () => {
-        const data = await fetchAllDataPaginated("tbl_resi", "created", today, today, "Resi"); // Changed date range to today only
-        const resiSet = new Set(data.map((item: { Resi: string }) => item.Resi.toLowerCase().trim()));
-        return resiSet;
-      },
-    });
-
-    // NEW: Prefetch the allFlagNoExpedisiData query
-    queryClient.prefetchQuery({
-      queryKey: ["allFlagNoExpedisiData"],
-      queryFn: async () => {
-        const data = await fetchAllDataPaginated("tbl_expedisi", undefined, undefined, undefined, "*", (query) => query.eq("flag", "NO"));
+        }
         const expedisiMap = new Map<string, any>();
-        data.forEach(item => {
+        allRecords.forEach(item => {
           if (item.resino) {
             expedisiMap.set(item.resino.toLowerCase(), item);
           }

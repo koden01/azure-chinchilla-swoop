@@ -4,12 +4,14 @@ import { format, subDays } from "date-fns";
 
 export const useAllExpedisiRecordsUnfiltered = () => {
   const today = new Date();
-  const todayFormatted = format(today, "yyyy-MM-dd"); // Use for query key
+  const twoDaysAgo = subDays(today, 2);
+  const twoDaysAgoFormatted = format(twoDaysAgo, "yyyy-MM-dd");
+  const endOfTodayFormatted = format(today, "yyyy-MM-dd");
 
   return useQuery<Map<string, any>>({
-    queryKey: ["allExpedisiDataUnfiltered", todayFormatted, todayFormatted], // Changed query key to today only
+    queryKey: ["allExpedisiDataUnfiltered", twoDaysAgoFormatted, endOfTodayFormatted],
     queryFn: async () => {
-      const data = await fetchAllDataPaginated("tbl_expedisi", "created", today, today); // Changed date range to today only
+      const data = await fetchAllDataPaginated("tbl_expedisi", "created", twoDaysAgo, today);
       const expedisiMap = new Map<string, any>();
       data.forEach(item => {
         if (item.resino) {
@@ -19,7 +21,7 @@ export const useAllExpedisiRecordsUnfiltered = () => {
       return expedisiMap;
     },
     enabled: true,
-    staleTime: 1000 * 60 * 60 * 4, // Changed to 4 hours (from 60 minutes)
+    staleTime: 1000 * 60 * 60, // Changed to 60 minutes (from 5 minutes)
     gcTime: 1000 * 60 * 60 * 24 * 2, // 2 days
   });
 };

@@ -6,6 +6,11 @@ export const invalidateDashboardQueries = (queryClient: QueryClient, date: Date 
   const actualCurrentDate = new Date();
   const actualCurrentFormattedDate = format(actualCurrentDate, 'yyyy-MM-dd');
 
+  // Calculate date range for 3 days (today and 2 days prior) for allExpedisiDataUnfiltered invalidation
+  const twoDaysAgo = subDays(actualCurrentDate, 2); // Covers today, yesterday, and the day before yesterday
+  const twoDaysAgoFormatted = format(twoDaysAgo, "yyyy-MM-dd");
+  const endOfTodayFormatted = format(actualCurrentDate, "yyyy-MM-dd");
+
   // Invalidate dashboard summary queries for the specific date provided (dateOfDeletedResi)
   // These are usually tied to a specific date.
   queryClient.invalidateQueries({ queryKey: ["transaksiHariIni", formattedDate] });
@@ -34,11 +39,11 @@ export const invalidateDashboardQueries = (queryClient: QueryClient, date: Date 
     queryClient.invalidateQueries({ queryKey: ["allResiForExpedition", normalizedExpeditionForInput, formattedDate] });
   }
 
-  // Invalidate the allExpedisiDataUnfiltered query with its new key (today only)
-  queryClient.invalidateQueries({ queryKey: ["allExpedisiDataUnfiltered", actualCurrentFormattedDate, actualCurrentFormattedDate] }); // Changed to today only
+  // Invalidate the allExpedisiDataUnfiltered query with its new key (3-day range)
+  queryClient.invalidateQueries({ queryKey: ["allExpedisiDataUnfiltered", twoDaysAgoFormatted, endOfTodayFormatted] });
 
-  // Invalidate recentResiNumbersForValidation for local duplicate checks (today only)
-  queryClient.invalidateQueries({ queryKey: ["recentResiNumbersForValidation", actualCurrentFormattedDate] }); // Changed to today only
+  // Invalidate recentResiNumbersForValidation for local duplicate checks (3-day range)
+  queryClient.invalidateQueries({ queryKey: ["recentResiNumbersForValidation", twoDaysAgoFormatted, actualCurrentFormattedDate] });
 
   // NEW: Invalidate the allFlagNoExpedisiData query
   queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] });

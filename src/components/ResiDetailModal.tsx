@@ -79,9 +79,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
     setSorting([]);
     setColumnFilters([]);
     table.setPageIndex(0); // Reset to first page
-    // Reset column visibility if needed, or define default visibility
-    // setColumnVisibility({}); 
-  }, [data, isOpen, modalType]); // Added table to dependencies for setPageIndex
+  }, [data, isOpen, modalType]);
 
   const columns = useMemo<ColumnDef<ModalDataItem>[]>(() => {
     const baseColumns: ColumnDef<ModalDataItem>[] = [];
@@ -256,12 +254,9 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
 
     const textToCopy = `${headerRow}\n${dataRows}`;
 
-    console.log("Attempting to copy data:", textToCopy);
-
     try {
       await navigator.clipboard.writeText(textToCopy);
       showSuccess(`Berhasil menyalin ${rowsToCopy.length} baris data!`);
-      console.log("Data copied successfully!");
     } catch (err: any) {
       showError(`Gagal menyalin data tabel: ${err.message || "Unknown error"}`);
       console.error("Failed to copy table data:", err);

@@ -3,7 +3,6 @@
 import React from "react";
 import ExpeditionDetailCard from "@/components/ExpeditionDetailCard";
 import { Loader2 } from "lucide-react";
-// import { cn } from "@/lib/utils"; // Dihapus karena tidak lagi digunakan
 
 interface ExpeditionSummary {
   name: string;
@@ -44,7 +43,6 @@ const DashboardExpeditionDetails: React.FC<DashboardExpeditionDetailsProps> = ({
                 className="relative overflow-hidden rounded-lg shadow-lg transform transition-transform hover:scale-105"
                 onClick={() => handleOpenExpeditionDetailModal(summary.name)}
               >
-                {/* Logika gradien dinamis dihapus dari sini */}
                 <ExpeditionDetailCard
                   name={summary.name}
                   totalTransaksi={summary.totalTransaksi}

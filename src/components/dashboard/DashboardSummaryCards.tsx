@@ -19,8 +19,7 @@ interface DashboardSummaryCardsProps {
   isLoadingScanFollowupLateCount: boolean;
   batalCount: number | undefined;
   isLoadingBatalCount: boolean;
-  // formattedDate: string; // Dihapus karena tidak lagi digunakan secara langsung di sini
-  handleOpenTransaksiHariIniModal: () => void; // Tetap ada karena masih dipanggil di DashboardPage
+  handleOpenTransaksiHariIniModal: () => void;
   handleOpenBelumKirimModal: () => void;
   handleOpenFollowUpFlagNoModal: () => void;
   handleOpenScanFollowupModal: () => void;
@@ -41,8 +40,7 @@ const DashboardSummaryCards: React.FC<DashboardSummaryCardsProps> = ({
   isLoadingScanFollowupLateCount,
   batalCount,
   isLoadingBatalCount,
-  // formattedDate, // Dihapus
-  handleOpenTransaksiHariIniModal, // Tetap ada
+  handleOpenTransaksiHariIniModal,
   handleOpenBelumKirimModal,
   handleOpenFollowUpFlagNoModal,
   handleOpenScanFollowupModal,

@@ -6,9 +6,9 @@ interface SummaryCardProps {
   title: string;
   value: number | string | React.ReactNode;
   secondaryTitle?: string;
-  secondaryValue?: number | string | React.ReactNode; // Updated to React.ReactNode
+  secondaryValue?: number | string | React.ReactNode;
   sisaTitle?: string;
-  sisaValue?: number | string | React.ReactNode; // Updated to React.ReactNode
+  sisaValue?: number | string | React.ReactNode;
   gradientFrom: string;
   gradientTo: string;
   icon: "package" | "maximize" | "warning" | "info" | "clock";

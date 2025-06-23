@@ -21,34 +21,38 @@ export interface PendingOperation {
 const STORE_NAME = 'pending-operations';
 
 export const addPendingOperation = async (operation: PendingOperation) => {
+  const timerLabel = `[IndexedDB] addPendingOperation:${operation.id}`;
   console.log(`[${new Date().toISOString()}] [IndexedDB] Adding pending operation: ${operation.type} for resi ${operation.payload.resiNumber}`);
-  console.time(`[IndexedDB] addPendingOperation:${operation.id}`); // Fixed timer label
+  console.time(timerLabel);
   const db = await initDB(); // initDB now returns existing instance if available
   await db.add(STORE_NAME, { ...operation, retries: 0, lastAttempt: Date.now() });
-  console.timeEnd(`[IndexedDB] addPendingOperation:${operation.id}`); // Fixed timer label
+  console.timeEnd(timerLabel);
 };
 
 export const getPendingOperations = async (): Promise<PendingOperation[]> => {
+  const timerLabel = `[IndexedDB] getPendingOperations`;
   console.log(`[${new Date().toISOString()}] [IndexedDB] Getting all pending operations.`);
-  console.time(`[IndexedDB] getPendingOperations`); // Fixed timer label
+  console.time(timerLabel);
   const db = await initDB();
   const operations = await db.getAll(STORE_NAME);
-  console.timeEnd(`[IndexedDB] getPendingOperations`); // Fixed timer label
+  console.timeEnd(timerLabel);
   return operations;
 };
 
 export const deletePendingOperation = async (id: string) => {
+  const timerLabel = `[IndexedDB] deletePendingOperation:${id}`;
   console.log(`[${new Date().toISOString()}] [IndexedDB] Deleting pending operation with ID: ${id}`);
-  console.time(`[IndexedDB] deletePendingOperation:${id}`); // Fixed timer label
+  console.time(timerLabel);
   const db = await initDB();
   await db.delete(STORE_NAME, id);
-  console.timeEnd(`[IndexedDB] deletePendingOperation:${id}`); // Fixed timer label
+  console.timeEnd(timerLabel);
 };
 
 export const updatePendingOperation = async (operation: PendingOperation) => {
+  const timerLabel = `[IndexedDB] updatePendingOperation:${operation.id}`;
   console.log(`[${new Date().toISOString()}] [IndexedDB] Updating pending operation with ID: ${operation.id} (retries: ${operation.retries})`);
-  console.time(`[IndexedDB] updatePendingOperation:${operation.id}`); // Fixed timer label
+  console.time(timerLabel);
   const db = await initDB();
   await db.put(STORE_NAME, operation);
-  console.timeEnd(`[IndexedDB] updatePendingOperation:${operation.id}`); // Fixed timer label
+  console.timeEnd(timerLabel);
 };

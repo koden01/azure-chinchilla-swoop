@@ -19,7 +19,7 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       gcTime: 1000 * 60 * 60, // Cache garbage collection time: 1 hour
-      staleTime: 1000 * 60 * 60, // Data is considered fresh for 60 minutes (changed from 5 minutes)
+      staleTime: 1000 * 60 * 60 * 4, // Data is considered fresh for 4 hours (changed from 1 hour)
     },
   },
 });

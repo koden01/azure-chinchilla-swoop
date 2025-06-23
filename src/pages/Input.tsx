@@ -25,15 +25,16 @@ const InputPage = () => {
 
   // Calculate date range for 2 days back for allExpedisiDataUnfiltered
   const today = new Date();
-  const twoDaysAgo = subDays(today, 2); // Covers today, yesterday, and the day before yesterday
-  const twoDaysAgoFormatted = format(twoDaysAgo, "yyyy-MM-dd");
-  const endOfTodayFormatted = format(today, "yyyy-MM-dd"); // For the end of the range key
+  // Mengubah menjadi hanya hari ini dan kemarin
+  const yesterday = subDays(today, 1);
+  const yesterdayFormatted = format(yesterday, "yyyy-MM-dd");
+  const endOfTodayFormatted = format(today, "yyyy-MM-dd");
 
   // NEW: Query to fetch tbl_expedisi data for the last 2 days for local validation
   const { data: allExpedisiDataUnfiltered, isLoading: isLoadingAllExpedisiUnfiltered } = useQuery<Map<string, any>>({
-    queryKey: ["allExpedisiDataUnfiltered", twoDaysAgoFormatted, endOfTodayFormatted], // New query key with 2-day range
+    queryKey: ["allExpedisiDataUnfiltered", yesterdayFormatted, endOfTodayFormatted], // New query key with 2-day range
     queryFn: async () => {
-      const data = await fetchAllDataPaginated("tbl_expedisi", "created", twoDaysAgo, today);
+      const data = await fetchAllDataPaginated("tbl_expedisi", "created", yesterday, today);
       const expedisiMap = new Map<string, any>();
       data.forEach(item => {
         if (item.resino) {

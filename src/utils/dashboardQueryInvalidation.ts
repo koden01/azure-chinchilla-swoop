@@ -6,9 +6,9 @@ export const invalidateDashboardQueries = (queryClient: QueryClient, date: Date 
   const actualCurrentDate = new Date();
   const actualCurrentFormattedDate = format(actualCurrentDate, 'yyyy-MM-dd');
 
-  // Calculate date range for 3 days (today and 2 days prior) for allExpedisiDataUnfiltered invalidation
-  const twoDaysAgo = subDays(actualCurrentDate, 2); // Covers today, yesterday, and the day before yesterday
-  const twoDaysAgoFormatted = format(twoDaysAgo, "yyyy-MM-dd");
+  // Calculate date range for "today and yesterday" for relevant invalidations
+  const yesterday = subDays(actualCurrentDate, 1); 
+  const yesterdayFormatted = format(yesterday, "yyyy-MM-dd");
   const endOfTodayFormatted = format(actualCurrentDate, "yyyy-MM-dd");
 
   // Invalidate dashboard summary queries for the specific date provided (dateOfDeletedResi)
@@ -39,11 +39,11 @@ export const invalidateDashboardQueries = (queryClient: QueryClient, date: Date 
     queryClient.invalidateQueries({ queryKey: ["allResiForExpedition", normalizedExpeditionForInput, formattedDate] });
   }
 
-  // Invalidate the allExpedisiDataUnfiltered query with its new key (3-day range)
-  queryClient.invalidateQueries({ queryKey: ["allExpedisiDataUnfiltered", twoDaysAgoFormatted, endOfTodayFormatted] });
+  // Invalidate the allExpedisiDataUnfiltered query with its new key (today and yesterday range)
+  queryClient.invalidateQueries({ queryKey: ["allExpedisiDataUnfiltered", yesterdayFormatted, endOfTodayFormatted] });
 
-  // Invalidate recentResiNumbersForValidation for local duplicate checks (3-day range)
-  queryClient.invalidateQueries({ queryKey: ["recentResiNumbersForValidation", twoDaysAgoFormatted, actualCurrentFormattedDate] });
+  // Invalidate recentResiNumbersForValidation for local duplicate checks (today and yesterday range)
+  queryClient.invalidateQueries({ queryKey: ["recentResiNumbersForValidation", yesterdayFormatted, actualCurrentFormattedDate] });
 
   // NEW: Invalidate the allFlagNoExpedisiData query
   queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] });

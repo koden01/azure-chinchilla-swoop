@@ -140,7 +140,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     
     const resiData: ResiExpedisiData[] = allResiForExpedition;
 
-    const count = resiData.filter(item => { // Menghapus penentuan tipe eksplisit untuk 'item'
+    const count = resiData.filter((item: ResiExpedisiData) => { // Menambahkan anotasi tipe eksplisit untuk 'item'
       const itemNokarung = item.nokarung ?? "";
       const itemKeterangan = item.Keterangan ?? "";
 

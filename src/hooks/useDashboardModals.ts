@@ -63,7 +63,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
     }
 
     try {
-      const data = await fetchAllDataPaginated(
+      const data = await fetchAllDataPaginated<ModalDataItem>( // Specify type here
         "tbl_expedisi",
         "created",
         date,
@@ -84,7 +84,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
     }
 
     try {
-      const data = await fetchAllDataPaginated(
+      const data = await fetchAllDataPaginated<ModalDataItem>( // Specify type here
         "tbl_expedisi",
         "created",
         date,
@@ -104,7 +104,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
     const actualCurrentFormattedDate = format(actualCurrentDate, 'yyyy-MM-dd');
 
     try {
-      const data = await fetchAllDataPaginated(
+      const data = await fetchAllDataPaginated<ModalDataItem>( // Specify type here
         "tbl_expedisi",
         "created",
         undefined, // No specific start date for this query as it's "except today"
@@ -145,7 +145,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
     }
 
     try {
-      const data = await fetchAllDataPaginated(
+      const data = await fetchAllDataPaginated<ModalDataItem>( // Specify type here
         "tbl_expedisi",
         "created",
         date,
@@ -242,7 +242,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       
       if (!expedisiRecord) {
         // If not in cache, fetch directly using fetchAllDataPaginated (limit 1)
-        const directExpedisiData = await fetchAllDataPaginated(
+        const directExpedisiData = await fetchAllDataPaginated<any>( // Specify type here, can be more specific if needed
           "tbl_expedisi",
           undefined, undefined, undefined, // No date filter needed for single record fetch
           "*",
@@ -299,7 +299,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       
       if (!expedisiRecord) {
         // If not in cache, fetch directly using fetchAllDataPaginated (limit 1)
-        const directExpedisiData = await fetchAllDataPaginated(
+        const directExpedisiData = await fetchAllDataPaginated<any>( // Specify type here, can be more specific if needed
           "tbl_expedisi",
           undefined, undefined, undefined, // No date filter needed for single record fetch
           "*",

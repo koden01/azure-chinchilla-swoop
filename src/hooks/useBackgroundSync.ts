@@ -4,7 +4,6 @@ import { getPendingOperations, deletePendingOperation, updatePendingOperation } 
 import { supabase } from '@/integrations/supabase/client';
 import { showError } from '@/utils/toast';
 import { invalidateDashboardQueries } from '@/utils/dashboardQueryInvalidation';
-// Removed unused import: format
 
 const SYNC_INTERVAL_MS = 1000 * 60; // Sync every 1 minute
 const MAX_RETRIES = 5; // Max attempts before giving up on an operation
@@ -16,23 +15,18 @@ export const useBackgroundSync = () => {
 
   const performSync = async () => {
     if (isSyncingRef.current) {
-      console.log("Sync already in progress, skipping this interval.");
       return;
     }
 
     isSyncingRef.current = true;
-    console.log("Attempting to sync pending operations...");
     let operationsSynced = 0;
     let operationsFailed = 0;
 
     try {
       const pendingOperations = await getPendingOperations();
       if (pendingOperations.length === 0) {
-        console.log("No pending operations to sync.");
         return;
       }
-
-      console.log(`Found ${pendingOperations.length} pending operations.`);
 
       for (const op of pendingOperations) {
         try {
@@ -52,7 +46,6 @@ export const useBackgroundSync = () => {
             if (resiUpsertError) throw resiUpsertError;
 
             success = true;
-            console.log(`Successfully synced 'batal' for resi: ${op.payload.resiNumber}`);
 
           } else if (op.type === 'confirm') {
             const { error: resiUpsertError } = await supabase
@@ -68,7 +61,6 @@ export const useBackgroundSync = () => {
             if (resiUpsertError) throw resiUpsertError;
 
             success = true;
-            console.log(`Successfully synced 'confirm' for resi: ${op.payload.resiNumber}`);
 
           } else if (op.type === 'cekfu') {
             const { error } = await supabase
@@ -79,7 +71,6 @@ export const useBackgroundSync = () => {
             if (error) throw error;
 
             success = true;
-            console.log(`Successfully synced 'cekfu' toggle for resi: ${op.payload.resiNumber} to ${op.payload.newCekfuStatus}`);
           } else if (op.type === 'scan') {
             const { resiNumber, selectedKarung, courierNameFromExpedisi } = op.payload;
 
@@ -110,7 +101,6 @@ export const useBackgroundSync = () => {
             }
 
             success = true;
-            console.log(`Successfully synced 'scan' for resi: ${resiNumber}`);
           }
 
           if (success) {

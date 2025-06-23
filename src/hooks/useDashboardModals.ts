@@ -259,7 +259,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
           expedisiCreatedTimestamp,
           keteranganValue: courierNameFromExpedisi, // Set Keterangan to couriername
         },
-        timestamp: Date.now(),
+        timestamp: Date.24(),
       });
 
       showSuccess(`Resi ${resiNumber} berhasil dikonfirmasi.`);

@@ -1,16 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
-import { format } from "date-fns";
+// Removed format import as it's no longer needed for query key
 
 export const useAllExpedisiRecordsUnfiltered = () => {
-  const today = new Date();
-  const formattedDate = format(today, "yyyy-MM-dd"); // Hanya tanggal hari ini
-
+  // No formattedDate needed here as it's truly unfiltered by date
   return useQuery<Map<string, any>>({
-    queryKey: ["allExpedisiDataUnfiltered", formattedDate], // Kunci kueri hanya untuk hari ini
+    queryKey: ["allExpedisiDataUnfiltered"], // Kunci kueri tanpa filter tanggal
     queryFn: async () => {
-      // Mengambil data hanya untuk hari ini
-      const data = await fetchAllDataPaginated("tbl_expedisi", "created", today, today);
+      // Mengambil semua data tanpa filter tanggal
+      const data = await fetchAllDataPaginated("tbl_expedisi"); // No date arguments
       const expedisiMap = new Map<string, any>();
       data.forEach(item => {
         if (item.resino) {

@@ -100,8 +100,10 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       console.log("[useResiInputData] Fetched uniqueExpeditionNames:", names);
       return names.sort((a, b) => a.localeCompare(b));
     },
-    staleTime: 1000 * 60 * 60 * 24, // Changed to 24 hours
-    gcTime: 1000 * 60 * 60 * 24, // Garbage collect after 24 hours
+    staleTime: Infinity, // Data is always fresh
+    gcTime: 1000 * 60 * 60 * 24 * 7, // Garbage collect after 7 days
+    refetchOnMount: false, // Do not refetch on component mount
+    refetchOnWindowFocus: false, // Do not refetch on window focus
   });
 
   // Derive currentCount from allResiForExpedition

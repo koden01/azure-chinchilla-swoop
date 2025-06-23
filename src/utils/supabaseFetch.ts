@@ -24,7 +24,7 @@ export const fetchAllDataPaginated = async (
   let offset = 0;
   const limit = 1000; // Fetch 1000 records at a time
   let hasMore = true;
-  const maxIterations = 10; // Safety break: max 10 iterations (10,000 records) for debugging
+  const maxIterations = 1000; // Increased safety break: allows up to 1,000,000 records
   let currentIteration = 0;
 
   while (hasMore && currentIteration < maxIterations) {
@@ -56,9 +56,9 @@ export const fetchAllDataPaginated = async (
     if (data && data.length > 0) {
       allRecords = allRecords.concat(data);
       offset += data.length;
-      hasMore = data.length === limit;
+      hasMore = data.length === limit; // Continue if we received exactly 'limit' records
     } else {
-      hasMore = false;
+      hasMore = false; // Stop if no data or less than 'limit' data received
     }
   }
 

@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { format, startOfDay, endOfDay, addDays } from "date-fns"; // Menambahkan addDays
+import { format, startOfDay, endOfDay, addDays } from "date-fns";
 
 /**
  * Fetches all data from a Supabase table with pagination, handling the 1000-row limit.
@@ -27,8 +27,6 @@ export const fetchAllDataPaginated = async (
   const maxIterations = 1000; // Increased safety break: allows up to 1,000,000 records
   let currentIteration = 0;
 
-  console.log(`[fetchAllDataPaginated] Starting fetch for table: ${tableName}`);
-
   while (hasMore && currentIteration < maxIterations) {
     currentIteration++;
     let query = supabase.from(tableName).select(selectColumns).range(offset, offset + limit - 1);
@@ -54,7 +52,7 @@ export const fetchAllDataPaginated = async (
     const { data, error } = await query;
 
     if (error) {
-      console.error(`[fetchAllDataPaginated] Error fetching paginated data from ${tableName} at offset ${offset}:`, error);
+      console.error(`Error fetching paginated data from ${tableName} at offset ${offset}:`, error);
       throw error;
     }
 
@@ -62,16 +60,13 @@ export const fetchAllDataPaginated = async (
       allRecords = allRecords.concat(data);
       offset += data.length;
       hasMore = data.length === limit; // Continue if we received exactly 'limit' records
-      console.log(`[fetchAllDataPaginated] ${tableName} - Fetched ${data.length} records at offset ${offset - data.length}. Total so far: ${allRecords.length}. Has more: ${hasMore}`);
     } else {
       hasMore = false; // Stop if no data or less than 'limit' data received
-      console.log(`[fetchAllDataPaginated] ${tableName} - No more data or less than limit. Stopping. Total: ${allRecords.length}`);
     }
   }
 
   if (currentIteration >= maxIterations) {
-    console.warn(`[fetchAllDataPaginated] Reached maxIterations (${maxIterations}) for ${tableName}. Stopping fetch early. Total records: ${allRecords.length}`);
+    console.warn(`Reached maxIterations (${maxIterations}) for ${tableName}. Stopping fetch early. Total records: ${allRecords.length}`);
   }
-  console.log(`[fetchAllDataPaginated] Finished fetching for table: ${tableName}. Final total records: ${allRecords.length}`);
   return allRecords;
 };

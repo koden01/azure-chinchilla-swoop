@@ -64,7 +64,6 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
     expedisiDataForSelectedDateWithOptimisticUpdates
   } = React.useMemo(() => {
     if (!allExpedisiDataUnfiltered || !expedisiDataForSelectedDate || !allResiData) {
-      console.log("[useCombinedDashboardData] Data dependencies not ready for optimistic updates.");
       return {
         currentResiDataWithOptimisticUpdates: [],
         currentExpedisiDataWithOptimisticUpdates: new Map(),
@@ -75,9 +74,6 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
     const currentExpedisiData = new Map(allExpedisiDataUnfiltered);
     const currentResiData: ModalDataItem[] = [...allResiData];
     const currentExpedisiDataForSelectedDate: ModalDataItem[] = [...expedisiDataForSelectedDate];
-
-    console.log(`[useCombinedDashboardData] Initial expedisiDataForSelectedDate length: ${currentExpedisiDataForSelectedDate.length}`);
-    console.log(`[useCombinedDashboardData] Pending operations count: ${pendingOperations.length}`);
 
     pendingOperations.forEach(op => {
       const normalizedResi = (op.payload.resiNumber || "").toLowerCase().trim();
@@ -186,7 +182,6 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
         }
       }
     });
-    console.log(`[useCombinedDashboardData] expedisiDataForSelectedDate after optimistic updates length: ${currentExpedisiDataForSelectedDate.length}`);
 
     return {
       currentResiDataWithOptimisticUpdates: currentResiData,
@@ -207,7 +202,6 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
     expeditionSummaries
   } = React.useMemo(() => {
     if (!date || !currentExpedisiDataWithOptimisticUpdates || !currentResiDataWithOptimisticUpdates || !expedisiDataForSelectedDateWithOptimisticUpdates) {
-      console.log("[useCombinedDashboardData] Dependencies for derived counts not ready.");
       return {
         transaksiHariIni: 0, // Default value
         totalScan: 0,
@@ -337,8 +331,6 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
       jumlahKarung: summary.jumlahKarung.size,
     }));
 
-    console.log(`[useCombinedDashboardData] Final Transaksi Hari Ini (calculated): ${currentTransaksiHariIni}`);
-
     return {
       transaksiHariIni: currentTransaksiHariIni, // Use client-side calculated value
       totalScan: currentTotalScan,
@@ -395,7 +387,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
     isLoadingFollowUp,
     expeditionSummaries,
     formattedDate,
-    allExpedisiData: currentExpedisiDataWithOptimisticUpdates, // Corrected typo here
+    allExpedisiData: currentExpedisiDataWithOptimisticUpdates,
     expedisiDataForSelectedDate: expedisiDataForSelectedDateWithOptimisticUpdates,
     isLoadingExpedisiDataForSelectedDate,
     allResiData: currentResiDataWithOptimisticUpdates,

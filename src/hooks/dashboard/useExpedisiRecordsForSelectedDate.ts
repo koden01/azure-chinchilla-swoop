@@ -18,7 +18,6 @@ export const useExpedisiRecordsForSelectedDate = (date: Date | undefined) => {
         "resino, orderno, chanelsales, couriername, created, flag, datetrans, cekfu" // Kolom yang relevan
       );
       
-      console.log(`[useExpedisiRecordsForSelectedDate] Fetched data length: ${data ? data.length : 0}`);
       return data || [];
     },
     enabled: !!date,

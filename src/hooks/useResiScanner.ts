@@ -35,19 +35,20 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
 
   // Calculate date range for 2 days back for local validation data
   const today = new Date();
-  const twoDaysAgo = subDays(today, 2);
-  const twoDaysAgoFormatted = format(twoDaysAgo, "yyyy-MM-dd");
+  // Mengubah menjadi hanya hari ini dan kemarin
+  const yesterday = subDays(today, 1);
+  const yesterdayFormatted = format(yesterday, "yyyy-MM-dd");
   const endOfTodayFormatted = format(today, "yyyy-MM-dd");
 
   // Query to fetch tbl_resi data for the last 2 days for local duplicate validation
   // Now returns a Set<string> for O(1) lookups
   const { data: recentResiNumbersForValidation, isLoading: isLoadingRecentResiNumbersForValidation } = useQuery<Set<string>>({
-    queryKey: ["recentResiNumbersForValidation", twoDaysAgoFormatted, formattedDate],
+    queryKey: ["recentResiNumbersForValidation", yesterdayFormatted, formattedDate],
     queryFn: async () => {
       const data = await fetchAllDataPaginated(
         "tbl_resi",
         "created", // dateFilterColumn
-        twoDaysAgo, // selectedStartDate
+        yesterday, // selectedStartDate
         today, // selectedEndDate (use 'today' to include all of today)
         "Resi" // Only select the Resi column
       );
@@ -216,7 +217,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
                 // console.log(`[handleScanResi] Found via direct fetch (RPC). Data:`, expedisiRecord); // Removed log
                 // Optionally, update the cache with this fresh data to prevent future direct fetches for this item
                 queryClient.setQueryData(
-                    ["allExpedisiDataUnfiltered", twoDaysAgoFormatted, endOfTodayFormatted],
+                    ["allExpedisiDataUnfiltered", yesterdayFormatted, endOfTodayFormatted],
                     (oldMap: Map<string, any> | undefined) => {
                         const newMap = oldMap ? new Map(oldMap) : new Map();
                         newMap.set(normalizedCurrentResi, expedisiRecord);
@@ -316,14 +317,14 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         return newData;
       });
       // Optimistic update for recentResiNumbersForValidation (Set)
-      queryClient.setQueryData(["recentResiNumbersForValidation", twoDaysAgoFormatted, formattedDate], (oldSet: Set<string> | undefined) => {
+      queryClient.setQueryData(["recentResiNumbersForValidation", yesterdayFormatted, formattedDate], (oldSet: Set<string> | undefined) => {
         const newSet = oldSet ? new Set(oldSet) : new Set();
         newSet.add(normalizedCurrentResi);
         // console.log(`[handleScanResi] Optimistic recentResiNumbersForValidation Update:`, newSet); // Removed log
         return newSet;
       });
       // Optimistic update for allExpedisiDataUnfiltered cache
-      queryClient.setQueryData(["allExpedisiDataUnfiltered", twoDaysAgoFormatted, endOfTodayFormatted], (oldMap: Map<string, any> | undefined) => {
+      queryClient.setQueryData(["allExpedisiDataUnfiltered", yesterdayFormatted, endOfTodayFormatted], (oldMap: Map<string, any> | undefined) => {
         const newMap = oldMap ? new Map(oldMap) : new Map();
         const existingExpedisi = newMap.get(normalizedCurrentResi);
         
@@ -422,14 +423,14 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
               return revertedData;
           });
           // Revert optimistic update for recentResiNumbersForValidation (Set)
-          queryClient.setQueryData(["recentResiNumbersForValidation", twoDaysAgoFormatted, formattedDate], (oldSet: Set<string> | undefined) => {
+          queryClient.setQueryData(["recentResiNumbersForValidation", yesterdayFormatted, formattedDate], (oldSet: Set<string> | undefined) => {
             const newSet = oldSet ? new Set(oldSet) : new Set();
             newSet.delete(normalizedCurrentResi); // Remove the optimistically added resi
             // console.log(`[handleScanResi] Reverted recentResiNumbersForValidation Update:`, newSet); // Removed log
             return newSet;
           });
           // Revert optimistic update for allExpedisiDataUnfiltered cache
-          queryClient.setQueryData(["allExpedisiDataUnfiltered", twoDaysAgoFormatted, endOfTodayFormatted], (oldMap: Map<string, any> | undefined) => {
+          queryClient.setQueryData(["allExpedisiDataUnfiltered", yesterdayFormatted, endOfTodayFormatted], (oldMap: Map<string, any> | undefined) => {
             const newMap = oldMap ? new Map(oldMap) : new Map();
             const existingExpedisi = newMap.get(normalizedCurrentResi);
             if (existingExpedisi && existingExpedisi.optimisticId === lastOptimisticIdRef.current) {

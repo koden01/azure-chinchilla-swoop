@@ -4,14 +4,15 @@ import { format, subDays } from "date-fns";
 
 export const useAllExpedisiRecordsUnfiltered = () => {
   const today = new Date();
-  const twoDaysAgo = subDays(today, 2);
-  const twoDaysAgoFormatted = format(twoDaysAgo, "yyyy-MM-dd");
+  // Mengubah menjadi hanya hari ini dan kemarin
+  const yesterday = subDays(today, 1); 
+  const yesterdayFormatted = format(yesterday, "yyyy-MM-dd");
   const endOfTodayFormatted = format(today, "yyyy-MM-dd");
 
   return useQuery<Map<string, any>>({
-    queryKey: ["allExpedisiDataUnfiltered", twoDaysAgoFormatted, endOfTodayFormatted],
+    queryKey: ["allExpedisiDataUnfiltered", yesterdayFormatted, endOfTodayFormatted],
     queryFn: async () => {
-      const data = await fetchAllDataPaginated("tbl_expedisi", "created", twoDaysAgo, today);
+      const data = await fetchAllDataPaginated("tbl_expedisi", "created", yesterday, today);
       const expedisiMap = new Map<string, any>();
       data.forEach(item => {
         if (item.resino) {

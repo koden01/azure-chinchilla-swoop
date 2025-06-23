@@ -135,30 +135,44 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     return count;
   }, [allResiForExpedition, expedition]);
 
-  // Derive lastKarung from allResiForExpedition
-  const lastKarung = React.useMemo(() => {
-    if (!allResiForExpedition || allResiForExpedition.length === 0) return "0";
-    const filteredResi = allResiForExpedition.filter(item => 
-      item.nokarung !== null && 
-      (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition)
-    );
-    if (filteredResi.length === 0) return "0";
+  // Optimized calculation for lastKarung and highestKarung
+  const { lastKarung, highestKarung } = React.useMemo(() => {
+    if (!allResiForExpedition || allResiForExpedition.length === 0) {
+      return { lastKarung: "0", highestKarung: 0 };
+    }
 
-    const sortedResi = [...filteredResi].sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime());
-    return sortedResi[0].nokarung || "0";
-  }, [allResiForExpedition, expedition]);
+    let maxKarung = 0;
+    let latestResi: ResiExpedisiData | null = null;
+    let latestTimestamp = 0;
 
-  // Derive highestKarung from allResiForExpedition
-  const highestKarung = React.useMemo(() => {
-    if (!allResiForExpedition || allResiForExpedition.length === 0) return 0;
-    const validKarungNumbers = allResiForExpedition
-      .filter(item => 
-        item.nokarung !== null && 
-        (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition)
-      )
-      .map(item => parseInt(item.nokarung || "0"))
-      .filter(num => !isNaN(num) && num > 0);
-    return validKarungNumbers.length > 0 ? Math.max(...validKarungNumbers) : 0;
+    allResiForExpedition.forEach(item => {
+      const normalizedKeterangan = normalizeExpeditionName(item.Keterangan);
+      const isRelevantExpedition = expedition === 'ID' ? 
+        (normalizedKeterangan === 'ID' || normalizedKeterangan === 'ID_REKOMENDASI') : 
+        normalizedKeterangan === expedition;
+
+      if (isRelevantExpedition) {
+        // For highestKarung
+        if (item.nokarung) {
+          const karungNum = parseInt(item.nokarung);
+          if (!isNaN(karungNum) && karungNum > maxKarung) {
+            maxKarung = karungNum;
+          }
+        }
+
+        // For lastKarung
+        const itemTimestamp = new Date(item.created).getTime();
+        if (itemTimestamp > latestTimestamp) {
+          latestTimestamp = itemTimestamp;
+          latestResi = item;
+        }
+      }
+    });
+
+    return {
+      lastKarung: latestResi?.nokarung || "0",
+      highestKarung: maxKarung,
+    };
   }, [allResiForExpedition, expedition]);
 
   // Karung options based on highestKarung (still client-side generation)

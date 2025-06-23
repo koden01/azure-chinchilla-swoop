@@ -208,7 +208,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
     const endOfSelectedDate = endOfDay(date);
 
     // Calculate Transaksi Hari Ini and Belum Kirim (for selected date)
-    expedisiDataForSelectedDateWithOptimisticUpdates.forEach((exp: ModalDataItem) => {
+    currentExpedisiDataForSelectedDate.forEach((exp: ModalDataItem) => { // Corrected: Use currentExpedisiDataForSelectedDate
       currentTransaksiHariIni++;
       if (exp.flag === "NO") {
         currentBelumKirim++;
@@ -251,7 +251,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
       };
     });
 
-    expedisiDataForSelectedDateWithOptimisticUpdates.forEach((exp: ModalDataItem) => {
+    currentExpedisiDataForSelectedDate.forEach((exp: ModalDataItem) => { // Corrected: Use currentExpedisiDataForSelectedDate
       const normalizedCourierName = normalizeExpeditionName(exp.couriername);
 
       if (normalizedCourierName && summaries[normalizedCourierName]) {
@@ -318,7 +318,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
     return {
       currentResiDataWithOptimisticUpdates: currentResiData,
       currentExpedisiDataWithOptimisticUpdates: currentExpedisiData,
-      expedisiDataForSelectedDateWithOptimisticUpdates: currentExpedisiDataForSelectedDate,
+      expedisiDataForSelectedDateWithOptimisticUpdates: currentExpedisiDataForSelectedDate, // Corrected: Assign the internal variable
       transaksiHariIni: currentTransaksiHariIni,
       totalScan: currentTotalScan,
       idRekCount: currentIdRekCount,

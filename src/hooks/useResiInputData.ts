@@ -138,10 +138,11 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     console.log("Calculating current count for expedition:", expedition, "karung:", selectedKarung);
     if (!allResiForExpedition || !selectedKarung) return 0;
     
-    const resiData = allResiForExpedition;
+    // Explicitly type resiData here
+    const resiData: ResiExpedisiData[] = allResiForExpedition; 
 
     // Extract the filter logic into a separate function/variable
-    const filterPredicate = (item: ResiExpedisiData) => {
+    const filterPredicate = (item: ResiExpedisiData) => { // Explicitly typed item here
       const itemNokarung = item.nokarung ?? "";
       const itemKeterangan = item.Keterangan ?? "";
 
@@ -171,7 +172,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     let latestResi: ResiExpedisiData | null = null;
     let latestTimestamp = 0;
 
-    allResiForExpedition.forEach(item => {
+    allResiForExpedition.forEach((item: ResiExpedisiData) => { // Explicitly type item here
       const normalizedKeterangan = normalizeExpeditionName(item.Keterangan);
       const isRelevantExpedition = expedition === 'ID' ? 
         (normalizedKeterangan === 'ID' || normalizedKeterangan === 'ID_REKOMENDASI') : 
@@ -179,7 +180,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
 
       if (isRelevantExpedition) {
         // For highestKarung
-        if (item.nokarung) {
+        if (item.nokarung) { 
           const karungNum = parseInt(item.nokarung);
           if (!isNaN(karungNum) && karungNum > maxKarung) {
             maxKarung = karungNum;

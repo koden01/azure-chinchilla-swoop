@@ -132,7 +132,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     // Memastikan allResiForExpedition diperlakukan sebagai array ResiExpedisiData
     const resiData: ResiExpedisiData[] = allResiForExpedition;
 
-    const count = resiData.filter((item) => // Biarkan TypeScript menginfer tipe item dari resiData
+    const count = resiData.filter((item: ResiExpedisiData) => // Explicitly type item here
       item.nokarung === selectedKarung && 
       (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition)
     ).length;

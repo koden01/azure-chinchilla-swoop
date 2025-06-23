@@ -14,7 +14,7 @@ import {
 import HistoryDatePicker from "@/components/history/HistoryDatePicker";
 import HistorySearchAndActions from "@/components/history/HistorySearchAndActions";
 import HistoryTable from "@/components/history/HistoryTable";
-import { useHistoryData } from "@/hooks/history/useHistoryData";
+import { useHistoryData, HistoryData } from "@/hooks/history/useHistoryData"; // Import HistoryData
 import { useHistoryTable } from "@/hooks/history/useHistoryTable";
 import { useHistoryActions } from "@/hooks/history/useHistoryActions";
 import { columns } from "@/components/columns/historyColumns"; // Import columns and HistoryData type
@@ -30,7 +30,7 @@ const HistoryPage: React.FC = () => {
 
   // Use custom hook for table logic
   const { table, getPaginationPages } = useHistoryTable({
-    data: historyData || [],
+    data: historyData || [], // Ensure data is always an array
     columns,
     globalFilter,
     startDate,

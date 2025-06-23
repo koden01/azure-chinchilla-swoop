@@ -4,6 +4,7 @@ import { format, subDays } from "date-fns";
 import React from "react";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 import { normalizeExpeditionName, KNOWN_EXPEDITIONS } from "@/utils/expeditionUtils";
+import { TblResi } from "@/types/supabase"; // Import TblResi
 
 // Define the type for ResiExpedisiData to match useResiInputData
 interface ResiExpedisiData {
@@ -34,7 +35,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     queryFn: async () => {
       if (!expedition) return [];
       
-      const data = await fetchAllDataPaginated<ResiExpedisiData>( // Specify type here
+      const data = await fetchAllDataPaginated<TblResi>( // Specify TblResi as the generic type
         "tbl_resi",
         "created", // dateFilterColumn
         yesterday, // selectedStartDate (fetch from yesterday)
@@ -48,7 +49,14 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
           }
         }
       );
-      return data || [];
+      // Map TblResi to ResiExpedisiData if there are any differences, otherwise just return
+      return data.map(item => ({
+        Resi: item.Resi,
+        nokarung: item.nokarung,
+        created: item.created,
+        Keterangan: item.Keterangan,
+        schedule: item.schedule,
+      })) || [];
     },
     enabled: !!expedition,
     staleTime: 1000 * 30, // Data considered fresh for 30 seconds

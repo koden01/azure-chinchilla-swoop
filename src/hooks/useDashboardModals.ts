@@ -6,6 +6,7 @@ import { normalizeExpeditionName } from "@/utils/expeditionUtils";
 import { addPendingOperation } from "@/integrations/indexeddb/pendingOperations";
 import { useBackgroundSync } from "@/hooks/useBackgroundSync";
 import { format } from "date-fns";
+import { fetchAllDataPaginated } from "@/utils/supabaseFetch"; // Import fetchAllDataPaginated
 
 interface UseDashboardModalsProps {
   date: Date | undefined;
@@ -61,16 +62,19 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       return;
     }
 
-    const { data, error } = await supabase.rpc("get_transaksi_hari_ini_records", {
-      p_selected_date: formattedDate,
-    });
-      
-    if (error) {
+    try {
+      const data = await fetchAllDataPaginated(
+        "tbl_expedisi",
+        "created",
+        date,
+        date,
+        "resino, orderno, chanelsales, couriername, created, flag, datetrans, cekfu"
+      );
+      openResiModal("Transaksi Hari Ini", data || [], "transaksiHariIni");
+    } catch (error) {
       showError("Gagal memuat data transaksi hari ini.");
       console.error("Error fetching Transaksi Hari Ini data:", error);
-      return;
     }
-    openResiModal("Transaksi Hari Ini", data || [], "transaksiHariIni");
   };
 
   const handleOpenBelumKirimModal = async () => {
@@ -79,32 +83,40 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       return;
     }
 
-    const { data, error } = await supabase.rpc("get_belum_kirim_records", {
-      p_selected_date: formattedDate,
-    });
-      
-    if (error) {
+    try {
+      const data = await fetchAllDataPaginated(
+        "tbl_expedisi",
+        "created",
+        date,
+        date,
+        "resino, orderno, chanelsales, couriername, created, flag, datetrans, cekfu",
+        (query) => query.eq("flag", "NO")
+      );
+      openResiModal("Belum Kirim (Hari Ini)", data || [], "belumKirim");
+    } catch (error) {
       showError("Gagal memuat data resi yang belum dikirim.");
       console.error("Error fetching Belum Kirim data:", error);
-      return;
     }
-    openResiModal("Belum Kirim (Hari Ini)", data || [], "belumKirim");
   };
 
   const handleOpenFollowUpFlagNoModal = async () => {
     const actualCurrentDate = new Date();
     const actualCurrentFormattedDate = format(actualCurrentDate, 'yyyy-MM-dd');
 
-    const { data, error } = await supabase.rpc("get_flag_no_expedisi_records_except_today", {
-      p_selected_date: actualCurrentFormattedDate,
-    });
-
-    if (error) {
+    try {
+      const data = await fetchAllDataPaginated(
+        "tbl_expedisi",
+        "created",
+        undefined, // No specific start date for this query as it's "except today"
+        undefined, // No specific end date
+        "resino, orderno, chanelsales, couriername, created, flag, datetrans, cekfu",
+        (query) => query.eq("flag", "NO").neq("created", actualCurrentFormattedDate) // Filter for flag NO and not today
+      );
+      openResiModal("Follow Up (Belum Kirim)", data || [], "belumKirim");
+    } catch (error) {
       showError("Gagal memuat data Follow Up (Belum Kirim).");
       console.error("Error fetching Follow Up (Belum Kirim) data via RPC:", error);
-      return;
     }
-    openResiModal("Follow Up (Belum Kirim)", data || [], "belumKirim");
   };
 
   const handleOpenScanFollowupModal = async () => {
@@ -113,6 +125,8 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       return;
     }
 
+    // This RPC function performs a join, so we keep it as RPC for now.
+    // If this also hits the 1000-row limit, a more complex refactor would be needed.
     const { data, error } = await supabase.rpc("get_scan_follow_up", {
       selected_date: formattedDate,
     });
@@ -130,17 +144,20 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       return;
     }
 
-    const { data, error } = await supabase.rpc("get_expedition_detail_records", {
-      p_couriername: courierName,
-      p_selected_date: formattedDate,
-    });
-
-    if (error) {
+    try {
+      const data = await fetchAllDataPaginated(
+        "tbl_expedisi",
+        "created",
+        date,
+        date,
+        "resino, orderno, chanelsales, couriername, created, flag, datetrans, cekfu",
+        (query) => query.eq("couriername", courierName).eq("flag", "NO")
+      );
+      openResiModal(`Detail Resi ${courierName} (Belum Kirim)`, data || [], "expeditionDetail", courierName);
+    } catch (error) {
       showError(`Gagal memuat detail resi untuk ${courierName}.`);
       console.error(`Error fetching expedition detail data for ${courierName}:`, error);
-      return;
     }
-    openResiModal(`Detail Resi ${courierName} (Belum Kirim)`, data || [], "expeditionDetail", courierName);
   };
 
   const handleCloseModal = () => {
@@ -224,18 +241,16 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       let expedisiRecord = allExpedisiData?.get(resiNumber.toLowerCase());
       
       if (!expedisiRecord) {
-        const { data: directExpedisiData, error: directExpedisiError } = await supabase
-            .from("tbl_expedisi")
-            .select("*")
-            .eq("resino", resiNumber)
-            .single();
+        // If not in cache, fetch directly using fetchAllDataPaginated (limit 1)
+        const directExpedisiData = await fetchAllDataPaginated(
+          "tbl_expedisi",
+          undefined, undefined, undefined, // No date filter needed for single record fetch
+          "*",
+          (query) => query.eq("resino", resiNumber).limit(1)
+        );
 
-        if (directExpedisiError && directExpedisiError.code !== 'PGRST116') {
-            throw directExpedisiError;
-        }
-        
-        if (directExpedisiData) {
-            expedisiRecord = directExpedisiData;
+        if (directExpedisiData && directExpedisiData.length > 0) {
+            expedisiRecord = directExpedisiData[0];
         } else {
             throw new Error(`Gagal mendapatkan data ekspedisi untuk resi ${resiNumber}: Data tidak ditemukan di database.`);
         }
@@ -253,7 +268,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
           expedisiCreatedTimestamp,
           keteranganValue: courierNameFromExpedisi,
         },
-        timestamp: Date.now(), // Corrected from Date.24()
+        timestamp: Date.now(),
       });
 
       showSuccess(`Resi ${resiNumber} berhasil dikonfirmasi.`);
@@ -283,18 +298,16 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       let expedisiRecord = allExpedisiData?.get(resiNumber.toLowerCase());
       
       if (!expedisiRecord) {
-        const { data: directExpedisiData, error: directExpedisiError } = await supabase
-            .from("tbl_expedisi")
-            .select("*")
-            .eq("resino", resiNumber)
-            .single();
-
-        if (directExpedisiError && directExpedisiError.code !== 'PGRST116') {
-            throw directExpedisiError;
-        }
+        // If not in cache, fetch directly using fetchAllDataPaginated (limit 1)
+        const directExpedisiData = await fetchAllDataPaginated(
+          "tbl_expedisi",
+          undefined, undefined, undefined, // No date filter needed for single record fetch
+          "*",
+          (query) => query.eq("resino", resiNumber).limit(1)
+        );
         
-        if (directExpedisiData) {
-            expedisiRecord = directExpedisiData;
+        if (directExpedisiData && directExpedisiData.length > 0) {
+            expedisiRecord = directExpedisiData[0];
         } else {
             throw new Error(`Gagal memperbarui status CEKFU resi ${resiNumber}: Data ekspedisi tidak ditemukan di database.`);
         }

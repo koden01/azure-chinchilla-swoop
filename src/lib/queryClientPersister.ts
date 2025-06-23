@@ -22,22 +22,10 @@ function replacer(_key: string, value: any): any {
 function reviver(_key: string, value: any): any {
   if (typeof value === 'object' && value !== null) {
     if (value.dataType === 'Map') {
-      // Ensure value.value is an array before passing to Map constructor
-      if (Array.isArray(value.value)) {
-        return new Map(value.value);
-      } else {
-        console.error("Attempted to revive Map, but value.value is not an array:", value.value);
-        return new Map(); // Return empty Map to prevent error
-      }
+      return new Map(value.value);
     }
     if (value.dataType === 'Set') { // Add Set handling
-      // Ensure value.value is an array before passing to Set constructor
-      if (Array.isArray(value.value)) {
-        return new Set(value.value);
-      } else {
-        console.error("Attempted to revive Set, but value.value is not an array:", value.value);
-        return new Set(); // Return empty Set to prevent error
-      }
+      return new Set(value.value);
     }
   }
   return value;

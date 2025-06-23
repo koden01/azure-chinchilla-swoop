@@ -395,7 +395,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
     isLoadingFollowUp,
     expeditionSummaries,
     formattedDate,
-    allExpedisiData: currentExpedisiDataWithOptimistikUpdates,
+    allExpedisiData: currentExpedisiDataWithOptimisticUpdates, // Corrected typo here
     expedisiDataForSelectedDate: expedisiDataForSelectedDateWithOptimisticUpdates,
     isLoadingExpedisiDataForSelectedDate,
     allResiData: currentResiDataWithOptimisticUpdates,

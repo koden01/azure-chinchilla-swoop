@@ -41,8 +41,8 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
   const endOfTodayFormatted = format(today, "yyyy-MM-dd"); // This is the local formatted date for today
 
   // Query to fetch tbl_resi data for the last 2 days for local duplicate validation
-  // Now returns a Map<string, { created: string, nokarung: string | null }> for O(1) lookups and data access
-  const { data: recentResiNumbersForValidation, isLoading: isLoadingRecentResiNumbersForValidation } = useQuery<Map<string, { created: string, nokarung: string | null }>>({
+  // Now returns a Set<string> for O(1) lookups
+  const { data: recentResiNumbersForValidation, isLoading: isLoadingRecentResiNumbersForValidation } = useQuery<Set<string>>({
     queryKey: ["recentResiNumbersForValidation", yesterdayFormatted, formattedDate],
     queryFn: async () => {
       console.log(`[${new Date().toISOString()}] [useResiScanner] Fetching recentResiNumbersForValidation...`);
@@ -51,27 +51,15 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         "created", // dateFilterColumn
         yesterday, // selectedStartDate
         today, // selectedEndDate (use 'today' to include all of today)
-        "Resi, nokarung, created" // Select Resi, nokarung, and created columns
+        "Resi" // Only select the Resi column
       );
-      const resiMap = new Map(data.map((item: { Resi: string, nokarung: string | null, created: string }) => [item.Resi.toLowerCase().trim(), { created: item.created, nokarung: item.nokarung }]));
-      console.log(`[${new Date().toISOString()}] [useResiScanner] Finished fetching recentResiNumbersForValidation. Count: ${resiMap.size}`);
-      return resiMap;
+      const resiSet = new Set(data.map((item: { Resi: string }) => item.Resi.toLowerCase().trim()));
+      console.log(`[${new Date().toISOString()}] [useResiScanner] Finished fetching recentResiNumbersForValidation. Count: ${resiSet.size}`);
+      return resiSet;
     },
     staleTime: 1000 * 60 * 60, // Increased to 1 hour for better performance
     gcTime: 1000 * 60 * 60 * 24 * 2, // Garbage collect after 2 days
     enabled: true, // Always enabled for local validation
-    select: (data) => { // Add select function to ensure Map instance
-      if (data instanceof Map) {
-        return data;
-      }
-      // Defensive check: if it's a plain object from JSON.parse, try to revive it
-      if (typeof data === 'object' && data !== null && (data as any).dataType === 'MapObject' && typeof (data as any).value === 'object') {
-        console.warn("recentResiNumbersForValidation was not a Map instance, attempting manual revival from MapObject in select.");
-        return new Map(Object.entries((data as any).value));
-      }
-      console.warn("recentResiNumbersForValidation data is not a Map and cannot be revived. Returning empty Map.");
-      return new Map();
-    },
   });
 
   // NEW: Query to fetch ALL tbl_expedisi data with flag = 'NO' for comprehensive local validation
@@ -99,17 +87,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
     staleTime: 1000 * 60 * 60 * 4, // Increased to 4 hours
     gcTime: 1000 * 60 * 60 * 24, // Garbage collect after 24 hours
     enabled: true, // Always enabled
-    select: (data) => { // Add select function to ensure Map instance
-      if (data instanceof Map) {
-        return data;
-      }
-      if (typeof data === 'object' && data !== null && (data as any).dataType === 'MapObject' && typeof (data as any).value === 'object') {
-        console.warn("allFlagNoExpedisiData was not a Map instance, attempting manual revival from MapObject in select.");
-        return new Map(Object.entries((data as any).value));
-      }
-      console.warn("allFlagNoExpedisiData data is not a Map and cannot be revived. Returning empty Map.");
-      return new Map();
-    },
   });
 
   const lastOptimisticIdRef = React.useRef<string | null>(null);
@@ -168,7 +145,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
     // Corrected queryKey to match useResiInputData, using the 'formattedDate' prop
     const queryKeyForInputPageDisplay = ["allResiForExpedition", expedition, yesterdayFormatted, formattedDate];
     const queryKeyForKarungSummary = ["karungSummary", expedition, formattedDate];
-    const queryKeyForCurrentCount = ["currentResiCount", expedition, selectedKarung, formattedDate]; // NEW: Query key for currentCount
 
 
     const currentOptimisticId = Date.now().toString() + Math.random().toString(36).substring(2, 9);
@@ -182,16 +158,21 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       console.time("[useResiScanner] Validation checks"); // Fixed timer label
       // 1. Local Duplicate Check (for recent scans)
       console.log(`[${new Date().toISOString()}] [useResiScanner] Performing local duplicate check...`);
-      const existingResiDetail = recentResiNumbersForValidation?.get(normalizedCurrentResi);
-      if (existingResiDetail) {
+      if (recentResiNumbersForValidation?.has(normalizedCurrentResi)) {
+        // Fetch the created date for the duplicate resi
+        const { data: existingResiDetail, error: _detailError } = await supabase
+          .from("tbl_resi")
+          .select("created")
+          .eq("Resi", currentResi)
+          .maybeSingle();
+
         let createdDateStr = "";
-        if (existingResiDetail.created) {
+        if (existingResiDetail && existingResiDetail.created) {
           createdDateStr = format(new Date(existingResiDetail.created), "dd/MM/yyyy HH:mm");
         }
-        const nokarungStr = existingResiDetail.nokarung ? ` di nokarung ${existingResiDetail.nokarung}` : "";
 
         validationStatus = 'DUPLICATE_RESI';
-        validationMessage = `DOUBLE! Resi ini Keterangan sudah discan${nokarungStr} ${createdDateStr}.`; // Updated message
+        validationMessage = `DOUBLE! Resi ini sudah discan ${createdDateStr}.`; // Updated message
         console.log(`[${new Date().toISOString()}] [useResiScanner] Local duplicate found.`);
       }
 
@@ -200,7 +181,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         console.log(`[${new Date().toISOString()}] [useResiScanner] Performing database duplicate check...`);
         const { data: existingResiInDb, error: dbCheckError } = await supabase
           .from("tbl_resi")
-          .select("Resi, created, nokarung") // Select created and nokarung as well
+          .select("Resi, created") // Select created as well
           .eq("Resi", currentResi)
           .maybeSingle(); // Use maybeSingle to get null if not found, or data if found
 
@@ -213,15 +194,15 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
           if (existingResiInDb.created) {
             createdDateStr = format(new Date(existingResiInDb.created), "dd/MM/yyyy HH:mm");
           }
-          const nokarungStr = existingResiInDb.nokarung ? ` di nokarung ${existingResiInDb.nokarung}` : "";
           validationStatus = 'DUPLICATE_RESI';
-          validationMessage = `DOUBLE! Resi ini Keterangan sudah discan${nokarungStr} ${createdDateStr}.`; // Updated message
+          validationMessage = `DOUBLE! Resi ini sudah discan ${createdDateStr}.`; // Updated message
           console.log(`[${new Date().toISOString()}] [useResiScanner] Database duplicate found.`);
         }
       }
 
       // Only proceed with further checks if not already a duplicate
       if (validationStatus === 'OK') { // Only proceed if not already a duplicate
+        // 3. Attempt to find expedisiRecord from caches or direct RPC call
         console.log(`[${new Date().toISOString()}] [useResiScanner] Checking expedisi record in caches...`);
         expedisiRecord = allExpedisiDataUnfiltered?.get(normalizedCurrentResi);
 
@@ -352,11 +333,11 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         const newData = [...(oldData || []), newResiEntry]; // Ensure oldData is an array
         return newData;
       });
-      // Optimistic update for recentResiNumbersForValidation (Map)
-      queryClient.setQueryData(["recentResiNumbersForValidation", yesterdayFormatted, formattedDate], (oldMap: Map<string, { created: string, nokarung: string | null }> | undefined) => {
-        const newMap = oldMap ? new Map(oldMap) : new Map();
-        newMap.set(normalizedCurrentResi, { created: newResiEntry.created, nokarung: newResiEntry.nokarung });
-        return newMap;
+      // Optimistic update for recentResiNumbersForValidation (Set)
+      queryClient.setQueryData(["recentResiNumbersForValidation", yesterdayFormatted, formattedDate], (oldSet: Set<string> | undefined) => {
+        const newSet = oldSet ? new Set(oldSet) : new Set();
+        newSet.add(normalizedCurrentResi);
+        return newSet;
       });
       // Optimistic update for allExpedisiDataUnfiltered cache
       queryClient.setQueryData(["allExpedisiDataUnfiltered", yesterdayFormatted, endOfTodayFormatted], (oldMap: Map<string, any> | undefined) => {
@@ -402,12 +383,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         }
         return newSummary;
       });
-
-      // NEW: Optimistic update for currentCount
-      queryClient.setQueryData(queryKeyForCurrentCount, (oldCount: number | undefined) => {
-        return (oldCount || 0) + 1;
-      });
-
       console.timeEnd("[useResiScanner] Optimistic UI updates"); // Fixed timer label
 
       lastOptimisticIdRef.current = currentOptimisticId;
@@ -439,9 +414,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       console.log(`[${new Date().toISOString()}] [useResiScanner] Triggering background sync.`);
       triggerSync(); // Re-enabled direct call to triggerSync()
 
-      // NEW: Invalidate currentCount query to force refetch from DB
-      queryClient.invalidateQueries({ queryKey: queryKeyForCurrentCount });
-
     } catch (error: any) {
       console.error(`[${new Date().toISOString()}] [useResiScanner] Error during resi input (before IndexedDB save or during optimistic update):`, error); // Log the full error object
 
@@ -467,11 +439,11 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
               const revertedData = (oldData || []).filter(item => item.optimisticId !== lastOptimisticIdRef.current);
               return revertedData;
           });
-          // Revert optimistic update for recentResiNumbersForValidation (Map)
-          queryClient.setQueryData(["recentResiNumbersForValidation", yesterdayFormatted, formattedDate], (oldMap: Map<string, { created: string, nokarung: string | null }> | undefined) => {
-            const newMap = oldMap ? new Map(oldMap) : new Map();
-            newMap.delete(normalizedCurrentResi); // Remove the optimistically added resi
-            return newMap;
+          // Revert optimistic update for recentResiNumbersForValidation (Set)
+          queryClient.setQueryData(["recentResiNumbersForValidation", yesterdayFormatted, formattedDate], (oldSet: Set<string> | undefined) => {
+            const newSet = oldSet ? new Set(oldSet) : new Set();
+            newSet.delete(normalizedCurrentResi); // Remove the optimistically added resi
+            return newSet;
           });
           // Revert optimistic update for allExpedisiDataUnfiltered cache
           queryClient.setQueryData(["allExpedisiDataUnfiltered", yesterdayFormatted, endOfTodayFormatted], (oldMap: Map<string, any> | undefined) => {
@@ -508,10 +480,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
               }
             }
             return newSummary;
-          });
-          // NEW: Revert optimistic update for currentCount
-          queryClient.setQueryData(queryKeyForCurrentCount, (oldCount: number | undefined) => {
-            return (oldCount || 0) - 1;
           });
       }
       console.timeEnd("[useResiScanner] Revert optimistic updates on error"); // Fixed timer label

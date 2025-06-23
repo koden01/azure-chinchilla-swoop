@@ -22,14 +22,13 @@ interface AllKarungSummaryItem {
   quantity: number;
 }
 
-export const useResiInputData = (expedition: string, selectedKarung: string, showAllExpeditionSummary: boolean) => {
+export const useResiInputData = (expedition: string, showAllExpeditionSummary: boolean) => {
   const today = new Date();
   const yesterday = subDays(today, 1); // Calculate yesterday's date
   const formattedToday = format(today, "yyyy-MM-dd"); // Use for query key
   const formattedYesterday = format(yesterday, "yyyy-MM-dd"); // Use for query key
 
   // Query to fetch all resi data for the current expedition and date range for local validation
-  // This query is still needed for `lastKarung` and `highestKarung` derivations.
   const { data: allResiForExpedition, isLoading: isLoadingAllResiForExpedition } = useQuery<ResiExpedisiData[]>({
     queryKey: ["allResiForExpedition", expedition, formattedYesterday, formattedToday], // Include yesterday in query key
     queryFn: async () => {
@@ -53,27 +52,6 @@ export const useResiInputData = (expedition: string, selectedKarung: string, sho
     },
     enabled: !!expedition,
     staleTime: 1000 * 30, // Data considered fresh for 30 seconds
-  });
-
-  // NEW: Query to fetch the current count for the selected karung using RPC
-  const { data: currentCount, isLoading: isLoadingCurrentCount } = useQuery<number>({
-    queryKey: ["currentResiCount", expedition, selectedKarung, formattedToday],
-    queryFn: async () => {
-      if (!expedition || !selectedKarung) return 0;
-      const { data, error } = await supabase.rpc("get_resi_count_for_karung_and_expedition_and_date", {
-        p_expedition_name: expedition,
-        p_karung_number: selectedKarung,
-        p_selected_date: formattedToday,
-      });
-
-      if (error) {
-        console.error("Error fetching current resi count:", error);
-        throw error;
-      }
-      return data || 0;
-    },
-    enabled: !!expedition && !!selectedKarung, // Only enabled if expedition and karung are selected
-    staleTime: 0, // Changed to 0ms for immediate refetch on invalidation
   });
 
   // NEW: Query to fetch karung summary for the selected expedition and today's date
@@ -147,6 +125,16 @@ export const useResiInputData = (expedition: string, selectedKarung: string, sho
     refetchOnWindowFocus: false, // Do not refetch on window focus
   });
 
+  // Derive currentCount from allResiForExpedition
+  const currentCount = React.useCallback((selectedKarung: string) => {
+    if (!allResiForExpedition || !selectedKarung) return 0;
+    const count = allResiForExpedition.filter(item => 
+      item.nokarung === selectedKarung && 
+      (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition)
+    ).length;
+    return count;
+  }, [allResiForExpedition, expedition]);
+
   // Derive lastKarung from allResiForExpedition
   const lastKarung = React.useMemo(() => {
     if (!allResiForExpedition || allResiForExpedition.length === 0) return "0";
@@ -203,8 +191,7 @@ export const useResiInputData = (expedition: string, selectedKarung: string, sho
   return {
     allResiForExpedition, // Now returned
     isLoadingAllResiForExpedition: isLoadingAllResiForExpedition || isLoadingAllKarungSummaries || isLoadingUniqueExpeditionNames, // Combine loading states
-    currentCount: currentCount || 0, // Return the fetched currentCount
-    isLoadingCurrentCount, // Return loading state for currentCount
+    currentCount,
     lastKarung,
     highestKarung,
     karungOptions,

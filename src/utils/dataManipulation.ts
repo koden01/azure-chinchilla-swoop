@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { format, startOfDay, endOfDay } from "date-fns";
+import { startOfDay, endOfDay } from "date-fns"; // Menghapus 'format'
 
 /**
  * Menyesuaikan jumlah resi untuk ekspedisi dan nomor karung tertentu pada tanggal tertentu.

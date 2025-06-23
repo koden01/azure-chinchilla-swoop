@@ -29,9 +29,9 @@ export const useAllExpedisiRecordsUnfiltered = () => {
         return data;
       }
       // Defensive check: if it's a plain object from JSON.parse, try to revive it
-      if (typeof data === 'object' && data !== null && (data as any).dataType === 'Map' && Array.isArray((data as any).value)) {
-        console.warn("allExpedisiDataUnfiltered was not a Map instance, attempting manual revival in select.");
-        return new Map((data as any).value);
+      if (typeof data === 'object' && data !== null && (data as any).dataType === 'MapObject' && typeof (data as any).value === 'object') {
+        console.warn("allExpedisiDataUnfiltered was not a Map instance, attempting manual revival from MapObject in select.");
+        return new Map(Object.entries((data as any).value));
       }
       console.warn("allExpedisiDataUnfiltered data is not a Map and cannot be revived. Returning empty Map.");
       return new Map();

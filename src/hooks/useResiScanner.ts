@@ -65,9 +65,9 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         return data;
       }
       // Defensive check: if it's a plain object from JSON.parse, try to revive it
-      if (typeof data === 'object' && data !== null && (data as any).dataType === 'Map' && Array.isArray((data as any).value)) {
-        console.warn("recentResiNumbersForValidation was not a Map instance, attempting manual revival in select.");
-        return new Map((data as any).value);
+      if (typeof data === 'object' && data !== null && (data as any).dataType === 'MapObject' && typeof (data as any).value === 'object') {
+        console.warn("recentResiNumbersForValidation was not a Map instance, attempting manual revival from MapObject in select.");
+        return new Map(Object.entries((data as any).value));
       }
       console.warn("recentResiNumbersForValidation data is not a Map and cannot be revived. Returning empty Map.");
       return new Map();
@@ -103,9 +103,9 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       if (data instanceof Map) {
         return data;
       }
-      if (typeof data === 'object' && data !== null && (data as any).dataType === 'Map' && Array.isArray((data as any).value)) {
-        console.warn("allFlagNoExpedisiData was not a Map instance, attempting manual revival in select.");
-        return new Map((data as any).value);
+      if (typeof data === 'object' && data !== null && (data as any).dataType === 'MapObject' && typeof (data as any).value === 'object') {
+        console.warn("allFlagNoExpedisiData was not a Map instance, attempting manual revival from MapObject in select.");
+        return new Map(Object.entries((data as any).value));
       }
       console.warn("allFlagNoExpedisiData data is not a Map and cannot be revived. Returning empty Map.");
       return new Map();

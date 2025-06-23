@@ -38,7 +38,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
   // Mengubah menjadi hanya hari ini dan kemarin
   const yesterday = subDays(today, 1);
   const yesterdayFormatted = format(yesterday, "yyyy-MM-dd");
-  const endOfTodayFormatted = format(today, "yyyy-MM-dd"); // This is the local formatted date for today
+  // const endOfTodayFormatted = format(today, "yyyy-MM-dd"); // Dihapus karena tidak terpakai
 
   // Query to fetch tbl_resi data for the last 2 days for local duplicate validation
   // Now returns a Set<string> for O(1) lookups
@@ -144,8 +144,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
 
     // Query key for the input page's display (allResiForExpedition)
     const queryKeyForInputPageDisplay = ["allResiForExpedition", expedition, yesterdayFormatted, formattedDate];
-    // Query key for karung summary (used by useResiInputData)
-    const queryKeyForKarungSummary = ["karungSummary", expedition, formattedDate];
+    // const queryKeyForKarungSummary = ["karungSummary", expedition, formattedDate]; // Dihapus karena tidak terpakai
 
 
     const currentOptimisticId = Date.now().toString() + Math.random().toString(36).substring(2, 9);
@@ -315,7 +314,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         const newData = [...(oldData || []), newResiEntry];
         return newData;
       });
-      // Optimistic update for recentResiNumbersForValidation (Set)
+      // Optimistik update for recentResiNumbersForValidation (Set)
       queryClient.setQueryData(["recentResiNumbersForValidation", yesterdayFormatted, formattedDate], (oldSet: Set<string> | undefined) => {
         const newSet = oldSet ? new Set(oldSet) : new Set();
         newSet.add(normalizedCurrentResi);

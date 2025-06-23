@@ -125,7 +125,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
   };
 
   const handleScanResi = async () => {
-    console.time(`[${new Date().toISOString()}] [useResiScanner] handleScanResi execution time`);
+    console.time("[useResiScanner] handleScanResi execution time"); // Fixed timer label
     dismissToast(); // Memanggil dismissToast tanpa argumen untuk menutup semua toast
     const currentResi = resiNumber.trim();
     const normalizedCurrentResi = currentResi.toLowerCase().trim();
@@ -136,7 +136,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
     if (!validateInput(currentResi)) {
       setIsProcessing(false); // Ensure processing state is reset
       keepFocus(); // Ensure focus is returned to input
-      console.timeEnd(`[${new Date().toISOString()}] [useResiScanner] handleScanResi execution time`);
+      console.timeEnd("[useResiScanner] handleScanResi execution time"); // Fixed timer label
       return;
     }
 
@@ -155,7 +155,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
     let expedisiRecord: any = null; // Will hold the record from tbl_expedisi if found
 
     try {
-      console.time(`[${new Date().toISOString()}] [useResiScanner] Validation checks`);
+      console.time("[useResiScanner] Validation checks"); // Fixed timer label
       // 1. Local Duplicate Check (for recent scans)
       console.log(`[${new Date().toISOString()}] [useResiScanner] Performing local duplicate check...`);
       if (recentResiNumbersForValidation?.has(normalizedCurrentResi)) {
@@ -289,7 +289,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
           }
         }
       }
-      console.timeEnd(`[${new Date().toISOString()}] [useResiScanner] Validation checks`);
+      console.timeEnd("[useResiScanner] Validation checks"); // Fixed timer label
 
       // --- FINAL ERROR HANDLING BLOCK ---
       if (validationStatus !== 'OK') {
@@ -312,7 +312,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         }
         setIsProcessing(false); // Ensure processing state is reset
         keepFocus(); // Ensure focus is returned to input
-        console.timeEnd(`[${new Date().toISOString()}] [useResiScanner] handleScanResi execution time`);
+        console.timeEnd("[useResiScanner] handleScanResi execution time"); // Fixed timer label
         return; // Exit after handling error
       }
 
@@ -327,7 +327,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         optimisticId: currentOptimisticId,
       };
 
-      console.time(`[${new Date().toISOString()}] [useResiScanner] Optimistic UI updates`);
+      console.time("[useResiScanner] Optimistic UI updates"); // Fixed timer label
       // Optimistic UI update for the input page's display
       queryClient.setQueryData(queryKeyForInputPageDisplay, (oldData: ResiExpedisiData[] | undefined) => {
         const newData = [...(oldData || []), newResiEntry]; // Ensure oldData is an array
@@ -383,11 +383,11 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         }
         return newSummary;
       });
-      console.timeEnd(`[${new Date().toISOString()}] [useResiScanner] Optimistic UI updates`);
+      console.timeEnd("[useResiScanner] Optimistic UI updates"); // Fixed timer label
 
       lastOptimisticIdRef.current = currentOptimisticId;
       
-      console.time(`[${new Date().toISOString()}] [useResiScanner] Add to IndexedDB`);
+      console.time("[useResiScanner] Add to IndexedDB"); // Fixed timer label
       // Add operation to IndexedDB for background sync
       await addPendingOperation({
         id: `scan-${currentResi}-${Date.now()}`,
@@ -399,7 +399,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         },
         timestamp: Date.now(),
       });
-      console.timeEnd(`[${new Date().toISOString()}] [useResiScanner] Add to IndexedDB`);
+      console.timeEnd("[useResiScanner] Add to IndexedDB"); // Fixed timer label
 
       showSuccess(`Resi ${currentResi} Berhasil`); // Updated toast message
       try {
@@ -432,7 +432,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         console.error(`[${new Date().toISOString()}] [useResiScanner] Error playing beepFailure:`, e);
       }
 
-      console.time(`[${new Date().toISOString()}] [useResiScanner] Revert optimistic updates on error`);
+      console.time("[useResiScanner] Revert optimistic updates on error"); // Fixed timer label
       // Revert optimistic update on error
       if (lastOptimisticIdRef.current) {
           queryClient.setQueryData(queryKeyForInputPageDisplay, (oldData: ResiExpedisiData[] | undefined) => {
@@ -482,12 +482,12 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
             return newSummary;
           });
       }
-      console.timeEnd(`[${new Date().toISOString()}] [useResiScanner] Revert optimistic updates on error`);
+      console.timeEnd("[useResiScanner] Revert optimistic updates on error"); // Fixed timer label
       lastOptimisticIdRef.current = null; // Clear the ref after attempting revert
     } finally {
       setIsProcessing(false); // Ensure processing state is reset
       keepFocus(); // Ensure focus is returned to input
-      console.timeEnd(`[${new Date().toISOString()}] [useResiScanner] handleScanResi execution time`);
+      console.timeEnd("[useResiScanner] handleScanResi execution time"); // Fixed timer label
     }
   };
 

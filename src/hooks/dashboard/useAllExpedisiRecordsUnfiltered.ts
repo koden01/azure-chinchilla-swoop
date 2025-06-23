@@ -23,7 +23,7 @@ export const useAllExpedisiRecordsUnfiltered = () => {
       return expedisiMap;
     },
     enabled: true,
-    staleTime: 1000 * 60 * 60, // Changed to 60 minutes (from 5 minutes)
+    staleTime: 0, // Changed to 0 to ensure immediate refetch on invalidation
     gcTime: 1000 * 60 * 60 * 24 * 2, // 2 days
   });
 };

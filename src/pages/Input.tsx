@@ -45,7 +45,7 @@ const InputPage = () => {
       return expedisiMap;
     },
     enabled: true, // Always enabled for local validation
-    staleTime: 1000 * 60 * 5, // Keep this data fresh for 5 minutes
+    staleTime: 0, // Set to 0 to ensure immediate refetch on invalidation
     gcTime: 1000 * 60 * 60 * 24 * 2, // Garbage collect after 2 days
   });
 

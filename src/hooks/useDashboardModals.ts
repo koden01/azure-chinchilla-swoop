@@ -4,16 +4,15 @@ import { showSuccess, showError } from "@/utils/toast";
 import { ModalDataItem } from "@/types/data";
 import { normalizeExpeditionName } from "@/utils/expeditionUtils";
 import { addPendingOperation } from "@/integrations/indexeddb/pendingOperations";
-import { useBackgroundSync } from "@/hooks/useBackgroundSync"; // Import useBackgroundSync
-import { format } from "date-fns"; // Import format
+import { useBackgroundSync } from "@/hooks/useBackgroundSync";
+import { format } from "date-fns";
 
 interface UseDashboardModalsProps {
   date: Date | undefined;
   formattedDate: string;
-  allExpedisiData: Map<string, any> | undefined; // Mengubah tipe menjadi Map
+  allExpedisiData: Map<string, any> | undefined;
 }
 
-// Define the explicit return type interface for useDashboardModals
 interface UseDashboardModalsReturn {
   isModalOpen: boolean;
   modalTitle: string;
@@ -35,17 +34,17 @@ interface UseDashboardModalsReturn {
 export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: UseDashboardModalsProps): UseDashboardModalsReturn => {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [modalTitle, setModalTitle] = React.useState("");
-  const [modalData, setModalData] = React.useState<ModalDataItem[]>([]); // Use the new interface here
+  const [modalData, setModalData] = React.useState<ModalDataItem[]>([]);
   const [modalType, setModalType] = React.useState<
     "belumKirim" | "followUp" | "expeditionDetail" | "transaksiHariIni" | null
   >(null);
   const [selectedCourier, setSelectedCourier] = React.useState<string | null>(null);
 
-  const { triggerSync } = useBackgroundSync(); // Dapatkan triggerSync dari useBackgroundSync
+  const { triggerSync } = useBackgroundSync();
 
   const openResiModal = (
     title: string,
-    data: ModalDataItem[], // Use the new interface here
+    data: ModalDataItem[],
     type: "belumKirim" | "followUp" | "expeditionDetail" | "transaksiHariIni",
     courier: string | null = null
   ) => {
@@ -152,7 +151,6 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
   };
 
   const handleBatalResi = async (resiNumber: string) => {
-    // Optimistic UI update: Remove the item immediately
     const originalModalData = modalData;
     const itemToBatal = originalModalData.find(item => (item.Resi || item.resino) === resiNumber);
     setModalData(prevData => {
@@ -170,12 +168,12 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       if (!expedisiRecord) {
         const { data: directExpedisiData, error: directExpedisiError } = await supabase
             .from("tbl_expedisi")
-            .select("created, couriername") // Select couriername as well
+            .select("created, couriername")
             .eq("resino", resiNumber)
             .single();
 
-        if (directExpedisiError && directExpedisiError.code !== 'PGRST116') { // PGRST116 means "no rows found"
-            throw directExpedisiError; // Re-throw other errors
+        if (directExpedisiError && directExpedisiError.code !== 'PGRST116') {
+            throw directExpedisiError;
         }
         
         if (directExpedisiData) {
@@ -185,28 +183,26 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         }
       }
 
-      const createdTimestampFromExpedisi = expedisiRecord?.created || new Date().toISOString(); // Default to now if not found
-      originalCourierName = expedisiRecord?.couriername || null; // Get original courier name
+      const createdTimestampFromExpedisi = expedisiRecord?.created || new Date().toISOString();
+      originalCourierName = expedisiRecord?.couriername || null;
 
-      // Add operation to IndexedDB
       await addPendingOperation({
         id: `batal-${resiNumber}-${Date.now()}`,
         type: "batal",
         payload: {
           resiNumber,
-          createdTimestampFromExpedisi, // Use created from tbl_expedisi
-          keteranganValue: normalizeExpeditionName(originalCourierName), // Set Keterangan to original courier name
+          createdTimestampFromExpedisi,
+          keteranganValue: normalizeExpeditionName(originalCourierName),
         },
         timestamp: Date.now(),
       });
 
       showSuccess(`Resi ${resiNumber} berhasil dibatalkan.`);
-      triggerSync(); // Panggil triggerSync setelah operasi ditambahkan
+      triggerSync();
 
     } catch (error: any) {
-      // Revert optimistic update on error
       if (itemToBatal) {
-        setModalData(originalModalData); // Revert to original data
+        setModalData(originalModalData);
       }
       showError(`Gagal membatalkan resi ${resiNumber}. ${error.message || "Silakan coba lagi."}`);
       console.error("Error batal resi:", error);
@@ -214,7 +210,6 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
   };
 
   const handleConfirmResi = async (resiNumber: string) => {
-    // Optimistic UI update: Remove the item immediately
     const originalModalData = modalData;
     const itemToConfirm = originalModalData.find(item => (item.Resi || item.resino) === resiNumber);
     setModalData(prevData => {
@@ -235,8 +230,8 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
             .eq("resino", resiNumber)
             .single();
 
-        if (directExpedisiError && directExpedisiError.code !== 'PGRST116') { // PGRST116 means "no rows found"
-            throw directExpedisiError; // Re-throw other errors
+        if (directExpedisiError && directExpedisiError.code !== 'PGRST116') {
+            throw directExpedisiError;
         }
         
         if (directExpedisiData) {
@@ -246,10 +241,9 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         }
       }
 
-      const courierNameFromExpedisi = normalizeExpeditionName(expedisiRecord.couriername); // Use normalized name
-      const expedisiCreatedTimestamp = expedisiRecord.created; // Get the created timestamp from tbl_expedisi
+      const courierNameFromExpedisi = normalizeExpeditionName(expedisiRecord.couriername);
+      const expedisiCreatedTimestamp = expedisiRecord.created;
 
-      // Add operation to IndexedDB
       await addPendingOperation({
         id: `confirm-${resiNumber}-${Date.now()}`,
         type: "confirm",
@@ -257,18 +251,17 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
           resiNumber,
           courierNameFromExpedisi,
           expedisiCreatedTimestamp,
-          keteranganValue: courierNameFromExpedisi, // Set Keterangan to couriername
+          keteranganValue: courierNameFromExpedisi,
         },
-        timestamp: Date.24(),
+        timestamp: Date.now(), // Corrected from Date.24()
       });
 
       showSuccess(`Resi ${resiNumber} berhasil dikonfirmasi.`);
-      triggerSync(); // Panggil triggerSync setelah operasi ditambahkan
+      triggerSync();
 
     } catch (error: any) {
-      // Revert optimistic update on error
       if (itemToConfirm) {
-        setModalData(originalModalData); // Revert to original data
+        setModalData(originalModalData);
       }
       showError(`Gagal mengkonfirmasi resi ${resiNumber}. ${error.message || "Silakan coba lagi."}`);
       console.error("[handleConfirmResi] Error confirming resi:", error);
@@ -276,8 +269,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
   };
 
   const onCekfuToggle = async (resiNumber: string, currentCekfuStatus: boolean) => {
-    // Optimistic UI update for CEKFU toggle
-    const originalModalData = modalData; // Store original data for potential revert
+    const originalModalData = modalData;
     setModalData(prevData =>
       prevData.map(item => {
         const itemResi = item.Resi || item.resino;
@@ -297,8 +289,8 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
             .eq("resino", resiNumber)
             .single();
 
-        if (directExpedisiError && directExpedisiError.code !== 'PGRST116') { // PGRST116 means "no rows found"
-            throw directExpedisiError; // Re-throw other errors
+        if (directExpedisiError && directExpedisiError.code !== 'PGRST116') {
+            throw directExpedisiError;
         }
         
         if (directExpedisiData) {
@@ -308,7 +300,6 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         }
       }
 
-      // Add operation to IndexedDB
       await addPendingOperation({
         id: `cekfu-${resiNumber}-${Date.now()}`,
         type: "cekfu",
@@ -320,10 +311,9 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       });
 
       showSuccess(`Status CEKFU resi ${resiNumber} berhasil diperbarui.`);
-      triggerSync(); // Panggil triggerSync setelah operasi ditambahkan
+      triggerSync();
     } catch (error: any) {
-      // Revert optimistic update on error
-      setModalData(originalModalData); // Revert to original data
+      setModalData(originalModalData);
       showError(`Gagal memperbarui status CEKFU resi ${resiNumber}. ${error.message || "Silakan coba lagi."}`);
       console.error("Error updating CEKFU status:", error);
     }

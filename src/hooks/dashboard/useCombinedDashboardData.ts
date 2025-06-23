@@ -95,9 +95,9 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
       if (op.type === 'scan') {
         const newResiEntry: ModalDataItem = {
           Resi: op.payload.resiNumber,
-          nokarung: op.payload.selectedKarung,
+          nokarung: op.payload.selectedKarung ?? null, // Handle undefined
           created: new Date(op.timestamp).toISOString(),
-          Keterangan: op.payload.courierNameFromExpedisi,
+          Keterangan: op.payload.courierNameFromExpedisi ?? null, // Handle undefined
           schedule: "ontime",
         };
         currentResiData.push(newResiEntry);
@@ -106,10 +106,10 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
         currentExpedisiData.set(normalizedResi, {
           ...(existingExpedisi || {}),
           resino: op.payload.resiNumber,
-          couriername: op.payload.courierNameFromExpedisi,
+          couriername: op.payload.courierNameFromExpedisi ?? null, // Handle undefined
           flag: "YES",
           created: existingExpedisi?.created || new Date(op.timestamp).toISOString(),
-          cekfu: existingExpedisi?.cekfu || false,
+          cekfu: existingExpedisi?.cekfu ?? false, // Handle undefined
         });
 
         const opDate = new Date(op.timestamp);
@@ -120,7 +120,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
               resino: op.payload.resiNumber,
               orderno: null,
               chanelsales: null,
-              couriername: op.payload.courierNameFromExpedisi,
+              couriername: op.payload.courierNameFromExpedisi ?? null, // Handle undefined
               created: new Date(op.timestamp).toISOString(),
               flag: "YES",
               datetrans: null,
@@ -137,14 +137,14 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
           currentResiData[resiIndex] = { 
             ...currentResiData[resiIndex], 
             schedule: "batal", 
-            Keterangan: op.payload.keteranganValue,
+            Keterangan: op.payload.keteranganValue ?? null, // Handle undefined
           };
         } else {
           currentResiData.push({
             Resi: op.payload.resiNumber,
-            nokarung: "0",
-            created: op.payload.createdTimestampFromExpedisi || new Date(op.timestamp).toISOString(),
-            Keterangan: op.payload.keteranganValue,
+            nokarung: "0", // Set nokarung to "0" for batal
+            created: op.payload.createdTimestampFromExpedisi || new Date(op.timestamp).toISOString(), // Gunakan created dari expedisi
+            Keterangan: op.payload.keteranganValue ?? null, // Set Keterangan menjadi nama ekspedisi asli, handle undefined
             schedule: "batal",
           });
         }
@@ -155,14 +155,14 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
           currentResiData[resiIndex] = { 
             ...currentResiData[resiIndex], 
             schedule: "ontime", 
-            Keterangan: op.payload.keteranganValue,
+            Keterangan: op.payload.keteranganValue ?? null, // Handle undefined
           };
         } else {
           currentResiData.push({
             Resi: op.payload.resiNumber,
-            nokarung: "0",
-            created: op.payload.expedisiCreatedTimestamp || new Date(op.timestamp).toISOString(),
-            Keterangan: op.payload.courierNameFromExpedisi,
+            nokarung: "0", // Set nokarung to "0" for confirm
+            created: op.payload.expedisiCreatedTimestamp || new Date(op.timestamp).toISOString(), // Gunakan created dari expedisi
+            Keterangan: op.payload.keteranganValue ?? op.payload.courierNameFromExpedisi ?? null, // Handle undefined
             schedule: "ontime",
           });
         }
@@ -183,14 +183,14 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
       } else if (op.type === 'cekfu') {
         const expedisiRecord = currentExpedisiData.get(normalizedResi);
         if (expedisiRecord) {
-          currentExpedisiData.set(normalizedResi, { ...expedisiRecord, cekfu: op.payload.newCekfuStatus });
+          currentExpedisiData.set(normalizedResi, { ...expedisiRecord, cekfu: op.payload.newCekfuStatus ?? false }); // Handle undefined
         }
 
         const opDate = new Date(op.timestamp);
         if (isSameDay(opDate, date)) {
           const indexInSelectedDate = currentExpedisiDataForSelectedDate.findIndex((e: ModalDataItem) => (e.resino || "").toLowerCase() === normalizedResi);
           if (indexInSelectedDate !== -1) {
-            currentExpedisiDataForSelectedDate[indexInSelectedDate].cekfu = op.payload.newCekfuStatus;
+            currentExpedisiDataForSelectedDate[indexInSelectedDate].cekfu = op.payload.newCekfuStatus ?? false; // Handle undefined
           }
         }
       }

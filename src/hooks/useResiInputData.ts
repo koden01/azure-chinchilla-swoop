@@ -141,10 +141,16 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     // Memastikan allResiForExpedition diperlakukan sebagai array ResiExpedisiData
     const resiData: ResiExpedisiData[] = allResiForExpedition;
 
-    const count = resiData.filter((item: ResiExpedisiData) => // Explicitly type item here
-      item.nokarung === selectedKarung && 
-      (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition)
-    ).length;
+    const count = resiData.filter((item: ResiExpedisiData) => { // Explicitly type item here
+      // Add defensive checks for null/undefined properties
+      const itemNokarung = item.nokarung ?? ""; // Default to empty string if null
+      const itemKeterangan = item.Keterangan ?? ""; // Default to empty string if null
+
+      return itemNokarung === selectedKarung && 
+             (expedition === 'ID' ? 
+                (itemKeterangan === 'ID' || itemKeterangan === 'ID_REKOMENDASI') : 
+                itemKeterangan === expedition);
+    }).length;
     return count;
   }, [allResiForExpedition, expedition]);
 

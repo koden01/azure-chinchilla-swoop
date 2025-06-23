@@ -22,7 +22,7 @@ interface ResiExpedisiData {
 interface UseResiScannerProps {
   expedition: string;
   selectedKarung: string;
-  formattedDate: string;
+  formattedDate: string; // This prop is the formatted date for today
   allExpedisiDataUnfiltered: Map<string, any> | undefined;
 }
 
@@ -38,7 +38,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
   // Mengubah menjadi hanya hari ini dan kemarin
   const yesterday = subDays(today, 1);
   const yesterdayFormatted = format(yesterday, "yyyy-MM-dd");
-  const endOfTodayFormatted = format(today, "yyyy-MM-dd");
+  const endOfTodayFormatted = format(today, "yyyy-MM-dd"); // This is the local formatted date for today
 
   // Query to fetch tbl_resi data for the last 2 days for local duplicate validation
   // Now returns a Set<string> for O(1) lookups
@@ -129,9 +129,9 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
 
     setIsProcessing(true); // Set to true at the very beginning
 
-    // Corrected queryKey to match useResiInputData
-    const queryKeyForInputPageDisplay = ["allResiForExpedition", expedition, yesterdayFormatted, formattedToday];
-    const queryKeyForKarungSummary = ["karungSummary", expedition, formattedToday];
+    // Corrected queryKey to match useResiInputData, using the 'formattedDate' prop
+    const queryKeyForInputPageDisplay = ["allResiForExpedition", expedition, yesterdayFormatted, formattedDate];
+    const queryKeyForKarungSummary = ["karungSummary", expedition, formattedDate];
 
 
     const currentOptimisticId = Date.now().toString() + Math.random().toString(36).substring(2, 9);
@@ -417,6 +417,8 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
           // Revert optimistic update for allFlagNoExpedisiData cache (add back if flag was 'NO')
           queryClient.setQueryData(["allFlagNoExpedisiData"], (oldMap: Map<string, any> | undefined) => {
             const newMap = oldMap ? new Map(oldMap) : new Map();
+            // If the original record was 'NO', add it back. Otherwise, just invalidate to refetch.
+            // For simplicity and robustness, invalidating is often safer here.
             queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] }); 
             return newMap; 
           });

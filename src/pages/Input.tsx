@@ -14,7 +14,8 @@ import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import KarungSummaryModal from "@/components/KarungSummaryModal";
 import { useQuery } from "@tanstack/react-query";
-import { format } from "date-fns"; // Import format directly
+import { format } from "date-fns";
+import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 
 const InputPage = () => {
   const { expedition, setExpedition } = useExpedition();

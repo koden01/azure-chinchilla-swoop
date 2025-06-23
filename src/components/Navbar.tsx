@@ -2,9 +2,8 @@ import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Plus, History, LayoutDashboard } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { format, startOfDay, endOfDay } from "date-fns"; // Import startOfDay and endOfDay
+import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 
 const Navbar = () => {
   const location = useLocation();
@@ -24,18 +23,15 @@ const Navbar = () => {
 
     console.log(`Prefetching dashboard data for date: ${formattedDate}`);
 
-    // Prefetch Transaksi Hari Ini (now using fetchAllDataPaginated)
+    // Prefetch Transaksi Hari Ini
     queryClient.prefetchQuery({
       queryKey: ["transaksiHariIni", formattedDate],
       queryFn: async () => {
-        const data = await fetchAllDataPaginated(
-          "tbl_expedisi",
-          "created",
-          today,
-          today,
-          "resino, orderno, chanelsales, couriername, created, flag, datetrans, cekfu"
-        );
-        return data.length || 0; // Return count of fetched records
+        const { data: countData, error } = await supabase.rpc("get_transaksi_hari_ini_count", {
+          p_selected_date: formattedDate,
+        });
+        if (error) throw error;
+        return countData || 0;
       },
     });
 
@@ -47,8 +43,8 @@ const Navbar = () => {
           .from("tbl_resi")
           .select("*", { count: "exact" })
           .eq("schedule", "ontime")
-          .gte("created", startOfDay(today).toISOString()) // Use startOfDay
-          .lt("created", endOfDay(today).toISOString()); // Use endOfDay
+          .gte("created", today.toISOString().split('T')[0] + 'T00:00:00.000Z') // Start of day
+          .lt("created", new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0] + 'T00:00:00.000Z'); // End of day
         if (error) throw error;
         return count || 0;
       },
@@ -62,8 +58,8 @@ const Navbar = () => {
           .from("tbl_resi")
           .select("*", { count: "exact" })
           .eq("Keterangan", "ID_REKOMENDASI")
-          .gte("created", startOfDay(today).toISOString())
-          .lt("created", endOfDay(today).toISOString());
+          .gte("created", today.toISOString().split('T')[0] + 'T00:00:00.000Z')
+          .lt("created", new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0] + 'T00:00:00.000Z');
         if (error) throw error;
         return count || 0;
       },
@@ -102,8 +98,8 @@ const Navbar = () => {
           .from("tbl_resi")
           .select("*", { count: "exact" })
           .eq("schedule", "late")
-          .gte("created", startOfDay(today).toISOString())
-          .lt("created", endOfDay(today).toISOString());
+          .gte("created", today.toISOString().split('T')[0] + 'T00:00:00.000Z')
+          .lt("created", new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0] + 'T00:00:00.000Z');
         if (error) throw error;
         return count || 0;
       },
@@ -117,24 +113,21 @@ const Navbar = () => {
           .from("tbl_resi")
           .select("*", { count: "exact" })
           .eq("schedule", "batal")
-          .gte("created", startOfDay(today).toISOString())
-          .lt("created", endOfDay(today).toISOString());
+          .gte("created", today.toISOString().split('T')[0] + 'T00:00:00.000Z')
+          .lt("created", new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0] + 'T00:00:00.000Z');
         if (error) throw error;
         return count || 0;
       },
     });
 
-    // Prefetch Expedisi Data for Selected Date (now using fetchAllDataPaginated)
+    // Prefetch Expedisi Data for Selected Date (RPC)
     queryClient.prefetchQuery({
       queryKey: ["expedisiDataForSelectedDate", formattedDate],
       queryFn: async () => {
-        const data = await fetchAllDataPaginated(
-          "tbl_expedisi",
-          "created",
-          today,
-          today,
-          "resino, orderno, chanelsales, couriername, created, flag, datetrans, cekfu"
-        );
+        const { data, error } = await supabase.rpc("get_transaksi_hari_ini_records", {
+          p_selected_date: formattedDate,
+        });
+        if (error) throw error;
         return data || [];
       },
     });
@@ -143,26 +136,64 @@ const Navbar = () => {
     queryClient.prefetchQuery({
       queryKey: ["allResiData", formattedDateISO], // Use formattedDateISO
       queryFn: async () => {
-        const data = await fetchAllDataPaginated(
-          "tbl_resi",
-          "created", // dateFilterColumn
-          today, // selectedStartDate
-          today, // selectedEndDate (use 'today' to include all of today)
-          "Resi, nokarung, created, Keterangan, schedule" // Only select necessary columns
-        );
-        return data;
+        let allRecords: any[] = [];
+        let offset = 0;
+        const limit = 1000;
+        let hasMore = true;
+
+        const startOfTodayISO = today.toISOString().split('T')[0] + 'T00:00:00.000Z';
+        const endOfTodayISO = new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0] + 'T00:00:00.000Z';
+
+        while (hasMore) {
+          const { data, error } = await supabase
+            .from("tbl_resi")
+            .select("*")
+            .gte("created", startOfTodayISO)
+            .lt("created", endOfTodayISO)
+            .range(offset, offset + limit - 1);
+
+          if (error) throw error;
+          if (data && data.length > 0) {
+            allRecords = allRecords.concat(data);
+            offset += data.length;
+            hasMore = data.length === limit;
+          } else {
+            hasMore = false;
+          }
+        }
+        return allRecords;
       },
     });
 
     // allExpedisiDataUnfiltered is already persisted and fetched on app load,
     // so explicit prefetch might not be strictly necessary here if it's already in cache.
     // However, including it ensures it's fresh if stale.
+    const twoDaysAgo = new Date();
+    twoDaysAgo.setDate(today.getDate() - 2);
+    const twoDaysAgoFormatted = format(twoDaysAgo, "yyyy-MM-dd");
+    const endOfTodayFormatted = format(today, "yyyy-MM-dd");
+
     queryClient.prefetchQuery({
-      queryKey: ["allExpedisiDataUnfiltered"], // Key now has no date filter
+      queryKey: ["allExpedisiDataUnfiltered", twoDaysAgoFormatted, endOfTodayFormatted],
       queryFn: async () => {
-        const data = await fetchAllDataPaginated("tbl_expedisi"); // Fetch all data, no date filter
+        let allRecords: any[] = [];
+        let offset = 0;
+        const limit = 1000;
+        let hasMore = true;
+
+        while (hasMore) {
+          const { data, error } = await supabase.from("tbl_expedisi").select("*").range(offset, offset + limit - 1);
+          if (error) throw error;
+          if (data && data.length > 0) {
+            allRecords = allRecords.concat(data);
+            offset += data.length;
+            hasMore = data.length === limit;
+          } else {
+            hasMore = false;
+          }
+        }
         const expedisiMap = new Map<string, any>();
-        data.forEach(item => {
+        allRecords.forEach(item => {
           if (item.resino) {
             expedisiMap.set(item.resino.toLowerCase(), item);
           }

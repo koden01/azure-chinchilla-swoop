@@ -11,7 +11,6 @@ import { useFollowUpRecords } from "@/hooks/dashboard/useFollowUpRecords"; // Im
 import { useExpedisiRecordsForSelectedDate } from "@/hooks/dashboard/useExpedisiRecordsForSelectedDate"; // Import missing hook
 import { useAllResiRecords } from "@/hooks/dashboard/useAllResiRecords"; // Import missing hook
 import { useAllExpedisiRecordsUnfiltered } from "@/hooks/dashboard/useAllExpedisiRecordsUnfiltered"; // Import missing hook
-import { useFollowUpFlagNoCount as useRpcFollowUpFlagNoCount } from "@/hooks/dashboard/useFollowUpFlagNoCount"; // Import RPC version
 
 // Define the return type interface for useCombinedDashboardData
 interface DashboardDataReturn {
@@ -50,7 +49,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
   const [totalScan, setTotalScan] = useState<number>(0);
   const [idRekCount, setIdRekCount] = useState<number>(0);
   const [belumKirim, setBelumKirim] = useState<number>(0);
-  // followUpFlagNoCount will now come directly from the RPC hook
+  const [followUpFlagNoCount, setFollowUpFlagNoCount] = useState<number>(0);
   const [scanFollowupLateCount, setScanFollowupLateCount] = useState<number>(0);
   const [batalCount, setBatalCount] = useState<number>(0);
   const [expeditionSummaries, setExpeditionSummaries] = useState<any[]>([]);
@@ -60,7 +59,6 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
   const { data: expedisiDataForSelectedDate, isLoading: isLoadingExpedisiDataForSelectedDate } = useExpedisiRecordsForSelectedDate(date);
   const { data: allResiData, isLoading: isLoadingAllResi } = useAllResiRecords(date);
   const { data: allExpedisiDataUnfiltered, isLoading: isLoadingAllExpedisiUnfiltered } = useAllExpedisiRecordsUnfiltered();
-  const { data: rpcFollowUpFlagNoCount, isLoading: isLoadingRpcFollowUpFlagNoCount } = useRpcFollowUpFlagNoCount(); // Get from RPC hook
 
   // Get pending operations from IndexedDB
   const { pendingOperations } = usePendingOperations();
@@ -73,7 +71,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
       setTotalScan(0);
       setIdRekCount(0);
       setBelumKirim(0);
-      // setFollowUpFlagNoCount(0); // No longer set here, comes from RPC hook
+      setFollowUpFlagNoCount(0);
       setScanFollowupLateCount(0);
       setBatalCount(0);
       setExpeditionSummaries([]);
@@ -217,8 +215,9 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
     let currentIdRekCount = 0;
     let currentBatalCount = 0;
     let currentScanFollowupLateCount = 0;
-    // currentFollowUpFlagNoCount will now come from RPC hook
+    let currentFollowUpFlagNoCount = 0; // This one is special, it's for *except today*
 
+    const today = new Date();
     const startOfSelectedDate = date ? startOfDay(date) : null;
     const endOfSelectedDate = date ? endOfDay(date) : null;
 
@@ -253,11 +252,20 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
       }
     });
 
+    // Calculate Follow Up (Flag NO except today)
+    // This count needs to iterate through allExpedisiDataUnfiltered and check dates
+    currentExpedisiData.forEach((exp: ModalDataItem) => { // Explicitly type exp as ModalDataItem
+      const expedisiCreatedDate = exp.created ? new Date(exp.created) : null;
+      if (exp.flag === "NO" && expedisiCreatedDate && !isSameDay(expedisiCreatedDate, today)) {
+        currentFollowUpFlagNoCount++;
+      }
+    });
+
     setTransaksiHariIni(currentTransaksiHariIni);
     setTotalScan(currentTotalScan);
     setIdRekCount(currentIdRekCount);
     setBelumKirim(currentBelumKirim);
-    // setFollowUpFlagNoCount(currentFollowUpFlagNoCount); // Removed manual calculation
+    setFollowUpFlagNoCount(currentFollowUpFlagNoCount);
     setScanFollowupLateCount(currentScanFollowupLateCount);
     setBatalCount(currentBatalCount);
 
@@ -388,8 +396,8 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
     isLoadingIdRekCount: isLoadingAllResi, // Now depends on allResiData
     belumKirim,
     isLoadingBelumKirim: isLoadingExpedisiDataForSelectedDate, // Now depends on expedisiDataForSelectedDate
-    followUpFlagNoCount: rpcFollowUpFlagNoCount || 0, // Directly use data from RPC hook
-    isLoadingFollowUpFlagNoCount: isLoadingRpcFollowUpFlagNoCount, // Directly use loading state from RPC hook
+    followUpFlagNoCount, 
+    isLoadingFollowUpFlagNoCount: isLoadingAllExpedisiUnfiltered, // Now depends on allExpedisiDataUnfiltered
     scanFollowupLateCount, 
     isLoadingScanFollowupLateCount: isLoadingAllResi, // Now depends on allResiData
     batalCount,
@@ -398,7 +406,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
     isLoadingFollowUp,
     expeditionSummaries,
     formattedDate,
-    allExpedisiData: allExpedisiDataUnfiltered, // This is now truly unfiltered
+    allExpedisiData: allExpedisiDataUnfiltered,
     expedisiDataForSelectedDate,
     isLoadingExpedisiDataForSelectedDate,
     allResiData,

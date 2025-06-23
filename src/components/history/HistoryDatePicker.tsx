@@ -23,7 +23,6 @@ const HistoryDatePicker: React.FC<HistoryDatePickerProps> = ({
   const [isEndDatePopoverOpen, setIsEndDatePopoverOpen] = React.useState(false);
 
   const handleStartDateSelect = (date: Date | undefined) => {
-    console.log("Start Date selected:", date);
     setStartDate(date);
     // If start date is set and it's after current end date, adjust end date
     if (date && endDate && isAfter(date, endDate)) {
@@ -33,12 +32,10 @@ const HistoryDatePicker: React.FC<HistoryDatePickerProps> = ({
     }
     setTimeout(() => {
       setIsStartDatePopoverOpen(false);
-      console.log("isStartDatePopoverOpen set to false via setTimeout");
     }, 0);
   };
 
   const handleEndDateSelect = (date: Date | undefined) => {
-    console.log("End Date selected:", date);
     setEndDate(date);
     // If end date is set and it's before current start date, adjust start date
     if (date && startDate && isBefore(date, startDate)) {
@@ -48,7 +45,6 @@ const HistoryDatePicker: React.FC<HistoryDatePickerProps> = ({
     }
     setTimeout(() => {
       setIsEndDatePopoverOpen(false);
-      console.log("isEndDatePopoverOpen set to false via setTimeout");
     }, 0);
   };
 

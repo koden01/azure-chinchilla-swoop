@@ -21,8 +21,6 @@ const Navbar = () => {
     const formattedDate = format(today, "yyyy-MM-dd");
     const formattedDateISO = today.toISOString().split('T')[0]; // For queries using date part only
 
-    console.log(`Prefetching dashboard data for date: ${formattedDate}`);
-
     // Prefetch Transaksi Hari Ini
     queryClient.prefetchQuery({
       queryKey: ["transaksiHariIni", formattedDate],

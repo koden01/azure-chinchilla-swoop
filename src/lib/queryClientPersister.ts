@@ -4,9 +4,14 @@ import { get, set, del } from 'idb-keyval';
 // Custom replacer for JSON.stringify to handle Map and Set objects
 function replacer(_key: string, value: any): any {
   if (value instanceof Map) {
+    // Convert Map to a plain object for simpler serialization if keys are strings
+    const obj: { [k: string]: any } = {};
+    for (let [k, v] of value.entries()) {
+      obj[k] = v;
+    }
     return {
-      dataType: 'Map',
-      value: Array.from(value.entries()),
+      dataType: 'MapObject', // Use a different dataType to distinguish
+      value: obj,
     };
   }
   if (value instanceof Set) { // Add Set handling
@@ -21,8 +26,8 @@ function replacer(_key: string, value: any): any {
 // Custom reviver for JSON.parse to handle Map and Set objects
 function reviver(_key: string, value: any): any {
   if (typeof value === 'object' && value !== null) {
-    if (value.dataType === 'Map') {
-      return new Map(value.value);
+    if (value.dataType === 'MapObject') { // Check for the new dataType
+      return new Map(Object.entries(value.value)); // Convert plain object back to Map
     }
     if (value.dataType === 'Set') { // Add Set handling
       return new Set(value.value);

@@ -41,8 +41,8 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
   const endOfTodayFormatted = format(today, "yyyy-MM-dd"); // This is the local formatted date for today
 
   // Query to fetch tbl_resi data for the last 2 days for local duplicate validation
-  // Now returns a Set<string> for O(1) lookups
-  const { data: recentResiNumbersForValidation, isLoading: isLoadingRecentResiNumbersForValidation } = useQuery<Set<string>>({
+  // Now returns a Map<string, { created: string, nokarung: string | null }> for O(1) lookups and data access
+  const { data: recentResiNumbersForValidation, isLoading: isLoadingRecentResiNumbersForValidation } = useQuery<Map<string, { created: string, nokarung: string | null }>>({
     queryKey: ["recentResiNumbersForValidation", yesterdayFormatted, formattedDate],
     queryFn: async () => {
       console.log(`[${new Date().toISOString()}] [useResiScanner] Fetching recentResiNumbersForValidation...`);
@@ -51,11 +51,11 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         "created", // dateFilterColumn
         yesterday, // selectedStartDate
         today, // selectedEndDate (use 'today' to include all of today)
-        "Resi" // Only select the Resi column
+        "Resi, nokarung, created" // Select Resi, nokarung, and created columns
       );
-      const resiSet = new Set(data.map((item: { Resi: string }) => item.Resi.toLowerCase().trim()));
-      console.log(`[${new Date().toISOString()}] [useResiScanner] Finished fetching recentResiNumbersForValidation. Count: ${resiSet.size}`);
-      return resiSet;
+      const resiMap = new Map(data.map((item: { Resi: string, nokarung: string | null, created: string }) => [item.Resi.toLowerCase().trim(), { created: item.created, nokarung: item.nokarung }]));
+      console.log(`[${new Date().toISOString()}] [useResiScanner] Finished fetching recentResiNumbersForValidation. Count: ${resiMap.size}`);
+      return resiMap;
     },
     staleTime: 1000 * 60 * 60, // Increased to 1 hour for better performance
     gcTime: 1000 * 60 * 60 * 24 * 2, // Garbage collect after 2 days
@@ -158,21 +158,16 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       console.time("[useResiScanner] Validation checks"); // Fixed timer label
       // 1. Local Duplicate Check (for recent scans)
       console.log(`[${new Date().toISOString()}] [useResiScanner] Performing local duplicate check...`);
-      if (recentResiNumbersForValidation?.has(normalizedCurrentResi)) {
-        // Fetch the created date for the duplicate resi
-        const { data: existingResiDetail, error: _detailError } = await supabase
-          .from("tbl_resi")
-          .select("created")
-          .eq("Resi", currentResi)
-          .maybeSingle();
-
+      const existingResiDetail = recentResiNumbersForValidation?.get(normalizedCurrentResi);
+      if (existingResiDetail) {
         let createdDateStr = "";
-        if (existingResiDetail && existingResiDetail.created) {
+        if (existingResiDetail.created) {
           createdDateStr = format(new Date(existingResiDetail.created), "dd/MM/yyyy HH:mm");
         }
+        const nokarungStr = existingResiDetail.nokarung ? ` di nokarung ${existingResiDetail.nokarung}` : "";
 
         validationStatus = 'DUPLICATE_RESI';
-        validationMessage = `DOUBLE! Resi ini sudah discan ${createdDateStr}.`; // Updated message
+        validationMessage = `DOUBLE! Resi ini sudah discan${nokarungStr} ${createdDateStr}.`; // Updated message
         console.log(`[${new Date().toISOString()}] [useResiScanner] Local duplicate found.`);
       }
 
@@ -181,7 +176,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         console.log(`[${new Date().toISOString()}] [useResiScanner] Performing database duplicate check...`);
         const { data: existingResiInDb, error: dbCheckError } = await supabase
           .from("tbl_resi")
-          .select("Resi, created") // Select created as well
+          .select("Resi, created, nokarung") // Select created and nokarung as well
           .eq("Resi", currentResi)
           .maybeSingle(); // Use maybeSingle to get null if not found, or data if found
 
@@ -194,15 +189,15 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
           if (existingResiInDb.created) {
             createdDateStr = format(new Date(existingResiInDb.created), "dd/MM/yyyy HH:mm");
           }
-          validationStatus = 'DUPLICATE_RESI';
-          validationMessage = `DOUBLE! Resi ini sudah discan ${createdDateStr}.`; // Updated message
+          const nokarungStr = existingResiInDb.nokarung ? ` di nokarung ${existingResiInDb.nokarung}` : "";
+          validationStatus = 'DUPLIKAT_RESI';
+          validationMessage = `DOUBLE! Resi ini sudah discan${nokarungStr} ${createdDateStr}.`; // Updated message
           console.log(`[${new Date().toISOString()}] [useResiScanner] Database duplicate found.`);
         }
       }
 
       // Only proceed with further checks if not already a duplicate
       if (validationStatus === 'OK') { // Only proceed if not already a duplicate
-        // 3. Attempt to find expedisiRecord from caches or direct RPC call
         console.log(`[${new Date().toISOString()}] [useResiScanner] Checking expedisi record in caches...`);
         expedisiRecord = allExpedisiDataUnfiltered?.get(normalizedCurrentResi);
 
@@ -333,11 +328,11 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         const newData = [...(oldData || []), newResiEntry]; // Ensure oldData is an array
         return newData;
       });
-      // Optimistic update for recentResiNumbersForValidation (Set)
-      queryClient.setQueryData(["recentResiNumbersForValidation", yesterdayFormatted, formattedDate], (oldSet: Set<string> | undefined) => {
-        const newSet = oldSet ? new Set(oldSet) : new Set();
-        newSet.add(normalizedCurrentResi);
-        return newSet;
+      // Optimistic update for recentResiNumbersForValidation (Map)
+      queryClient.setQueryData(["recentResiNumbersForValidation", yesterdayFormatted, formattedDate], (oldMap: Map<string, { created: string, nokarung: string | null }> | undefined) => {
+        const newMap = oldMap ? new Map(oldMap) : new Map();
+        newMap.set(normalizedCurrentResi, { created: newResiEntry.created, nokarung: newResiEntry.nokarung });
+        return newMap;
       });
       // Optimistic update for allExpedisiDataUnfiltered cache
       queryClient.setQueryData(["allExpedisiDataUnfiltered", yesterdayFormatted, endOfTodayFormatted], (oldMap: Map<string, any> | undefined) => {
@@ -439,11 +434,11 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
               const revertedData = (oldData || []).filter(item => item.optimisticId !== lastOptimisticIdRef.current);
               return revertedData;
           });
-          // Revert optimistic update for recentResiNumbersForValidation (Set)
-          queryClient.setQueryData(["recentResiNumbersForValidation", yesterdayFormatted, formattedDate], (oldSet: Set<string> | undefined) => {
-            const newSet = oldSet ? new Set(oldSet) : new Set();
-            newSet.delete(normalizedCurrentResi); // Remove the optimistically added resi
-            return newSet;
+          // Revert optimistic update for recentResiNumbersForValidation (Map)
+          queryClient.setQueryData(["recentResiNumbersForValidation", yesterdayFormatted, formattedDate], (oldMap: Map<string, { created: string, nokarung: string | null }> | undefined) => {
+            const newMap = oldMap ? new Map(oldMap) : new Map();
+            newMap.delete(normalizedCurrentResi); // Remove the optimistically added resi
+            return newMap;
           });
           // Revert optimistic update for allExpedisiDataUnfiltered cache
           queryClient.setQueryData(["allExpedisiDataUnfiltered", yesterdayFormatted, endOfTodayFormatted], (oldMap: Map<string, any> | undefined) => {

@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { format, isSameDay, startOfDay, endOfDay } from "date-fns";
-import React, { useEffect } from "react"; // Menggunakan React untuk useMemo
+import React, { useEffect } from "react";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import { normalizeExpeditionName, KNOWN_EXPEDITIONS } from "@/utils/expeditionUtils";
@@ -12,7 +12,7 @@ import { useExpedisiRecordsForSelectedDate } from "@/hooks/dashboard/useExpedisi
 import { useAllResiRecords } from "@/hooks/dashboard/useAllResiRecords";
 import { useAllExpedisiRecordsUnfiltered } from "@/hooks/dashboard/useAllExpedisiRecordsUnfiltered";
 import { useFollowUpFlagNoCount as useActualFollowUpFlagNoCount } from "@/hooks/dashboard/useFollowUpFlagNoCount";
-import { useTransaksiHariIniCount as useActualTransaksiHariIniCount } from "@/hooks/dashboard/useTransaksiHariIniCount";
+// Removed import for useActualTransaksiHariIniCount as it will be derived client-side
 
 // Define the return type interface for useCombinedDashboardData
 interface DashboardDataReturn {
@@ -52,7 +52,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
   const { data: allResiData, isLoading: isLoadingAllResi } = useAllResiRecords(date);
   const { data: allExpedisiDataUnfiltered, isLoading: isLoadingAllExpedisiUnfiltered } = useAllExpedisiRecordsUnfiltered();
   const { data: actualFollowUpFlagNoCount, isLoading: isLoadingActualFollowUpFlagNoCount } = useActualFollowUpFlagNoCount();
-  const { data: actualTransaksiHariIniCount, isLoading: isLoadingActualTransaksiHariIniCount } = useActualTransaksiHariIniCount(date);
+  // Removed useActualTransaksiHariIniCount
 
   // Get pending operations from IndexedDB
   const { pendingOperations } = usePendingOperations();
@@ -193,6 +193,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
 
   // Memoized derived counts
   const {
+    transaksiHariIni, // Now derived here
     totalScan,
     idRekCount,
     belumKirim,
@@ -202,6 +203,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
   } = React.useMemo(() => {
     if (!date || !currentExpedisiDataWithOptimisticUpdates || !currentResiDataWithOptimisticUpdates || !expedisiDataForSelectedDateWithOptimisticUpdates) {
       return {
+        transaksiHariIni: 0, // Default value
         totalScan: 0,
         idRekCount: 0,
         belumKirim: 0,
@@ -216,12 +218,14 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
     let currentIdRekCount = 0;
     let currentBatalCount = 0;
     let currentScanFollowupLateCount = 0;
+    let currentTransaksiHariIni = 0; // Initialize for client-side calculation
 
     const startOfSelectedDate = startOfDay(date);
     const endOfSelectedDate = endOfDay(date);
 
     // Calculate Belum Kirim (for selected date)
     expedisiDataForSelectedDateWithOptimisticUpdates.forEach((exp: ModalDataItem) => {
+      currentTransaksiHariIni++; // Increment for every record in expedisiDataForSelectedDateWithOptimisticUpdates
       if (exp.flag === "NO") {
         currentBelumKirim++;
       }
@@ -328,6 +332,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
     }));
 
     return {
+      transaksiHariIni: currentTransaksiHariIni, // Use client-side calculated value
       totalScan: currentTotalScan,
       idRekCount: currentIdRekCount,
       belumKirim: currentBelumKirim,
@@ -364,28 +369,28 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
   }, [debouncedInvalidateDashboardQueries]);
 
   return {
-    transaksiHariIni: actualTransaksiHariIniCount || 0,
-    isLoadingTransaksiHariIni: isLoadingActualTransaksiHariIniCount,
+    transaksiHariIni, // Use the memoized value
+    isLoadingTransaksiHariIni: isLoadingExpedisiDataForSelectedDate, // Loading state now depends on expedisiDataForSelectedDate
     totalScan,
-    isLoadingTotalScan: isLoadingAllResi, // Loading state for totalScan now depends on allResiData
+    isLoadingTotalScan: isLoadingAllResi,
     idRekCount, 
-    isLoadingIdRekCount: isLoadingAllResi, // Loading state for idRekCount now depends on allResiData
+    isLoadingIdRekCount: isLoadingAllResi,
     belumKirim,
-    isLoadingBelumKirim: isLoadingExpedisiDataForSelectedDate, // Loading state for belumKirim now depends on expedisiDataForSelectedDate
+    isLoadingBelumKirim: isLoadingExpedisiDataForSelectedDate,
     followUpFlagNoCount: actualFollowUpFlagNoCount || 0,
     isLoadingFollowUpFlagNoCount: isLoadingActualFollowUpFlagNoCount,
     scanFollowupLateCount, 
-    isLoadingScanFollowupLateCount: isLoadingAllResi, // Loading state for scanFollowupLateCount now depends on allResiData
+    isLoadingScanFollowupLateCount: isLoadingAllResi,
     batalCount,
-    isLoadingBatalCount: isLoadingAllResi, // Loading state for batalCount now depends on allResiData
+    isLoadingBatalCount: isLoadingAllResi,
     followUpData,
     isLoadingFollowUp,
     expeditionSummaries,
     formattedDate,
-    allExpedisiData: currentExpedisiDataWithOptimisticUpdates, // Menggunakan data yang sudah dioptimistic update
-    expedisiDataForSelectedDate: expedisiDataForSelectedDateWithOptimisticUpdates, // Menggunakan data yang sudah dioptimistic update
+    allExpedisiData: currentExpedisiDataWithOptimisticUpdates,
+    expedisiDataForSelectedDate: expedisiDataForSelectedDateWithOptimisticUpdates,
     isLoadingExpedisiDataForSelectedDate,
-    allResiData: currentResiDataWithOptimisticUpdates, // Menggunakan data yang sudah dioptimistic update
+    allResiData: currentResiDataWithOptimisticUpdates,
     isLoadingAllResi,
     isLoadingAllExpedisiUnfiltered,
   };

@@ -20,16 +20,18 @@ export const useBackgroundSync = () => {
     }
 
     isSyncingRef.current = true;
-    console.time(`[${new Date().toISOString()}] [BackgroundSync] Total sync duration`);
+    console.time(`[BackgroundSync] Total sync duration`); // Fixed timer label
     console.log(`[${new Date().toISOString()}] [BackgroundSync] Starting background sync...`);
 
     let operationsSynced = 0;
     let operationsFailed = 0;
+    const affectedDates = new Set<string>(); // To collect unique dates affected
+    const affectedExpeditions = new Set<string>(); // To collect unique expeditions affected
 
     try {
-      console.time(`[${new Date().toISOString()}] [BackgroundSync] Fetching pending operations`);
+      console.time(`[BackgroundSync] Fetching pending operations`); // Fixed timer label
       const pendingOperations = await getPendingOperations();
-      console.timeEnd(`[${new Date().toISOString()}] [BackgroundSync] Fetching pending operations`);
+      console.timeEnd(`[BackgroundSync] Fetching pending operations`); // Fixed timer label
 
       if (pendingOperations.length === 0) {
         console.log(`[${new Date().toISOString()}] [BackgroundSync] No pending operations found. Exiting sync.`);
@@ -40,7 +42,7 @@ export const useBackgroundSync = () => {
 
       for (const op of pendingOperations) {
         console.log(`[${new Date().toISOString()}] [BackgroundSync] Processing operation ${op.id} (type: ${op.type}, resi: ${op.payload.resiNumber || 'N/A'})`);
-        console.time(`[${new Date().toISOString()}] [BackgroundSync] Operation ${op.id} processing time`);
+        console.time(`[BackgroundSync] Operation ${op.id} processing time`); // Fixed timer label
         try {
           let success = false;
           if (op.type === 'batal') {
@@ -58,6 +60,8 @@ export const useBackgroundSync = () => {
             if (resiUpsertError) throw resiUpsertError;
             console.log(`[${new Date().toISOString()}] [BackgroundSync] 'batal' operation for ${op.payload.resiNumber} successful.`);
             success = true;
+            affectedDates.add(format(new Date(op.payload.createdTimestampFromExpedisi || op.timestamp), 'yyyy-MM-dd'));
+            if (op.payload.keteranganValue) affectedExpeditions.add(op.payload.keteranganValue);
 
           } else if (op.type === 'confirm') {
             console.log(`[${new Date().toISOString()}] [BackgroundSync] Executing 'confirm' for resi: ${op.payload.resiNumber}`);
@@ -74,6 +78,8 @@ export const useBackgroundSync = () => {
             if (resiUpsertError) throw resiUpsertError;
             console.log(`[${new Date().toISOString()}] [BackgroundSync] 'confirm' operation for ${op.payload.resiNumber} successful.`);
             success = true;
+            affectedDates.add(format(new Date(op.payload.expedisiCreatedTimestamp || op.timestamp), 'yyyy-MM-dd'));
+            if (op.payload.keteranganValue) affectedExpeditions.add(op.payload.keteranganValue);
 
           } else if (op.type === 'cekfu') {
             console.log(`[${new Date().toISOString()}] [BackgroundSync] Executing 'cekfu' for resi: ${op.payload.resiNumber} to ${op.payload.newCekfuStatus}`);
@@ -85,6 +91,17 @@ export const useBackgroundSync = () => {
             if (error) throw error;
             console.log(`[${new Date().toISOString()}] [BackgroundSync] 'cekfu' operation for ${op.payload.resiNumber} successful.`);
             success = true;
+            // For cekfu, we need to find the original created date of the expedisi record
+            const { data: expedisiRecord, error: fetchExpedisiError } = await supabase
+              .from('tbl_expedisi')
+              .select('created, couriername')
+              .eq('resino', op.payload.resiNumber)
+              .single();
+            if (expedisiRecord) {
+              affectedDates.add(format(new Date(expedisiRecord.created), 'yyyy-MM-dd'));
+              if (expedisiRecord.couriername) affectedExpeditions.add(expedisiRecord.couriername);
+            }
+
           } else if (op.type === 'scan') {
             console.log(`[${new Date().toISOString()}] [BackgroundSync] Executing 'scan' for resi: ${op.payload.resiNumber}`);
             const { resiNumber, selectedKarung, courierNameFromExpedisi } = op.payload;
@@ -123,6 +140,8 @@ export const useBackgroundSync = () => {
             }
 
             success = true;
+            affectedDates.add(format(new Date(op.timestamp), 'yyyy-MM-dd'));
+            if (courierNameFromExpedisi) affectedExpeditions.add(courierNameFromExpedisi);
           }
 
           if (success) {
@@ -144,20 +163,30 @@ export const useBackgroundSync = () => {
           }
           operationsFailed++;
         } finally {
-          console.timeEnd(`[${new Date().toISOString()}] [BackgroundSync] Operation ${op.id} processing time`);
+          console.timeEnd(`[BackgroundSync] Operation ${op.id} processing time`); // Fixed timer label
         }
       }
 
       if (operationsSynced > 0) {
         console.log(`[${new Date().toISOString()}] [BackgroundSync] ${operationsSynced} operations synced. Invalidating relevant queries.`);
+        // Invalidate queries once after all operations are processed
         const today = new Date();
-        invalidateDashboardQueries(queryClient, today);
+        // Invalidate for each affected date and expedition
+        affectedDates.forEach(dateStr => {
+          invalidateDashboardQueries(queryClient, new Date(dateStr));
+        });
+        affectedExpeditions.forEach(expName => {
+          invalidateDashboardQueries(queryClient, today, expName); // Pass today's date and specific expedition
+        });
+
+        // Also invalidate general queries that might not be date/expedition specific
         queryClient.invalidateQueries({ queryKey: ["historyData"] }); 
         queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] });
         queryClient.invalidateQueries({ queryKey: ["allExpedisiDataUnfiltered"] });
         queryClient.invalidateQueries({ queryKey: ["recentResiNumbersForValidation"] });
-        queryClient.refetchQueries({ queryKey: ["karungSummary"] });
-        queryClient.refetchQueries({ queryKey: ["lastKarung"] });
+        queryClient.invalidateQueries({ queryKey: ["karungSummary"] }); // Invalidate all karung summaries
+        queryClient.invalidateQueries({ queryKey: ["lastKarung"] }); // Invalidate all last karung
+        queryClient.invalidateQueries({ queryKey: ["uniqueExpeditionNames"] }); // Invalidate unique expedition names
         console.log(`[${new Date().toISOString()}] [BackgroundSync] Queries invalidated.`);
       }
       if (operationsFailed > 0) {
@@ -169,7 +198,7 @@ export const useBackgroundSync = () => {
     } finally {
       isSyncingRef.current = false;
       console.log(`[${new Date().toISOString()}] [BackgroundSync] Background sync finished.`);
-      console.timeEnd(`[${new Date().toISOString()}] [BackgroundSync] Total sync duration`);
+      console.timeEnd(`[BackgroundSync] Total sync duration`); // Fixed timer label
     }
   };
 

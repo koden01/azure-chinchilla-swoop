@@ -168,6 +168,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
     // Corrected queryKey to match useResiInputData, using the 'formattedDate' prop
     const queryKeyForInputPageDisplay = ["allResiForExpedition", expedition, yesterdayFormatted, formattedDate];
     const queryKeyForKarungSummary = ["karungSummary", expedition, formattedDate];
+    const queryKeyForCurrentCount = ["currentResiCount", expedition, selectedKarung, formattedDate]; // NEW: Query key for currentCount
 
 
     const currentOptimisticId = Date.now().toString() + Math.random().toString(36).substring(2, 9);
@@ -401,6 +402,12 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         }
         return newSummary;
       });
+
+      // NEW: Optimistic update for currentCount
+      queryClient.setQueryData(queryKeyForCurrentCount, (oldCount: number | undefined) => {
+        return (oldCount || 0) + 1;
+      });
+
       console.timeEnd("[useResiScanner] Optimistic UI updates"); // Fixed timer label
 
       lastOptimisticIdRef.current = currentOptimisticId;
@@ -431,6 +438,9 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       
       console.log(`[${new Date().toISOString()}] [useResiScanner] Triggering background sync.`);
       triggerSync(); // Re-enabled direct call to triggerSync()
+
+      // NEW: Invalidate currentCount query to force refetch from DB
+      queryClient.invalidateQueries({ queryKey: queryKeyForCurrentCount });
 
     } catch (error: any) {
       console.error(`[${new Date().toISOString()}] [useResiScanner] Error during resi input (before IndexedDB save or during optimistic update):`, error); // Log the full error object
@@ -498,6 +508,10 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
               }
             }
             return newSummary;
+          });
+          // NEW: Revert optimistic update for currentCount
+          queryClient.setQueryData(queryKeyForCurrentCount, (oldCount: number | undefined) => {
+            return (oldCount || 0) - 1;
           });
       }
       console.timeEnd("[useResiScanner] Revert optimistic updates on error"); // Fixed timer label

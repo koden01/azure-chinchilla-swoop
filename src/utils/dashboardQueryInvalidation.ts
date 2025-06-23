@@ -1,13 +1,15 @@
 import { QueryClient } from "@tanstack/react-query";
-import { format } from "date-fns"; // Removed subDays
+import { format, subDays } from "date-fns"; // Import subDays
 
 export const invalidateDashboardQueries = (queryClient: QueryClient, date: Date | undefined, expedition?: string) => {
   const formattedDate = date ? format(date, "yyyy-MM-dd") : "";
   const actualCurrentDate = new Date();
   const actualCurrentFormattedDate = format(actualCurrentDate, 'yyyy-MM-dd');
 
-  // The allExpedisiDataUnfiltered query now only fetches for today, so its key is simpler.
-  const todayFormattedForExpedisi = format(actualCurrentDate, "yyyy-MM-dd");
+  // Calculate date range for 3 days (today and 2 days prior) for allExpedisiDataUnfiltered invalidation
+  const twoDaysAgo = subDays(actualCurrentDate, 2); // Covers today, yesterday, and the day before yesterday
+  const twoDaysAgoFormatted = format(twoDaysAgo, "yyyy-MM-dd");
+  const endOfTodayFormatted = format(actualCurrentDate, "yyyy-MM-dd");
 
   // Invalidate dashboard summary queries for the specific date provided (dateOfDeletedResi)
   // These are usually tied to a specific date.
@@ -37,11 +39,11 @@ export const invalidateDashboardQueries = (queryClient: QueryClient, date: Date 
     queryClient.invalidateQueries({ queryKey: ["allResiForExpedition", normalizedExpeditionForInput, formattedDate] });
   }
 
-  // Invalidate the allExpedisiDataUnfiltered query with its new key (only today's date)
-  queryClient.invalidateQueries({ queryKey: ["allExpedisiDataUnfiltered", todayFormattedForExpedisi] });
+  // Invalidate the allExpedisiDataUnfiltered query with its new key (3-day range)
+  queryClient.invalidateQueries({ queryKey: ["allExpedisiDataUnfiltered", twoDaysAgoFormatted, endOfTodayFormatted] });
 
-  // Invalidate recentResiNumbersForValidation for local duplicate checks (only today's date)
-  queryClient.invalidateQueries({ queryKey: ["recentResiNumbersForValidation", actualCurrentFormattedDate] });
+  // Invalidate recentResiNumbersForValidation for local duplicate checks (3-day range)
+  queryClient.invalidateQueries({ queryKey: ["recentResiNumbersForValidation", twoDaysAgoFormatted, actualCurrentFormattedDate] });
 
   // NEW: Invalidate the allFlagNoExpedisiData query
   queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] });

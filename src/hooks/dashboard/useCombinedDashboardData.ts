@@ -11,6 +11,7 @@ import { useFollowUpRecords } from "@/hooks/dashboard/useFollowUpRecords"; // Im
 import { useExpedisiRecordsForSelectedDate } from "@/hooks/dashboard/useExpedisiRecordsForSelectedDate"; // Import missing hook
 import { useAllResiRecords } from "@/hooks/dashboard/useAllResiRecords"; // Import missing hook
 import { useAllExpedisiRecordsUnfiltered } from "@/hooks/dashboard/useAllExpedisiRecordsUnfiltered"; // Import missing hook
+import { useFollowUpFlagNoCount as useActualFollowUpFlagNoCount } from "@/hooks/dashboard/useFollowUpFlagNoCount"; // Import the dedicated hook
 
 // Define the return type interface for useCombinedDashboardData
 interface DashboardDataReturn {
@@ -49,7 +50,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
   const [totalScan, setTotalScan] = useState<number>(0);
   const [idRekCount, setIdRekCount] = useState<number>(0);
   const [belumKirim, setBelumKirim] = useState<number>(0);
-  const [followUpFlagNoCount, setFollowUpFlagNoCount] = useState<number>(0);
+  // const [followUpFlagNoCount, setFollowUpFlagNoCount] = useState<number>(0); // Dihapus, akan menggunakan data dari hook khusus
   const [scanFollowupLateCount, setScanFollowupLateCount] = useState<number>(0);
   const [batalCount, setBatalCount] = useState<number>(0);
   const [expeditionSummaries, setExpeditionSummaries] = useState<any[]>([]);
@@ -59,6 +60,9 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
   const { data: expedisiDataForSelectedDate, isLoading: isLoadingExpedisiDataForSelectedDate } = useExpedisiRecordsForSelectedDate(date);
   const { data: allResiData, isLoading: isLoadingAllResi } = useAllResiRecords(date);
   const { data: allExpedisiDataUnfiltered, isLoading: isLoadingAllExpedisiUnfiltered } = useAllExpedisiRecordsUnfiltered();
+  // NEW: Fetch Follow Up (Flag NO except today) directly from its dedicated hook
+  const { data: actualFollowUpFlagNoCount, isLoading: isLoadingActualFollowUpFlagNoCount } = useActualFollowUpFlagNoCount();
+
 
   // Get pending operations from IndexedDB
   const { pendingOperations } = usePendingOperations();
@@ -71,7 +75,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
       setTotalScan(0);
       setIdRekCount(0);
       setBelumKirim(0);
-      setFollowUpFlagNoCount(0);
+      // setFollowUpFlagNoCount(0); // Dihapus
       setScanFollowupLateCount(0);
       setBatalCount(0);
       setExpeditionSummaries([]);
@@ -215,7 +219,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
     let currentIdRekCount = 0;
     let currentBatalCount = 0;
     let currentScanFollowupLateCount = 0;
-    let currentFollowUpFlagNoCount = 0; // This one is special, it's for *except today*
+    // let currentFollowUpFlagNoCount = 0; // Dihapus
 
     const today = new Date();
     const startOfSelectedDate = date ? startOfDay(date) : null;
@@ -252,20 +256,19 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
       }
     });
 
-    // Calculate Follow Up (Flag NO except today)
-    // This count needs to iterate through allExpedisiDataUnfiltered and check dates
-    currentExpedisiData.forEach((exp: ModalDataItem) => { // Explicitly type exp as ModalDataItem
-      const expedisiCreatedDate = exp.created ? new Date(exp.created) : null;
-      if (exp.flag === "NO" && expedisiCreatedDate && !isSameDay(expedisiCreatedDate, today)) {
-        currentFollowUpFlagNoCount++;
-      }
-    });
+    // Calculate Follow Up (Flag NO except today) - THIS IS NOW HANDLED BY DEDICATED HOOK
+    // currentExpedisiData.forEach((exp: ModalDataItem) => { // Explicitly type exp as ModalDataItem
+    //   const expedisiCreatedDate = exp.created ? new Date(exp.created) : null;
+    //   if (exp.flag === "NO" && expedisiCreatedDate && !isSameDay(expedisiCreatedDate, today)) {
+    //     currentFollowUpFlagNoCount++;
+    //   }
+    // });
 
     setTransaksiHariIni(currentTransaksiHariIni);
     setTotalScan(currentTotalScan);
     setIdRekCount(currentIdRekCount);
     setBelumKirim(currentBelumKirim);
-    setFollowUpFlagNoCount(currentFollowUpFlagNoCount);
+    // setFollowUpFlagNoCount(currentFollowUpFlagNoCount); // Dihapus
     setScanFollowupLateCount(currentScanFollowupLateCount);
     setBatalCount(currentBatalCount);
 
@@ -396,8 +399,8 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
     isLoadingIdRekCount: isLoadingAllResi, // Now depends on allResiData
     belumKirim,
     isLoadingBelumKirim: isLoadingExpedisiDataForSelectedDate, // Now depends on expedisiDataForSelectedDate
-    followUpFlagNoCount, 
-    isLoadingFollowUpFlagNoCount: isLoadingAllExpedisiUnfiltered, // Now depends on allExpedisiDataUnfiltered
+    followUpFlagNoCount: actualFollowUpFlagNoCount || 0, // Menggunakan data dari hook khusus
+    isLoadingFollowUpFlagNoCount: isLoadingActualFollowUpFlagNoCount, // Menggunakan loading state dari hook khusus
     scanFollowupLateCount, 
     isLoadingScanFollowupLateCount: isLoadingAllResi, // Now depends on allResiData
     batalCount,

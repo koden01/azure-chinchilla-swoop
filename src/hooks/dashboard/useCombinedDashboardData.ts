@@ -83,11 +83,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
       };
     }
 
-    // Ensure allExpedisiDataUnfiltered is a Map instance
-    const currentExpedisiData = (allExpedisiDataUnfiltered instanceof Map)
-      ? new Map(allExpedisiDataUnfiltered)
-      : new Map();
-    
+    const currentExpedisiData = new Map(allExpedisiDataUnfiltered);
     const currentResiData: ModalDataItem[] = [...allResiData];
     const currentExpedisiDataForSelectedDate: ModalDataItem[] = [...expedisiDataForSelectedDate];
 
@@ -208,11 +204,11 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
     let currentScanFollowupLateCount = 0;
     let currentTransaksiHariIni = 0;
 
-    const startOfSelectedDate = date ? startOfDay(date) : null;
-    const endOfSelectedDate = date ? endOfDay(date) : null;
+    const startOfSelectedDate = startOfDay(date);
+    const endOfSelectedDate = endOfDay(date);
 
     // Calculate Transaksi Hari Ini and Belum Kirim (for selected date)
-    currentExpedisiDataForSelectedDate.forEach((exp: ModalDataItem) => { // Corrected variable name here
+    expedisiDataForSelectedDateWithOptimisticUpdates.forEach((exp: ModalDataItem) => {
       currentTransaksiHariIni++;
       if (exp.flag === "NO") {
         currentBelumKirim++;
@@ -223,7 +219,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
     currentResiData.forEach((resi: ModalDataItem) => {
       const resiCreatedDate = resi.created ? new Date(resi.created) : null;
 
-      if (resiCreatedDate && startOfSelectedDate && endOfSelectedDate && resiCreatedDate >= startOfSelectedDate && resiCreatedDate <= endOfSelectedDate) {
+      if (resiCreatedDate && resiCreatedDate >= startOfSelectedDate && resiCreatedDate <= endOfSelectedDate) {
         if (resi.schedule === "ontime") {
           currentTotalScan++;
         }
@@ -255,7 +251,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
       };
     });
 
-    currentExpedisiDataForSelectedDate.forEach((exp: ModalDataItem) => { // Corrected variable name here
+    expedisiDataForSelectedDateWithOptimisticUpdates.forEach((exp: ModalDataItem) => {
       const normalizedCourierName = normalizeExpeditionName(exp.couriername);
 
       if (normalizedCourierName && summaries[normalizedCourierName]) {

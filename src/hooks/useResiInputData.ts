@@ -138,9 +138,10 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     console.log("Calculating current count for expedition:", expedition, "karung:", selectedKarung);
     if (!allResiForExpedition || !selectedKarung) return 0;
     
-    const resiData: ResiExpedisiData[] = allResiForExpedition;
+    const resiData = allResiForExpedition;
 
-    const count = resiData.filter((item: ResiExpedisiData) => { // Menambahkan anotasi tipe eksplisit untuk 'item'
+    // Extract the filter logic into a separate function/variable
+    const filterPredicate = (item: ResiExpedisiData) => {
       const itemNokarung = item.nokarung ?? "";
       const itemKeterangan = item.Keterangan ?? "";
 
@@ -154,9 +155,11 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       }
       
       return isKarungMatch && isExpeditionMatch;
-    }).length;
+    };
+
+    const count = resiData.filter(filterPredicate).length;
     return count;
-  }, [allResiForExpedition, expedition]);
+  }, [allResiForExpedition, expedition]); // Dependencies remain the same
 
   // Optimized calculation for lastKarung and highestKarung
   const { lastKarung, highestKarung } = React.useMemo(() => {

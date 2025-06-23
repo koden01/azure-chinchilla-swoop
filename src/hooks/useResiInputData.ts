@@ -46,11 +46,10 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
           }
         }
       );
-      console.log(`[useResiInputData] Fetched allResiForExpedition for ${expedition} on ${formattedDate}:`, data);
       return data || [];
     },
     enabled: !!expedition,
-    staleTime: 1000 * 60 * 60, // Changed to 60 minutes (from 1 minute)
+    staleTime: 1000 * 60 * 60 * 4, // Changed to 4 hours
   });
 
   // NEW: Query to fetch ALL karung summaries directly from database using new RPC
@@ -65,11 +64,10 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
         console.error("Error fetching all karung summaries:", error);
         throw error;
       }
-      console.log(`[useResiInputData] Fetched allKarungSummariesData for ${formattedDate}:`, data);
       return data || [];
     },
     enabled: showAllExpeditionSummary, // Only enabled when explicitly requested
-    staleTime: 1000 * 60 * 60, // Changed to 60 minutes (from 1 minute)
+    staleTime: 1000 * 60 * 60 * 4, // Changed to 4 hours
   });
 
   // Query to fetch unique expedition names
@@ -97,10 +95,9 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       });
       
       const names = Array.from(namesSet);
-      console.log("[useResiInputData] Fetched uniqueExpeditionNames:", names);
       return names.sort((a, b) => a.localeCompare(b));
     },
-    staleTime: 1000 * 60 * 60 * 24, // Changed to 24 hours
+    staleTime: 1000 * 60 * 60 * 4, // Changed to 4 hours
     gcTime: 1000 * 60 * 60 * 24, // Garbage collect after 24 hours
   });
 
@@ -111,7 +108,6 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       item.nokarung === selectedKarung && 
       (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition)
     ).length;
-    console.log(`[useResiInputData] Recalculating currentCount for karung ${selectedKarung}. New count: ${count}. allResiForExpedition length: ${allResiForExpedition.length}`);
     return count;
   }, [allResiForExpedition, expedition]);
 
@@ -163,7 +159,6 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       .map(([karungNumber, quantity]) => ({ karungNumber, quantity }))
       .sort((a, b) => parseInt(a.karungNumber) - parseInt(b.karungNumber)); // Sort numerically
 
-    console.log(`[useResiInputData] Derived karungSummary from cache:`, sortedSummary);
     return sortedSummary;
   }, [allResiForExpedition, expedition]);
 

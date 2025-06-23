@@ -73,7 +73,7 @@ export const useResiInputData = (expedition: string, selectedKarung: string, sho
       return data || 0;
     },
     enabled: !!expedition && !!selectedKarung, // Only enabled if expedition and karung are selected
-    staleTime: 1000 * 10, // Keep this count fresh for 10 seconds
+    staleTime: 0, // Changed to 0ms for immediate refetch on invalidation
   });
 
   // NEW: Query to fetch karung summary for the selected expedition and today's date

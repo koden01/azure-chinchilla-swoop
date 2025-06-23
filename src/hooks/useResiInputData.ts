@@ -128,7 +128,11 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
   // Derive currentCount from allResiForExpedition
   const currentCount = React.useCallback((selectedKarung: string) => {
     if (!allResiForExpedition || !selectedKarung) return 0;
-    const count = allResiForExpedition.filter((item: ResiExpedisiData) => // Explicitly type item here
+    
+    // Memastikan allResiForExpedition diperlakukan sebagai array ResiExpedisiData
+    const resiData: ResiExpedisiData[] = allResiForExpedition;
+
+    const count = resiData.filter((item) => // Biarkan TypeScript menginfer tipe item dari resiData
       item.nokarung === selectedKarung && 
       (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition)
     ).length;

@@ -22,5 +22,6 @@ export const useTotalScanCount = (date: Date | undefined) => {
       return count || 0;
     },
     enabled: !!date,
+    staleTime: 1000 * 30, // Data considered fresh for 30 seconds
   });
 };

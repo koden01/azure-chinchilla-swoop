@@ -13,5 +13,6 @@ export const useAllResiRecords = (date: Date | undefined) => {
       return data;
     },
     enabled: !!date,
+    staleTime: 1000 * 30, // Data considered fresh for 30 seconds
   });
 };

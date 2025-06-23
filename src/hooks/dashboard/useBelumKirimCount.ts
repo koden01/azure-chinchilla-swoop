@@ -19,5 +19,6 @@ export const useBelumKirimCount = (date: Date | undefined) => {
       return countData || 0;
     },
     enabled: !!date,
+    staleTime: 1000 * 30, // Data considered fresh for 30 seconds
   });
 };

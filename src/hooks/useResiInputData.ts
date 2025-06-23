@@ -128,7 +128,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
   // Derive currentCount from allResiForExpedition
   const currentCount = React.useCallback((selectedKarung: string) => {
     if (!allResiForExpedition || !selectedKarung) return 0;
-    const count = allResiForExpedition.filter(item => 
+    const count = allResiForExpedition.filter((item: ResiExpedisiData) => // Explicitly type item here
       item.nokarung === selectedKarung && 
       (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition)
     ).length;

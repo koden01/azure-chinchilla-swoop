@@ -129,7 +129,8 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
 
     setIsProcessing(true); // Set to true at the very beginning
 
-    const queryKeyForInputPageDisplay = ["allResiForExpedition", expedition, formattedDate];
+    // Corrected queryKey to match useResiInputData
+    const queryKeyForInputPageDisplay = ["allResiForExpedition", expedition, yesterdayFormatted, formattedDate];
     const queryKeyForKarungSummary = ["karungSummary", expedition, formattedDate];
 
 
@@ -249,7 +250,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
             const normalizedExpedisiCourier = normalizeExpeditionName(expedisiRecord.couriername);
             if (normalizedExpedisiCourier !== expedition.toUpperCase()) {
               validationStatus = 'MISMATCH_EXPEDISI';
-              validationMessage = `Resi milik ${expedisiRecord.couriername}`; // Updated message
+              validationMessage = `Resi milik ${expedisiCourier}`; // Updated message
             } else {
               actualCourierName = expedisiRecord.couriername;
             }

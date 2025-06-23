@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
+import { format, subDays } from "date-fns"; // Import subDays
 import React from "react";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
-import { normalizeExpeditionName, KNOWN_EXPEDITIONS } from "@/utils/expeditionUtils"; // Import new utility
+import { normalizeExpeditionName, KNOWN_EXPEDITIONS } from "@/utils/expeditionUtils";
 
 // Define the type for ResiExpedisiData to match useResiInputData
 interface ResiExpedisiData {
@@ -24,19 +24,21 @@ interface AllKarungSummaryItem {
 
 export const useResiInputData = (expedition: string, showAllExpeditionSummary: boolean) => {
   const today = new Date();
-  const formattedDate = format(today, "yyyy-MM-dd");
+  const yesterday = subDays(today, 1); // Calculate yesterday's date
+  const formattedToday = format(today, "yyyy-MM-dd"); // Use for query key
+  const formattedYesterday = format(yesterday, "yyyy-MM-dd"); // Use for query key
 
-  // Query to fetch all resi data for the current expedition and date for local validation
+  // Query to fetch all resi data for the current expedition and date range for local validation
   const { data: allResiForExpedition, isLoading: isLoadingAllResiForExpedition } = useQuery<ResiExpedisiData[]>({
-    queryKey: ["allResiForExpedition", expedition, formattedDate],
+    queryKey: ["allResiForExpedition", expedition, formattedYesterday, formattedToday], // Include yesterday in query key
     queryFn: async () => {
       if (!expedition) return [];
       
       const data = await fetchAllDataPaginated(
         "tbl_resi",
         "created", // dateFilterColumn
-        today, // selectedStartDate
-        today, // selectedEndDate
+        yesterday, // selectedStartDate (fetch from yesterday)
+        today, // selectedEndDate (fetch up to end of today)
         "Resi, nokarung, created, Keterangan, schedule", // Only select necessary columns
         (baseQuery) => { // Custom filter function
           if (expedition === 'ID') {
@@ -46,26 +48,26 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
           }
         }
       );
-      console.log(`[useResiInputData] Fetched allResiForExpedition for ${expedition} on ${formattedDate}:`, data);
+      console.log(`[useResiInputData] Fetched allResiForExpedition for ${expedition} from ${formattedYesterday} to ${formattedToday}:`, data);
       return data || [];
     },
     enabled: !!expedition,
-    staleTime: 1000 * 60 * 60, // Changed to 60 minutes (from 1 minute)
+    staleTime: 1000 * 30, // Data considered fresh for 30 seconds
   });
 
   // NEW: Query to fetch ALL karung summaries directly from database using new RPC
   const { data: allKarungSummariesData, isLoading: isLoadingAllKarungSummaries } = useQuery<AllKarungSummaryItem[]>({
-    queryKey: ["allKarungSummaries", formattedDate],
+    queryKey: ["allKarungSummaries", formattedToday], // Still only for today's summary
     queryFn: async () => {
       const { data, error } = await supabase.rpc("get_all_karung_summaries_for_date", {
-        p_selected_date: formattedDate,
+        p_selected_date: formattedToday,
       });
 
       if (error) {
         console.error("Error fetching all karung summaries:", error);
         throw error;
       }
-      console.log(`[useResiInputData] Fetched allKarungSummariesData for ${formattedDate}:`, data);
+      console.log(`[useResiInputData] Fetched allKarungSummariesData for ${formattedToday}:`, data);
       return data || [];
     },
     enabled: showAllExpeditionSummary, // Only enabled when explicitly requested
@@ -155,7 +157,12 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
 
     const summaryMap = new Map<string, number>();
     allResiForExpedition.forEach(item => {
-      if (item.nokarung !== null && (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition)) {
+      // Filter by current date for the summary displayed in the modal
+      const itemCreatedDate = new Date(item.created);
+      if (item.nokarung !== null && 
+          (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition) &&
+          itemCreatedDate.toDateString() === today.toDateString() // Only count for today
+      ) {
         const currentCount = summaryMap.get(item.nokarung) || 0;
         summaryMap.set(item.nokarung, currentCount + 1);
       }
@@ -165,9 +172,9 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       .map(([karungNumber, quantity]) => ({ karungNumber, quantity }))
       .sort((a, b) => parseInt(a.karungNumber) - parseInt(b.karungNumber)); // Sort numerically
 
-    console.log(`[useResiInputData] Derived karungSummary from cache:`, sortedSummary);
+    console.log(`[useResiInputData] Derived karungSummary from cache (only for today):`, sortedSummary);
     return sortedSummary;
-  }, [allResiForExpedition, expedition]);
+  }, [allResiForExpedition, expedition, today]); // Add 'today' to dependencies
 
   // NEW: Mapped allKarungSummariesData to match existing structure for modal
   const allExpeditionKarungSummary = React.useMemo(() => {
@@ -189,7 +196,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     lastKarung,
     highestKarung,
     karungOptions,
-    formattedDate,
+    formattedDate: formattedToday, // Use formattedToday for consistency
     karungSummary,
     allExpeditionKarungSummary, // NEW: Return all expedition karung summary
     isLoadingKarungSummary: isLoadingAllResiForExpedition, // Now depends on allResiForExpedition

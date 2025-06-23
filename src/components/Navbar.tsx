@@ -4,7 +4,7 @@ import { Plus, History, LayoutDashboard } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { format, startOfDay, endOfDay } from "date-fns"; // Import startOfDay and endOfDay
 import { supabase } from "@/integrations/supabase/client";
-import { fetchAllDataPaginated } from "@/utils/supabaseFetch"; // Import fetchAllDataPaginated
+import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 
 const Navbar = () => {
   const location = useLocation();
@@ -157,15 +157,10 @@ const Navbar = () => {
     // allExpedisiDataUnfiltered is already persisted and fetched on app load,
     // so explicit prefetch might not be strictly necessary here if it's already in cache.
     // However, including it ensures it's fresh if stale.
-    const twoDaysAgo = new Date();
-    twoDaysAgo.setDate(today.getDate() - 2);
-    const twoDaysAgoFormatted = format(twoDaysAgo, "yyyy-MM-dd");
-    const endOfTodayFormatted = format(today, "yyyy-MM-dd");
-
     queryClient.prefetchQuery({
-      queryKey: ["allExpedisiDataUnfiltered", endOfTodayFormatted], // Key now only uses today's date
+      queryKey: ["allExpedisiDataUnfiltered"], // Key now has no date filter
       queryFn: async () => {
-        const data = await fetchAllDataPaginated("tbl_expedisi", "created", today, today); // Fetch only for today
+        const data = await fetchAllDataPaginated("tbl_expedisi"); // Fetch all data, no date filter
         const expedisiMap = new Map<string, any>();
         data.forEach(item => {
           if (item.resino) {

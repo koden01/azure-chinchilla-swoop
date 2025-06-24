@@ -24,21 +24,21 @@ interface AllKarungSummaryItem {
 
 export const useResiInputData = (expedition: string, showAllExpeditionSummary: boolean) => {
   const today = new Date();
-  const yesterday = subDays(today, 1); // Calculate yesterday's date
+  // Menghapus 'yesterday' karena currentCount hanya akan menampilkan data hari ini
   const formattedToday = format(today, "yyyy-MM-dd"); // Use for query key
-  const formattedYesterday = format(yesterday, "yyyy-MM-dd"); // Use for query key
 
   // Query to fetch all resi data for the current expedition and date range for local validation
   const { data: allResiForExpedition, isLoading: isLoadingAllResiForExpedition } = useQuery<ResiExpedisiData[]>({
-    queryKey: ["allResiForExpedition", expedition, formattedYesterday, formattedToday], // Include yesterday in query key
+    // Mengubah queryKey agar hanya bergantung pada tanggal hari ini
+    queryKey: ["allResiForExpedition", expedition, formattedToday], 
     queryFn: async () => {
       if (!expedition) return [];
       
       const data = await fetchAllDataPaginated(
         "tbl_resi",
         "created", // dateFilterColumn
-        yesterday, // selectedStartDate (fetch from yesterday)
-        today, // selectedEndDate (fetch up to end of today)
+        today, // selectedStartDate (fetch only from today)
+        today, // selectedEndDate (fetch only up to end of today)
         "Resi, nokarung, created, Keterangan, schedule", // Only select necessary columns
         (baseQuery) => { // Custom filter function
           if (expedition === 'ID') {

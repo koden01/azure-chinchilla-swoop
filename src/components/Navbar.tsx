@@ -168,9 +168,6 @@ const Navbar = () => {
     // allExpedisiDataUnfiltered is already persisted and fetched on app load,
     // so explicit prefetch might not be strictly necessary here if it's already in cache.
     // However, including it ensures it's fresh if stale.
-    const twoDaysAgo = new Date();
-    twoDaysAgo.setDate(today.getDate() - 2);
-    const twoDaysAgoFormatted = format(twoDaysAgo, "yyyy-MM-dd");
     const endOfTodayFormatted = format(today, "yyyy-MM-dd");
 
     queryClient.prefetchQuery({

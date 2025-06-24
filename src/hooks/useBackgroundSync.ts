@@ -55,17 +55,28 @@ export const useBackgroundSync = () => {
         try {
           let success = false;
           if (op.type === 'batal') {
+            // 1. Upsert into tbl_resi with schedule 'batal'
             const { error: resiUpsertError } = await supabase
               .from("tbl_resi")
               .upsert({
                 Resi: op.payload.resiNumber,
-                nokarung: "0",
+                nokarung: "0", // Default to "0" for batal
                 created: op.payload.createdTimestampFromExpedisi || new Date(op.timestamp).toISOString(),
                 Keterangan: op.payload.keteranganValue,
                 schedule: "batal",
               }, { onConflict: 'Resi', ignoreDuplicates: false });
 
             if (resiUpsertError) throw resiUpsertError;
+
+            // 2. Update tbl_expedisi flag to 'NO'
+            const { error: expedisiUpdateError } = await supabase
+              .from("tbl_expedisi")
+              .update({ flag: op.payload.expedisiFlagStatus || 'NO' }) // Use payload status or default to 'NO'
+              .eq("resino", op.payload.resiNumber);
+
+            if (expedisiUpdateError && expedisiUpdateError.code !== 'PGRST116') { // PGRST116 means "no rows found"
+              console.warn(`[BackgroundSync] Warning: Failed to update tbl_expedisi flag for resi ${op.payload.resiNumber}: ${expedisiUpdateError.message}`);
+            }
             success = true;
             affectedDates.add(format(new Date(op.payload.createdTimestampFromExpedisi || op.timestamp), 'yyyy-MM-dd'));
             if (op.payload.keteranganValue) affectedExpeditions.add(op.payload.keteranganValue);

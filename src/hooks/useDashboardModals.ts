@@ -181,7 +181,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
             .eq("resino", resiNumber) // Use original resiNumber for DB query
             .single();
 
-        if (directExpedisiError && directExpedisiError.code !== 'PGRST116') {
+        if (directExpedisiError && directExpedisiError.code !== 'PGRST116') { // PGRST116 means "no rows found"
             throw directExpedisiError;
         }
         
@@ -205,7 +205,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
           resiNumber,
           createdTimestampFromExpedisi: createdTimestampForResi, // Ensure it's an ISO string
           keteranganValue: normalizeExpeditionName(originalCourierName),
-          expedisiFlagStatus: "NO", // Explicitly set flag to NO for tbl_expedisi
+          expedisiFlagStatus: "YES", // Changed from "NO" to "YES" as requested
         },
         timestamp: Date.now(),
       });

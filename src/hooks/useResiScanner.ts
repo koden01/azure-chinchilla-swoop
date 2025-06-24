@@ -78,7 +78,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       console.log(`[useResiScanner] Fetched ${expedisiMap.size} Flag NO expedisi records.`);
       return expedisiMap;
     },
-    staleTime: 1000 * 60 * 60 * 4, // Increased to 4 hours
+    staleTime: 1000 * 60 * 5, // Changed to 5 minutes for faster invalidation
     gcTime: 1000 * 60 * 60 * 24, // Garbage collect after 24 hours
     enabled: true, // Always enabled
   });
@@ -115,7 +115,8 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
     return true;
   };
 
-  const handleScanResi = async () => {
+  const handleScanResi = React.useCallback(async () => {
+    console.time("handleScanResi_sync_part"); // Start timing synchronous part
     dismissToast();
     const currentResi = resiNumber.trim();
     const normalizedCurrentResi = currentResi.toLowerCase().trim();
@@ -124,6 +125,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
     if (!validateInput(currentResi)) {
       setIsProcessing(false);
       keepFocus();
+      console.timeEnd("handleScanResi_sync_part");
       return;
     }
 
@@ -184,9 +186,11 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         }
 
         if (!expedisiRecord) {
+            console.time("rpc_get_expedisi_by_resino"); // Start timing RPC call
             const { data: directExpedisiDataArray, error: directExpedisiError } = await supabase.rpc("get_expedisi_by_resino_case_insensitive", {
               p_resino: currentResi,
             });
+            console.timeEnd("rpc_get_expedisi_by_resino"); // End timing RPC call
 
             if (directExpedisiError) {
                 console.error(`[useResiScanner] Error during direct fetch:`, directExpedisiError);
@@ -269,6 +273,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         }
         setIsProcessing(false);
         keepFocus();
+        console.timeEnd("handleScanResi_sync_part");
         return;
       }
 
@@ -418,8 +423,9 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
     } finally {
       setIsProcessing(false);
       keepFocus();
+      console.timeEnd("handleScanResi_sync_part"); // End timing synchronous part
     }
-  };
+  }, [resiNumber, expedition, selectedKarung, formattedDate, allExpedisiDataUnfiltered, recentScannedResiNumbers, allFlagNoExpedisiData, queryClient, triggerSync, validateInput]);
 
   return {
     resiNumber,

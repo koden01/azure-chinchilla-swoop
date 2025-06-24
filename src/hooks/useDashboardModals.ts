@@ -151,26 +151,34 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
   };
 
   const handleBatalResi = async (resiNumber: string) => {
+    console.log(`[handleBatalResi] Attempting to batal resi: ${resiNumber}`);
     const originalModalData = modalData;
     const itemToBatal = originalModalData.find(item => (item.Resi || item.resino) === resiNumber);
+    
+    // Normalize resiNumber for comparison
+    const normalizedResiNumber = resiNumber.toLowerCase().trim();
+
     setModalData(prevData => {
       const newData = prevData.filter(item => {
-        const itemResi = item.Resi || item.resino;
-        return itemResi !== resiNumber;
+        const itemResi = (item.Resi || item.resino || "").toLowerCase().trim();
+        console.log(`[handleBatalResi] Filtering: Comparing '${itemResi}' with '${normalizedResiNumber}'`);
+        return itemResi !== normalizedResiNumber;
       });
+      console.log(`[handleBatalResi] Modal data after optimistic filter:`, newData);
       return newData;
     });
 
     try {
-      let expedisiRecord = allExpedisiData?.get(resiNumber.toLowerCase());
+      let expedisiRecord = allExpedisiData?.get(normalizedResiNumber); // Use normalized resi for map lookup
       let originalCourierName: string | null = null;
       let createdTimestampForResi: string;
       
       if (!expedisiRecord) {
+        console.log(`[handleBatalResi] Expedisi record not found in cache for ${resiNumber}. Fetching directly.`);
         const { data: directExpedisiData, error: directExpedisiError } = await supabase
             .from("tbl_expedisi")
             .select("created, couriername")
-            .eq("resino", resiNumber)
+            .eq("resino", resiNumber) // Use original resiNumber for DB query
             .single();
 
         if (directExpedisiError && directExpedisiError.code !== 'PGRST116') {
@@ -179,8 +187,9 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         
         if (directExpedisiData) {
             expedisiRecord = directExpedisiData;
+            console.log(`[handleBatalResi] Direct fetch successful for ${resiNumber}.`);
         } else {
-            console.warn(`Resi ${resiNumber} not found in tbl_expedisi. Proceeding with 'batal' in tbl_resi using default values.`);
+            console.warn(`[handleBatalResi] Resi ${resiNumber} not found in tbl_expedisi. Proceeding with 'batal' in tbl_resi using default values.`);
         }
       }
 
@@ -188,6 +197,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       createdTimestampForResi = expedisiRecord?.created ? new Date(expedisiRecord.created).toISOString() : new Date().toISOString();
       originalCourierName = expedisiRecord?.couriername || null;
 
+      console.log(`[handleBatalResi] Adding pending operation for batal: ${resiNumber}, created: ${createdTimestampForResi}, courier: ${originalCourierName}`);
       await addPendingOperation({
         id: `batal-${resiNumber}-${Date.now()}`,
         type: "batal",

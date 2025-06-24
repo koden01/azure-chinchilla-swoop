@@ -39,29 +39,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
   const yesterdayFormatted = format(yesterday, "yyyy-MM-dd");
   const endOfTodayFormatted = format(today, "yyyy-MM-dd");
 
-  // NEW: Query to fetch tbl_expedisi data with flag = 'YES' for the last 2 days for local duplicate validation
-  // This will be the primary source for checking if a resi has already been "processed" (flag YES)
-  const { data: recentProcessedResiNumbers, isLoading: isLoadingRecentProcessedResiNumbers } = useQuery<Set<string>>({
-    queryKey: ["recentProcessedResiNumbers", yesterdayFormatted, formattedDate],
-    queryFn: async () => {
-      console.log(`[${new Date().toISOString()}] [useResiScanner] Fetching recentProcessedResiNumbers (tbl_expedisi flag YES)...`);
-      const data = await fetchAllDataPaginated(
-        "tbl_expedisi",
-        "created", // dateFilterColumn
-        yesterday, // selectedStartDate
-        today, // selectedEndDate (use 'today' to include all of today)
-        "resino", // Only select the resino column
-        (query) => query.eq("flag", "YES") // Filter by flag = 'YES'
-      );
-      const resiSet = new Set(data.map((item: { resino: string }) => item.resino.toLowerCase().trim()));
-      console.log(`[${new Date().toISOString()}] [useResiScanner] Finished fetching recentProcessedResiNumbers. Count: ${resiSet.size}`);
-      return resiSet;
-    },
-    staleTime: 1000 * 60 * 5, // Keep this data fresh for 5 minutes
-    gcTime: 1000 * 60 * 60 * 24 * 2, // Garbage collect after 2 days
-    enabled: true, // Always enabled for local validation
-  });
-
   // Query to fetch tbl_resi data for the last 2 days for local duplicate validation (general scan history)
   // This is still needed to catch duplicates in tbl_resi even if tbl_expedisi flag is not yet YES or if it's an ID_REKOMENDASI
   const { data: recentScannedResiNumbers, isLoading: isLoadingRecentScannedResiNumbers } = useQuery<Set<string>>({
@@ -164,7 +141,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
 
     setIsProcessing(true);
 
-    const queryKeyForInputPageDisplay = ["allResiForExpedition", expedition, yesterdayFormatted, formattedDate];
+    const queryKeyForInputPageDisplay = ["allResiForExpedition", expedition, formattedDate]; // Updated query key
     const queryKeyForKarungSummary = ["karungSummary", expedition, formattedDate];
 
     const currentOptimisticId = Date.now().toString() + Math.random().toString(36).substring(2, 9);
@@ -178,8 +155,18 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       console.time("[useResiScanner] Validation checks");
 
       // 1. Check if resi has already been PROCESSED (flag = YES in tbl_expedisi)
-      console.log(`[${new Date().toISOString()}] [useResiScanner] Performing recent processed resi check...`);
-      if (recentProcessedResiNumbers?.has(normalizedCurrentResi)) {
+      //    Derive this from allExpedisiDataUnfiltered (which covers last 2 days, all flags)
+      console.log(`[${new Date().toISOString()}] [useResiScanner] Performing recent processed resi check (derived from allExpedisiDataUnfiltered)...`);
+      const derivedRecentProcessedResiNumbers = new Set<string>();
+      if (allExpedisiDataUnfiltered) {
+        for (const [resi, data] of allExpedisiDataUnfiltered.entries()) {
+          if (data.flag === 'YES') {
+            derivedRecentProcessedResiNumbers.add(resi);
+          }
+        }
+      }
+
+      if (derivedRecentProcessedResiNumbers.has(normalizedCurrentResi)) {
         validationStatus = 'DUPLICATE_PROCESSED';
         validationMessage = `DOUBLE! Resi ini sudah diproses.`;
         console.log(`[${new Date().toISOString()}] [useResiScanner] Duplicate processed resi found.`);
@@ -211,10 +198,10 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       if (validationStatus === 'OK') {
         // 3. Attempt to find expedisiRecord from caches or direct RPC call
         console.log(`[${new Date().toISOString()}] [useResiScanner] Checking expedisi record in caches...`);
-        expedisiRecord = allExpedisiDataUnfiltered?.get(normalizedCurrentResi);
+        expedisiRecord = allExpedisiDataUnfiltered?.get(normalizedCurrentResi); // Check recent all expedisi data first
 
         if (!expedisiRecord) {
-          expedisiRecord = allFlagNoExpedisiData?.get(normalizedCurrentResi);
+          expedisiRecord = allFlagNoExpedisiData?.get(normalizedCurrentResi); // Then check all flag NO data
         }
 
         if (!expedisiRecord) {
@@ -231,6 +218,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
             if (directExpedisiDataArray && directExpedisiDataArray.length > 0) {
                 expedisiRecord = directExpedisiDataArray[0];
                 console.log(`[${new Date().toISOString()}] [useResiScanner] Expedisi record fetched directly. Updating cache.`);
+                // Update allExpedisiDataUnfiltered cache
                 queryClient.setQueryData(
                     ["allExpedisiDataUnfiltered", yesterdayFormatted, endOfTodayFormatted],
                     (oldMap: Map<string, any> | undefined) => {
@@ -239,6 +227,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
                         return newMap;
                     }
                 );
+                // Update allFlagNoExpedisiData cache if flag is NO
                 if (expedisiRecord.flag === 'NO') {
                   queryClient.setQueryData(
                     ["allFlagNoExpedisiData"],
@@ -345,12 +334,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         newSet.add(normalizedCurrentResi);
         return newSet;
       });
-      // Optimistic update for recentProcessedResiNumbers (Set)
-      queryClient.setQueryData(["recentProcessedResiNumbers", yesterdayFormatted, formattedDate], (oldSet: Set<string> | undefined) => {
-        const newSet = oldSet ? new Set(oldSet) : new Set();
-        newSet.add(normalizedCurrentResi);
-        return newSet;
-      });
       // Optimistic update for allExpedisiDataUnfiltered cache
       queryClient.setQueryData(["allExpedisiDataUnfiltered", yesterdayFormatted, endOfTodayFormatted], (oldMap: Map<string, any> | undefined) => {
         const newMap = oldMap ? new Map(oldMap) : new Map();
@@ -451,12 +434,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
             newSet.delete(normalizedCurrentResi);
             return newSet;
           });
-          // Revert optimistic update for recentProcessedResiNumbers (Set)
-          queryClient.setQueryData(["recentProcessedResiNumbers", yesterdayFormatted, formattedDate], (oldSet: Set<string> | undefined) => {
-            const newSet = oldSet ? new Set(oldSet) : new Set();
-            newSet.delete(normalizedCurrentResi);
-            return newSet;
-          });
           // Revert optimistic update for allExpedisiDataUnfiltered cache
           queryClient.setQueryData(["allExpedisiDataUnfiltered", yesterdayFormatted, endOfTodayFormatted], (oldMap: Map<string, any> | undefined) => {
             const newMap = oldMap ? new Map(oldMap) : new Map();
@@ -472,6 +449,9 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
           // Revert optimistic update for allFlagNoExpedisiData cache (add back if flag was 'NO')
           queryClient.setQueryData(["allFlagNoExpedisiData"], (oldMap: Map<string, any> | undefined) => {
             const newMap = oldMap ? new Map(oldMap) : new Map();
+            // If the original expedisi record (before optimistic update) had flag 'NO', re-add it.
+            // This requires knowing the original state, which is complex.
+            // For simplicity, we'll just invalidate the query to refetch the correct state.
             queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] }); 
             return newMap; 
           });
@@ -507,7 +487,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
     handleScanResi,
     resiInputRef,
     isProcessing,
-    isLoadingRecentResiNumbersForValidation: isLoadingRecentScannedResiNumbers || isLoadingRecentProcessedResiNumbers, // Combine loading states
+    isLoadingRecentResiNumbersForValidation: isLoadingRecentScannedResiNumbers, // Only depend on recentScannedResiNumbers
     isLoadingAllFlagNoExpedisiData,
   };
 };

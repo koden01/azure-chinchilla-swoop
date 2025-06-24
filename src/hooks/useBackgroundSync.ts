@@ -21,6 +21,15 @@ interface TblExpedisiRecord {
   cekfu: boolean | null;
 }
 
+// Define the type for tbl_resi records
+interface TblResiRecord {
+  Resi: string;
+  nokarung: string | null;
+  created: string; // timestamp with time zone
+  Keterangan: string | null;
+  schedule: string | null;
+}
+
 export const useBackgroundSync = () => {
   const queryClient = useQueryClient();
   const syncIntervalRef = useRef<number | null>(null);
@@ -55,31 +64,56 @@ export const useBackgroundSync = () => {
         try {
           let success = false;
           if (op.type === 'batal') {
+            const { resiNumber, createdTimestampFromExpedisi, keteranganValue, expedisiFlagStatus } = op.payload;
+
+            // Try to fetch existing tbl_resi record to preserve original 'created' and 'nokarung'
+            const { data: existingResi, error: fetchResiError } = await supabase
+              .from("tbl_resi")
+              .select("created, nokarung, Keterangan")
+              .eq("Resi", resiNumber)
+              .maybeSingle();
+
+            if (fetchResiError && fetchResiError.code !== 'PGRST116') { // PGRST116 means "no rows found"
+              throw fetchResiError;
+            }
+
+            const resiToUpsert: Partial<TblResiRecord> = {
+              Resi: resiNumber,
+              schedule: "batal",
+            };
+
+            if (existingResi) {
+              // If resi exists, update it, preserving original created date and nokarung
+              resiToUpsert.created = existingResi.created;
+              resiToUpsert.nokarung = existingResi.nokarung;
+              resiToUpsert.Keterangan = existingResi.Keterangan; // Preserve original Keterangan
+            } else {
+              // If resi does not exist, insert new, using provided createdTimestamp or current time
+              resiToUpsert.created = createdTimestampFromExpedisi || new Date(op.timestamp).toISOString();
+              resiToUpsert.nokarung = "0"; // Default to "0" for new batal entry
+              resiToUpsert.Keterangan = keteranganValue;
+            }
+
             // 1. Upsert into tbl_resi with schedule 'batal'
             const { error: resiUpsertError } = await supabase
               .from("tbl_resi")
-              .upsert({
-                Resi: op.payload.resiNumber,
-                nokarung: "0", // Default to "0" for batal
-                created: op.payload.createdTimestampFromExpedisi || new Date(op.timestamp).toISOString(),
-                Keterangan: op.payload.keteranganValue,
-                schedule: "batal",
-              }, { onConflict: 'Resi', ignoreDuplicates: false });
+              .upsert(resiToUpsert as TblResiRecord, { onConflict: 'Resi', ignoreDuplicates: false });
 
             if (resiUpsertError) throw resiUpsertError;
 
             // 2. Update tbl_expedisi flag to 'NO'
             const { error: expedisiUpdateError } = await supabase
               .from("tbl_expedisi")
-              .update({ flag: op.payload.expedisiFlagStatus || 'NO' }) // Use payload status or default to 'NO'
-              .eq("resino", op.payload.resiNumber);
+              .update({ flag: expedisiFlagStatus || 'NO' }) // Use payload status or default to 'NO'
+              .eq("resino", resiNumber);
 
             if (expedisiUpdateError && expedisiUpdateError.code !== 'PGRST116') { // PGRST116 means "no rows found"
-              console.warn(`[BackgroundSync] Warning: Failed to update tbl_expedisi flag for resi ${op.payload.resiNumber}: ${expedisiUpdateError.message}`);
+              console.warn(`[BackgroundSync] Warning: Failed to update tbl_expedisi flag for resi ${resiNumber}: ${expedisiUpdateError.message}`);
             }
             success = true;
-            affectedDates.add(format(new Date(op.payload.createdTimestampFromExpedisi || op.timestamp), 'yyyy-MM-dd'));
-            if (op.payload.keteranganValue) affectedExpeditions.add(op.payload.keteranganValue);
+            // Use the created date from the upserted resi for invalidation
+            affectedDates.add(format(new Date(resiToUpsert.created!), 'yyyy-MM-dd'));
+            if (resiToUpsert.Keterangan) affectedExpeditions.add(resiToUpsert.Keterangan);
 
           } else if (op.type === 'confirm') {
             const { error: resiUpsertError } = await supabase

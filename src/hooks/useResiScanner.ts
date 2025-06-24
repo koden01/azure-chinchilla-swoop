@@ -153,7 +153,31 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       // 1. Check if resi has already been PROCESSED (flag = YES in tbl_expedisi)
       if (derivedRecentProcessedResiNumbers.has(normalizedCurrentResi)) {
         validationStatus = 'DUPLICATE_PROCESSED';
-        validationMessage = `DOUBLE! Resi ini sudah diproses.`;
+        // Fetch details from tbl_resi for the toast message
+        const { data: resiDetails, error: resiDetailsError } = await supabase
+            .from("tbl_resi")
+            .select("created, Keterangan, nokarung")
+            .eq("Resi", currentResi)
+            .maybeSingle();
+
+        let keterangan = "Tidak Diketahui";
+        let processedDate = "Tidak Diketahui";
+        let nokarung = "Tidak Diketahui";
+
+        if (resiDetails && !resiDetailsError) {
+            keterangan = resiDetails.Keterangan || "Tidak Diketahui";
+            processedDate = resiDetails.created ? format(new Date(resiDetails.created), "dd/MM/yyyy HH:mm") : "Tidak Diketahui";
+            nokarung = resiDetails.nokarung || "Tidak Diketahui";
+        } else {
+            // Fallback to expedisi data if resiDetails not found (shouldn't happen if flag is YES)
+            const processedExpedisiRecord = allExpedisiDataUnfiltered?.get(normalizedCurrentResi);
+            if (processedExpedisiRecord) {
+                keterangan = processedExpedisiRecord.couriername || "Tidak Diketahui";
+                processedDate = processedExpedisiRecord.created ? format(new Date(processedExpedisiRecord.created), "dd/MM/yyyy HH:mm") : "Tidak Diketahui";
+                // nokarung cannot be reliably retrieved from tbl_expedisi
+            }
+        }
+        validationMessage = `DOUBLE! Resi ini ${keterangan} sudah diproses pada ${processedDate} di karung ${nokarung}.`;
       }
 
       // 2. Attempt to find expedisiRecord from caches or direct RPC call

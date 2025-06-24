@@ -35,17 +35,39 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
 
   // Calculate date range for 2 days back for local validation data
   const today = new Date();
-  // Mengubah menjadi hanya hari ini dan kemarin
   const yesterday = subDays(today, 1);
   const yesterdayFormatted = format(yesterday, "yyyy-MM-dd");
-  const endOfTodayFormatted = format(today, "yyyy-MM-dd"); // This is the local formatted date for today
+  const endOfTodayFormatted = format(today, "yyyy-MM-dd");
 
-  // Query to fetch tbl_resi data for the last 2 days for local duplicate validation
-  // Now returns a Set<string> for O(1) lookups
-  const { data: recentResiNumbersForValidation, isLoading: isLoadingRecentResiNumbersForValidation } = useQuery<Set<string>>({
-    queryKey: ["recentResiNumbersForValidation", yesterdayFormatted, formattedDate],
+  // NEW: Query to fetch tbl_expedisi data with flag = 'YES' for the last 2 days for local duplicate validation
+  // This will be the primary source for checking if a resi has already been "processed" (flag YES)
+  const { data: recentProcessedResiNumbers, isLoading: isLoadingRecentProcessedResiNumbers } = useQuery<Set<string>>({
+    queryKey: ["recentProcessedResiNumbers", yesterdayFormatted, formattedDate],
     queryFn: async () => {
-      console.log(`[${new Date().toISOString()}] [useResiScanner] Fetching recentResiNumbersForValidation...`);
+      console.log(`[${new Date().toISOString()}] [useResiScanner] Fetching recentProcessedResiNumbers (tbl_expedisi flag YES)...`);
+      const data = await fetchAllDataPaginated(
+        "tbl_expedisi",
+        "created", // dateFilterColumn
+        yesterday, // selectedStartDate
+        today, // selectedEndDate (use 'today' to include all of today)
+        "resino", // Only select the resino column
+        (query) => query.eq("flag", "YES") // Filter by flag = 'YES'
+      );
+      const resiSet = new Set(data.map((item: { resino: string }) => item.resino.toLowerCase().trim()));
+      console.log(`[${new Date().toISOString()}] [useResiScanner] Finished fetching recentProcessedResiNumbers. Count: ${resiSet.size}`);
+      return resiSet;
+    },
+    staleTime: 1000 * 60 * 5, // Keep this data fresh for 5 minutes
+    gcTime: 1000 * 60 * 60 * 24 * 2, // Garbage collect after 2 days
+    enabled: true, // Always enabled for local validation
+  });
+
+  // Query to fetch tbl_resi data for the last 2 days for local duplicate validation (general scan history)
+  // This is still needed to catch duplicates in tbl_resi even if tbl_expedisi flag is not yet YES or if it's an ID_REKOMENDASI
+  const { data: recentScannedResiNumbers, isLoading: isLoadingRecentScannedResiNumbers } = useQuery<Set<string>>({
+    queryKey: ["recentScannedResiNumbers", yesterdayFormatted, formattedDate],
+    queryFn: async () => {
+      console.log(`[${new Date().toISOString()}] [useResiScanner] Fetching recentScannedResiNumbers (tbl_resi)...`);
       const data = await fetchAllDataPaginated(
         "tbl_resi",
         "created", // dateFilterColumn
@@ -54,10 +76,10 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         "Resi" // Only select the Resi column
       );
       const resiSet = new Set(data.map((item: { Resi: string }) => item.Resi.toLowerCase().trim()));
-      console.log(`[${new Date().toISOString()}] [useResiScanner] Finished fetching recentResiNumbersForValidation. Count: ${resiSet.size}`);
+      console.log(`[${new Date().toISOString()}] [useResiScanner] Finished fetching recentScannedResiNumbers. Count: ${resiSet.size}`);
       return resiSet;
     },
-    staleTime: 1000 * 60 * 60, // Increased to 1 hour for better performance
+    staleTime: 1000 * 60 * 5, // Keep this data fresh for 5 minutes
     gcTime: 1000 * 60 * 60 * 24 * 2, // Garbage collect after 2 days
     enabled: true, // Always enabled for local validation
   });
@@ -125,8 +147,8 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
   };
 
   const handleScanResi = async () => {
-    console.time("[useResiScanner] handleScanResi execution time"); // Fixed timer label
-    dismissToast(); // Memanggil dismissToast tanpa argumen untuk menutup semua toast
+    console.time("[useResiScanner] handleScanResi execution time");
+    dismissToast();
     const currentResi = resiNumber.trim();
     const normalizedCurrentResi = currentResi.toLowerCase().trim();
     setResiNumber("");
@@ -134,74 +156,59 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
     console.log(`[${new Date().toISOString()}] [useResiScanner] Starting scan for resi: ${currentResi}`);
 
     if (!validateInput(currentResi)) {
-      setIsProcessing(false); // Ensure processing state is reset
-      keepFocus(); // Ensure focus is returned to input
-      console.timeEnd("[useResiScanner] handleScanResi execution time"); // Fixed timer label
+      setIsProcessing(false);
+      keepFocus();
+      console.timeEnd("[useResiScanner] handleScanResi execution time");
       return;
     }
 
-    setIsProcessing(true); // Set to true at the very beginning
+    setIsProcessing(true);
 
-    // Corrected queryKey to match useResiInputData, using the 'formattedDate' prop
     const queryKeyForInputPageDisplay = ["allResiForExpedition", expedition, yesterdayFormatted, formattedDate];
     const queryKeyForKarungSummary = ["karungSummary", expedition, formattedDate];
 
-
     const currentOptimisticId = Date.now().toString() + Math.random().toString(36).substring(2, 9);
 
-    let validationStatus: "OK" | "DUPLICATE_RESI" | "MISMATCH_EXPEDISI" | "NOT_FOUND_EXPEDISI" = "OK";
+    let validationStatus: "OK" | "DUPLICATE_PROCESSED" | "DUPLICATE_SCANNED" | "MISMATCH_EXPEDISI" | "NOT_FOUND_EXPEDISI" = "OK";
     let validationMessage: string | null = null;
     let actualCourierName: string | null = null;
     let expedisiRecord: any = null; // Will hold the record from tbl_expedisi if found
 
     try {
-      console.time("[useResiScanner] Validation checks"); // Fixed timer label
-      // 1. Local Duplicate Check (for recent scans)
-      console.log(`[${new Date().toISOString()}] [useResiScanner] Performing local duplicate check...`);
-      if (recentResiNumbersForValidation?.has(normalizedCurrentResi)) {
-        // Fetch the created date for the duplicate resi
-        const { data: existingResiDetail, error: _detailError } = await supabase
-          .from("tbl_resi")
-          .select("created")
-          .eq("Resi", currentResi)
-          .maybeSingle();
+      console.time("[useResiScanner] Validation checks");
 
-        let createdDateStr = "";
-        if (existingResiDetail && existingResiDetail.created) {
-          createdDateStr = format(new Date(existingResiDetail.created), "dd/MM/yyyy HH:mm");
-        }
-
-        validationStatus = 'DUPLICATE_RESI';
-        validationMessage = `DOUBLE! Resi ini sudah discan ${createdDateStr}.`; // Updated message
-        console.log(`[${new Date().toISOString()}] [useResiScanner] Local duplicate found.`);
+      // 1. Check if resi has already been PROCESSED (flag = YES in tbl_expedisi)
+      console.log(`[${new Date().toISOString()}] [useResiScanner] Performing recent processed resi check...`);
+      if (recentProcessedResiNumbers?.has(normalizedCurrentResi)) {
+        validationStatus = 'DUPLICATE_PROCESSED';
+        validationMessage = `DOUBLE! Resi ini sudah diproses.`;
+        console.log(`[${new Date().toISOString()}] [useResiScanner] Duplicate processed resi found.`);
       }
 
-      // 2. Database Duplicate Check (for older scans, if not found locally)
+      // 2. Check if resi has already been SCANNED (in tbl_resi)
       if (validationStatus === 'OK') {
-        console.log(`[${new Date().toISOString()}] [useResiScanner] Performing database duplicate check...`);
-        const { data: existingResiInDb, error: dbCheckError } = await supabase
-          .from("tbl_resi")
-          .select("Resi, created") // Select created as well
-          .eq("Resi", currentResi)
-          .maybeSingle(); // Use maybeSingle to get null if not found, or data if found
+        console.log(`[${new Date().toISOString()}] [useResiScanner] Performing recent scanned resi check...`);
+        if (recentScannedResiNumbers?.has(normalizedCurrentResi)) {
+          // Fetch the created date for the duplicate resi from tbl_resi
+          const { data: existingResiDetail, error: _detailError } = await supabase
+            .from("tbl_resi")
+            .select("created")
+            .eq("Resi", currentResi)
+            .maybeSingle();
 
-        if (dbCheckError && dbCheckError.code !== 'PGRST116') { // PGRST116 means "no rows found"
-          throw dbCheckError; // Re-throw other errors
-        }
-
-        if (existingResiInDb) {
           let createdDateStr = "";
-          if (existingResiInDb.created) {
-            createdDateStr = format(new Date(existingResiInDb.created), "dd/MM/yyyy HH:mm");
+          if (existingResiDetail && existingResiDetail.created) {
+            createdDateStr = format(new Date(existingResiDetail.created), "dd/MM/yyyy HH:mm");
           }
-          validationStatus = 'DUPLICATE_RESI';
-          validationMessage = `DOUBLE! Resi ini sudah discan ${createdDateStr}.`; // Updated message
-          console.log(`[${new Date().toISOString()}] [useResiScanner] Database duplicate found.`);
+
+          validationStatus = 'DUPLICATE_SCANNED';
+          validationMessage = `DOUBLE! Resi ini sudah discan pada ${createdDateStr}.`;
+          console.log(`[${new Date().toISOString()}] [useResiScanner] Duplicate scanned resi found.`);
         }
       }
 
       // Only proceed with further checks if not already a duplicate
-      if (validationStatus === 'OK') { // Only proceed if not already a duplicate
+      if (validationStatus === 'OK') {
         // 3. Attempt to find expedisiRecord from caches or direct RPC call
         console.log(`[${new Date().toISOString()}] [useResiScanner] Checking expedisi record in caches...`);
         expedisiRecord = allExpedisiDataUnfiltered?.get(normalizedCurrentResi);
@@ -218,13 +225,12 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
 
             if (directExpedisiError) {
                 console.error(`[${new Date().toISOString()}] [useResiScanner] Error during direct fetch via RPC:`, directExpedisiError);
-                throw directExpedisiError; // Re-throw other errors
+                throw directExpedisiError;
             }
             
             if (directExpedisiDataArray && directExpedisiDataArray.length > 0) {
-                expedisiRecord = directExpedisiDataArray[0]; // Take the first one if multiple
+                expedisiRecord = directExpedisiDataArray[0];
                 console.log(`[${new Date().toISOString()}] [useResiScanner] Expedisi record fetched directly. Updating cache.`);
-                // Optionally, update the cache with this fresh data to prevent future direct fetches for this item
                 queryClient.setQueryData(
                     ["allExpedisiDataUnfiltered", yesterdayFormatted, endOfTodayFormatted],
                     (oldMap: Map<string, any> | undefined) => {
@@ -252,7 +258,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       }
 
       // 4. Determine actualCourierName and final validationStatus based on `expedition` and `expedisiRecord` presence
-      if (validationStatus === 'OK') { // Only proceed if not already a duplicate
+      if (validationStatus === 'OK') {
         console.log(`[${new Date().toISOString()}] [useResiScanner] Determining courier name and final validation status...`);
         if (expedition === 'ID') {
           if (expedisiRecord) {
@@ -262,7 +268,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
               console.log(`[${new Date().toISOString()}] [useResiScanner] Matched to ID (from expedisi record).`);
             } else {
               validationStatus = 'MISMATCH_EXPEDISI';
-              validationMessage = `Resi milik ${expedisiRecord.couriername}`; // Corrected variable name
+              validationMessage = `Resi milik ${expedisiRecord.couriername}`;
               console.log(`[${new Date().toISOString()}] [useResiScanner] Mismatch: Expected ID, got ${expedisiRecord.couriername}.`);
             }
           } else {
@@ -272,7 +278,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
           }
         } else { // For non-ID expeditions (JNE, SPX, etc.)
           if (!expedisiRecord) {
-            // If expedition is NOT 'ID' and resi was NOT found in tbl_expedisi, then it's a true NOT_FOUND_EXPEDISI
             validationStatus = 'NOT_FOUND_EXPEDISI';
             validationMessage = 'Data tidak ada di database ekspedisi.';
             console.log(`[${new Date().toISOString()}] [useResiScanner] Not found in expedisi for non-ID expedition.`);
@@ -280,7 +285,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
             const normalizedExpedisiCourier = normalizeExpeditionName(expedisiRecord.couriername);
             if (normalizedExpedisiCourier !== expedition.toUpperCase()) {
               validationStatus = 'MISMATCH_EXPEDISI';
-              validationMessage = `Resi milik ${expedisiRecord.couriername}`; // Corrected variable name
+              validationMessage = `Resi milik ${expedisiRecord.couriername}`;
               console.log(`[${new Date().toISOString()}] [useResiScanner] Mismatch: Expected ${expedition}, got ${expedisiRecord.couriername}.`);
             } else {
               actualCourierName = expedisiRecord.couriername;
@@ -289,7 +294,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
           }
         }
       }
-      console.timeEnd("[useResiScanner] Validation checks"); // Fixed timer label
+      console.timeEnd("[useResiScanner] Validation checks");
 
       // --- FINAL ERROR HANDLING BLOCK ---
       if (validationStatus !== 'OK') {
@@ -300,7 +305,8 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
             case 'MISMATCH_EXPEDISI':
               beepFailure.play();
               break;
-            case 'DUPLICATE_RESI':
+            case 'DUPLICATE_PROCESSED':
+            case 'DUPLICATE_SCANNED':
               beepDouble.play();
               break;
             default:
@@ -310,10 +316,10 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         } catch (e) {
           console.error(`[${new Date().toISOString()}] [useResiScanner] Error playing beep sound:`, e);
         }
-        setIsProcessing(false); // Ensure processing state is reset
-        keepFocus(); // Ensure focus is returned to input
-        console.timeEnd("[useResiScanner] handleScanResi execution time"); // Fixed timer label
-        return; // Exit after handling error
+        setIsProcessing(false);
+        keepFocus();
+        console.timeEnd("[useResiScanner] handleScanResi execution time");
+        return;
       }
 
       // --- If all OK, proceed with optimistic update and saving to IndexedDB ---
@@ -322,19 +328,25 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         Resi: currentResi,
         nokarung: selectedKarung,
         created: new Date().toISOString(),
-        Keterangan: actualCourierName, // Use validated courier name
-        schedule: "ontime", // Added schedule property
+        Keterangan: actualCourierName,
+        schedule: "ontime",
         optimisticId: currentOptimisticId,
       };
 
-      console.time("[useResiScanner] Optimistic UI updates"); // Fixed timer label
+      console.time("[useResiScanner] Optimistic UI updates");
       // Optimistic UI update for the input page's display
       queryClient.setQueryData(queryKeyForInputPageDisplay, (oldData: ResiExpedisiData[] | undefined) => {
-        const newData = [...(oldData || []), newResiEntry]; // Ensure oldData is an array
+        const newData = [...(oldData || []), newResiEntry];
         return newData;
       });
-      // Optimistic update for recentResiNumbersForValidation (Set)
-      queryClient.setQueryData(["recentResiNumbersForValidation", yesterdayFormatted, formattedDate], (oldSet: Set<string> | undefined) => {
+      // Optimistic update for recentScannedResiNumbers (Set)
+      queryClient.setQueryData(["recentScannedResiNumbers", yesterdayFormatted, formattedDate], (oldSet: Set<string> | undefined) => {
+        const newSet = oldSet ? new Set(oldSet) : new Set();
+        newSet.add(normalizedCurrentResi);
+        return newSet;
+      });
+      // Optimistic update for recentProcessedResiNumbers (Set)
+      queryClient.setQueryData(["recentProcessedResiNumbers", yesterdayFormatted, formattedDate], (oldSet: Set<string> | undefined) => {
         const newSet = oldSet ? new Set(oldSet) : new Set();
         newSet.add(normalizedCurrentResi);
         return newSet;
@@ -344,38 +356,35 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         const newMap = oldMap ? new Map(oldMap) : new Map();
         const existingExpedisi = newMap.get(normalizedCurrentResi);
         
-        // Create or update the expedisi record in the cache
         newMap.set(normalizedCurrentResi, {
-          ...existingExpedisi, // Keep existing properties if any
+          ...existingExpedisi,
           resino: currentResi,
           couriername: actualCourierName,
-          flag: "YES", // Set flag to YES optimistically
-          created: existingExpedisi?.created || new Date().toISOString(), // Keep original created or set new
-          cekfu: existingExpedisi?.cekfu || false, // Keep existing cekfu or default
-          optimisticId: currentOptimisticId, // Add optimistic ID for potential rollback
+          flag: "YES",
+          created: existingExpedisi?.created || new Date().toISOString(),
+          cekfu: existingExpedisi?.cekfu || false,
+          optimisticId: currentOptimisticId,
         });
         return newMap;
       });
       // Optimistic update for allFlagNoExpedisiData cache (remove if flag becomes YES)
       queryClient.setQueryData(["allFlagNoExpedisiData"], (oldMap: Map<string, any> | undefined) => {
         const newMap = oldMap ? new Map(oldMap) : new Map();
-        newMap.delete(normalizedCurrentResi); // Remove from flag NO cache as it's now 'YES'
+        newMap.delete(normalizedCurrentResi);
         return newMap;
       });
 
-      // NEW OPTIMISTIC UPDATE FOR KARUNG SUMMARY
+      // OPTIMISTIC UPDATE FOR KARUNG SUMMARY
       queryClient.setQueryData(queryKeyForKarungSummary, (oldSummary: { karung_number: string; quantity: number; }[] | undefined) => {
         const newSummary = oldSummary ? [...oldSummary] : [];
         const existingKarungIndex = newSummary.findIndex(item => item.karung_number === selectedKarung);
 
         if (existingKarungIndex !== -1) {
-          // If karung exists, increment its quantity
           newSummary[existingKarungIndex] = {
             ...newSummary[existingKarungIndex],
             quantity: newSummary[existingKarungIndex].quantity + 1,
           };
         } else {
-          // If karung doesn't exist, add it with quantity 1
           newSummary.push({
             karung_number: selectedKarung,
             quantity: 1,
@@ -383,11 +392,10 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         }
         return newSummary;
       });
-      console.timeEnd("[useResiScanner] Optimistic UI updates"); // Fixed timer label
+      console.timeEnd("[useResiScanner] Optimistic UI updates");
 
       lastOptimisticIdRef.current = currentOptimisticId;
       
-      // Move success toast and beep here for instant feedback
       showSuccess(`Resi ${currentResi} Berhasil`);
       try {
         beepSuccess.play();
@@ -395,8 +403,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         console.error(`[${new Date().toISOString()}] [useResiScanner] Error playing beepSuccess:`, e);
       }
 
-      console.time("[useResiScanner] Add to IndexedDB"); // Fixed timer label
-      // Add operation to IndexedDB for background sync
+      console.time("[useResiScanner] Add to IndexedDB");
       await addPendingOperation({
         id: `scan-${currentResi}-${Date.now()}`,
         type: "scan",
@@ -407,23 +414,22 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         },
         timestamp: Date.now(),
       });
-      console.timeEnd("[useResiScanner] Add to IndexedDB"); // Fixed timer label
+      console.timeEnd("[useResiScanner] Add to IndexedDB");
 
-      // Clear the optimistic ref as the operation was successfully added to IndexedDB
       lastOptimisticIdRef.current = null;
       
       console.log(`[${new Date().toISOString()}] [useResiScanner] Triggering background sync.`);
-      triggerSync(); // Re-enabled direct call to triggerSync()
+      triggerSync();
 
     } catch (error: any) {
-      console.error(`[${new Date().toISOString()}] [useResiScanner] Error during resi input (before IndexedDB save or during optimistic update):`, error); // Log the full error object
+      console.error(`[${new Date().toISOString()}] [useResiScanner] Error during resi input (before IndexedDB save or during optimistic update):`, error);
 
       let errorMessage = "Terjadi kesalahan yang tidak diketahui. Silakan coba lagi.";
       if (error instanceof TypeError && error.message === "Failed to fetch") {
-        errorMessage = "Gagal terhubung ke server. Periksa koneksi internet Anda atau coba lagi nanti. Pastikan variabel lingkungan Supabase Anda sudah benar."; // Enhanced message
+        errorMessage = "Gagal terhubung ke server. Periksa koneksi internet Anda atau coba lagi nanti. Pastikan variabel lingkungan Supabase Anda sudah benar.";
       } else if (error.message) {
         errorMessage = `Terjadi kesalahan: ${error.message}`;
-      } else if (error.code) { // Supabase error codes
+      } else if (error.code) {
         errorMessage = `Terjadi kesalahan Supabase (${error.code}): ${error.message || error.details}`;
       }
       showError(errorMessage);
@@ -433,17 +439,22 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         console.error(`[${new Date().toISOString()}] [useResiScanner] Error playing beepFailure:`, e);
       }
 
-      console.time("[useResiScanner] Revert optimistic updates on error"); // Fixed timer label
-      // Revert optimistic update on error
+      console.time("[useResiScanner] Revert optimistic updates on error");
       if (lastOptimisticIdRef.current) {
           queryClient.setQueryData(queryKeyForInputPageDisplay, (oldData: ResiExpedisiData[] | undefined) => {
               const revertedData = (oldData || []).filter(item => item.optimisticId !== lastOptimisticIdRef.current);
               return revertedData;
           });
-          // Revert optimistic update for recentResiNumbersForValidation (Set)
-          queryClient.setQueryData(["recentResiNumbersForValidation", yesterdayFormatted, formattedDate], (oldSet: Set<string> | undefined) => {
+          // Revert optimistic update for recentScannedResiNumbers (Set)
+          queryClient.setQueryData(["recentScannedResiNumbers", yesterdayFormatted, formattedDate], (oldSet: Set<string> | undefined) => {
             const newSet = oldSet ? new Set(oldSet) : new Set();
-            newSet.delete(normalizedCurrentResi); // Remove the optimistically added resi
+            newSet.delete(normalizedCurrentResi);
+            return newSet;
+          });
+          // Revert optimistic update for recentProcessedResiNumbers (Set)
+          queryClient.setQueryData(["recentProcessedResiNumbers", yesterdayFormatted, formattedDate], (oldSet: Set<string> | undefined) => {
+            const newSet = oldSet ? new Set(oldSet) : new Set();
+            newSet.delete(normalizedCurrentResi);
             return newSet;
           });
           // Revert optimistic update for allExpedisiDataUnfiltered cache
@@ -461,8 +472,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
           // Revert optimistic update for allFlagNoExpedisiData cache (add back if flag was 'NO')
           queryClient.setQueryData(["allFlagNoExpedisiData"], (oldMap: Map<string, any> | undefined) => {
             const newMap = oldMap ? new Map(oldMap) : new Map();
-            // If the original record was 'NO', add it back. Otherwise, just invalidate to refetch.
-            // For simplicity and robustness, invalidating is often safer here.
             queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] }); 
             return newMap; 
           });
@@ -483,12 +492,12 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
             return newSummary;
           });
       }
-      console.timeEnd("[useResiScanner] Revert optimistic updates on error"); // Fixed timer label
-      lastOptimisticIdRef.current = null; // Clear the ref after attempting revert
+      console.timeEnd("[useResiScanner] Revert optimistic updates on error");
+      lastOptimisticIdRef.current = null;
     } finally {
-      setIsProcessing(false); // Ensure processing state is reset
-      keepFocus(); // Ensure focus is returned to input
-      console.timeEnd("[useResiScanner] handleScanResi execution time"); // Fixed timer label
+      setIsProcessing(false);
+      keepFocus();
+      console.timeEnd("[useResiScanner] handleScanResi execution time");
     }
   };
 
@@ -498,7 +507,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
     handleScanResi,
     resiInputRef,
     isProcessing,
-    isLoadingRecentResiNumbersForValidation,
+    isLoadingRecentResiNumbersForValidation: isLoadingRecentScannedResiNumbers || isLoadingRecentProcessedResiNumbers, // Combine loading states
     isLoadingAllFlagNoExpedisiData,
   };
 };

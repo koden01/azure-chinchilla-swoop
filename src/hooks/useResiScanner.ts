@@ -156,18 +156,22 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         // Fetch details from tbl_resi for the toast message
         const { data: resiDetails, error: resiDetailsError } = await supabase
             .from("tbl_resi")
-            .select("created, Keterangan, nokarung")
+            .select("created, Keterangan, nokarung, schedule") // Include schedule
             .eq("Resi", currentResi)
             .maybeSingle();
 
         let keterangan = "Tidak Diketahui";
         let processedDate = "Tidak Diketahui";
         let nokarung = "Tidak Diketahui";
+        let scheduleStatus = ""; // New variable for schedule status
 
         if (resiDetails && !resiDetailsError) {
             keterangan = resiDetails.Keterangan || "Tidak Diketahui";
             processedDate = resiDetails.created ? format(new Date(resiDetails.created), "dd/MM/yyyy HH:mm") : "Tidak Diketahui";
             nokarung = resiDetails.nokarung || "Tidak Diketahui";
+            if (resiDetails.schedule === "batal") {
+              scheduleStatus = "BATAL "; // Add "BATAL " if schedule is batal
+            }
         } else {
             // Fallback to expedisi data if resiDetails not found (shouldn't happen if flag is YES)
             const processedExpedisiRecord = allExpedisiDataUnfiltered?.get(normalizedCurrentResi);
@@ -177,7 +181,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
                 // nokarung cannot be reliably retrieved from tbl_expedisi
             }
         }
-        validationMessage = `DOUBLE! Resi ini ${keterangan} sudah diproses pada ${processedDate} di karung ${nokarung}.`;
+        validationMessage = `DOUBLE! Resi ini ${scheduleStatus}${keterangan} sudah diproses pada ${processedDate} di karung ${nokarung}.`;
       }
 
       // 2. Attempt to find expedisiRecord from caches or direct RPC call

@@ -163,14 +163,15 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         let keterangan = "Tidak Diketahui";
         let processedDate = "Tidak Diketahui";
         let nokarung = "Tidak Diketahui";
-        let scheduleStatus = ""; // New variable for schedule status
-
+        
         if (resiDetails && !resiDetailsError) {
-            keterangan = resiDetails.Keterangan || "Tidak Diketahui";
             processedDate = resiDetails.created ? format(new Date(resiDetails.created), "dd/MM/yyyy HH:mm") : "Tidak Diketahui";
-            nokarung = resiDetails.nokarung || "Tidak Diketahui";
             if (resiDetails.schedule === "batal") {
-              scheduleStatus = "BATAL "; // Add "BATAL " if schedule is batal
+              validationMessage = `BATAL ${processedDate}`; // Simplified message for 'batal' schedule
+            } else {
+              keterangan = resiDetails.Keterangan || "Tidak Diketahui";
+              nokarung = resiDetails.nokarung || "Tidak Diketahui";
+              validationMessage = `DOUBLE! Resi ini ${keterangan} sudah diproses pada ${processedDate} di karung ${nokarung}.`;
             }
         } else {
             // Fallback to expedisi data if resiDetails not found (shouldn't happen if flag is YES)
@@ -178,10 +179,11 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
             if (processedExpedisiRecord) {
                 keterangan = processedExpedisiRecord.couriername || "Tidak Diketahui";
                 processedDate = processedExpedisiRecord.created ? format(new Date(processedExpedisiRecord.created), "dd/MM/yyyy HH:mm") : "Tidak Diketahui";
-                // nokarung cannot be reliably retrieved from tbl_expedisi
+                validationMessage = `DOUBLE! Resi ini ${keterangan} sudah diproses pada ${processedDate}.`; // No nokarung from expedisi
+            } else {
+                validationMessage = `DOUBLE! Resi ini sudah diproses.`; // Generic fallback
             }
         }
-        validationMessage = `DOUBLE! Resi ini ${scheduleStatus}${keterangan} sudah diproses pada ${processedDate} di karung ${nokarung}.`;
       }
 
       // 2. Attempt to find expedisiRecord from caches or direct RPC call

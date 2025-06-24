@@ -40,7 +40,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
   const formattedToday = format(today, "yyyy-MM-dd");
 
   // Initialize localCurrentCount based on allResiForExpedition when expedition or karung changes
-  // This useEffect will now be the primary source for initial count.
   React.useEffect(() => {
     if (allResiForExpedition && expedition && selectedKarung) {
       const count = allResiForExpedition.filter(item =>
@@ -51,11 +50,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
     } else {
       setLocalCurrentCount(0);
     }
-  }, [expedition, selectedKarung, allResiForExpedition]); // Depend on allResiForExpedition to re-evaluate when it changes from background sync
-
-  // Removed useQuery for recentScannedResiNumbers to avoid querying tbl_resi for duplicate checks.
-  // This means client-side duplicate detection for tbl_resi-only entries (like ID_REKOMENDASI)
-  // will no longer be instant. Database unique constraints will still prevent true duplicates.
+  }, [expedition, selectedKarung, allResiForExpedition]);
 
   const { data: allFlagNoExpedisiData, isLoading: isLoadingAllFlagNoExpedisiData } = useQuery<Map<string, any>>({
     queryKey: ["allFlagNoExpedisiData"], // This query remains global as it's for all 'NO' flags
@@ -149,7 +144,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
     const queryKeyForInputPageDisplay = ["allResiForExpedition", expedition, formattedDate];
     const queryKeyForKarungSummary = ["karungSummary", expedition, formattedDate];
 
-    let validationStatus: "OK" | "DUPLICATE_PROCESSED" | "DUPLICATE_SCANNED_TODAY" | "MISMATCH_EXPEDISI" | "NOT_FOUND_EXPEDISI" = "OK";
+    let validationStatus: "OK" | "DUPLICATE_PROCESSED" | "DUPLICATE_SCANNED_TODAY_ID_REKOMENDASI" | "MISMATCH_EXPEDISI" | "NOT_FOUND_EXPEDISI" = "OK";
     let validationMessage: string | null = null;
     let actualCourierName: string | null = null;
     let expedisiRecord: any = null;
@@ -161,22 +156,10 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         validationMessage = `DOUBLE! Resi ini sudah diproses.`;
       }
 
-      // 2. Check if resi has already been SCANNED into tbl_resi for the current day
-      // This handles ID_REKOMENDASI duplicates and re-scans of 'batal' items.
-      if (validationStatus === 'OK' && allResiForExpedition) {
-        const isAlreadyScannedToday = allResiForExpedition.some(item =>
-          (item.Resi || "").toLowerCase() === normalizedCurrentResi
-        );
-        if (isAlreadyScannedToday) {
-          validationStatus = 'DUPLICATE_SCANNED_TODAY';
-          validationMessage = `DOUBLE! Resi ini sudah dipindai hari ini.`;
-        }
-      }
-
-      // Only proceed with further checks if not already a duplicate
-      if (validationStatus === 'OK') {
+      // 2. Attempt to find expedisiRecord from caches or direct RPC call
+      // This step is crucial to determine if the resi exists in tbl_expedisi at all.
+      if (validationStatus === 'OK') { // Only proceed if not already a processed duplicate
         console.time("handleScanResi_expedisi_lookup");
-        // 3. Attempt to find expedisiRecord from caches or direct RPC call
         expedisiRecord = allExpedisiDataUnfiltered?.get(normalizedCurrentResi);
 
         if (!expedisiRecord) {
@@ -215,21 +198,32 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         console.timeEnd("handleScanResi_expedisi_lookup");
       }
 
-      // 4. Determine actualCourierName and final validationStatus
-      if (validationStatus === 'OK') {
+      // 3. Determine actualCourierName and final validationStatus based on expedisiRecord presence
+      if (validationStatus === 'OK') { // Still OK after processed check
         if (expedition === 'ID') {
           if (expedisiRecord) {
             const normalizedExpedisiCourier = normalizeExpeditionName(expedisiRecord.couriername);
             if (normalizedExpedisiCourier === 'ID') {
-              actualCourierName = 'ID';
+              actualCourierName = 'ID'; // Resi ID yang ada di tbl_expedisi
             } else {
               validationStatus = 'MISMATCH_EXPEDISI';
               validationMessage = `Resi milik ${expedisiRecord.couriername}`;
             }
           } else {
+            // Resi ID yang TIDAK ada di tbl_expedisi (ID_REKOMENDASI)
             actualCourierName = 'ID_REKOMENDASI';
+            // For ID_REKOMENDASI, we MUST check tbl_resi for duplicates
+            if (allResiForExpedition) {
+              const isAlreadyScannedToday = allResiForExpedition.some(item =>
+                (item.Resi || "").toLowerCase() === normalizedCurrentResi
+              );
+              if (isAlreadyScannedToday) {
+                validationStatus = 'DUPLICATE_SCANNED_TODAY_ID_REKOMENDASI';
+                validationMessage = `DOUBLE! Resi ID Rekomendasi ini sudah dipindai hari ini.`;
+              }
+            }
           }
-        } else {
+        } else { // Non-ID expedition
           if (!expedisiRecord) {
             validationStatus = 'NOT_FOUND_EXPEDISI';
             validationMessage = 'Data tidak ada di database ekspedisi.';

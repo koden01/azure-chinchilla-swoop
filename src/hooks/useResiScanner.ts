@@ -40,7 +40,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
   const formattedToday = format(today, "yyyy-MM-dd");
 
   // Initialize localCurrentCount based on allResiForExpedition when expedition or karung changes
-  // This useEffect will now be the primary source for initial count and updates when filters change.
+  // This useEffect will now be the primary source for initial count.
   React.useEffect(() => {
     if (allResiForExpedition && expedition && selectedKarung) {
       const count = allResiForExpedition.filter(item =>
@@ -51,8 +51,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
     } else {
       setLocalCurrentCount(0);
     }
-  }, [allResiForExpedition, expedition, selectedKarung]);
-
+  }, [expedition, selectedKarung, allResiForExpedition]); // Depend on allResiForExpedition to re-evaluate when it changes from background sync
 
   const { data: recentScannedResiNumbers, isLoading: isLoadingRecentScannedResiNumbers } = useQuery<Set<string>>({
     queryKey: ["recentScannedResiNumbers", formattedToday], // Only today's date
@@ -282,53 +281,21 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
 
       // --- If all OK, proceed with optimistic update and saving to IndexedDB ---
       console.time("handleScanResi_optimistic_updates");
-      const newResiEntry: ResiExpedisiData = {
-        Resi: currentResi,
-        nokarung: selectedKarung,
-        created: new Date().toISOString(),
-        Keterangan: actualCourierName,
-        schedule: "ontime",
-        optimisticId: currentOptimisticId,
-      };
-
+      
       // Optimistically update localCurrentCount immediately for instant UI feedback
       setLocalCurrentCount(prevCount => prevCount + 1);
 
-      // All other updates can be deferred using startTransition
+      // Invalidate relevant queries to trigger background refetch
       startTransition(() => {
-        // Update allResiForExpedition (still important for Input page's derived data)
-        queryClient.setQueryData(queryKeyForInputPageDisplay, (oldData: ResiExpedisiData[] | undefined) => {
-          const newData = [...(oldData || []), newResiEntry];
-          return newData;
-        });
-
-        // Update karungSummary (still important for Input page's derived data)
-        queryClient.setQueryData(queryKeyForKarungSummary, (oldSummary: { karung_number: string; quantity: number; }[] | undefined) => {
-          const newSummary = oldSummary ? [...oldSummary] : [];
-          const existingKarungIndex = newSummary.findIndex(item => item.karung_number === selectedKarung);
-
-          if (existingKarungIndex !== -1) {
-            newSummary[existingKarungIndex] = {
-              ...newSummary[existingKarungIndex],
-              quantity: newSummary[existingKarungIndex].quantity + 1,
-            };
-          } else {
-            newSummary.push({
-              karung_number: selectedKarung,
-              quantity: 1,
-            });
-          }
-          return newSummary;
-        });
-        
-        // Invalidate these queries instead of setting data directly
+        queryClient.invalidateQueries({ queryKey: queryKeyForInputPageDisplay });
+        queryClient.invalidateQueries({ queryKey: queryKeyForKarungSummary });
         queryClient.invalidateQueries({ queryKey: ["recentScannedResiNumbers", formattedToday] });
         queryClient.invalidateQueries({ queryKey: ["allExpedisiDataUnfiltered", formattedToday] });
         queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] });
       });
       console.timeEnd("handleScanResi_optimistic_updates");
 
-      lastOptimisticIdRef.current = currentOptimisticId;
+      lastOptimisticIdRef.current = currentOptimisticId; // Keep this for potential rollback
       
       showSuccess(`Resi ${currentResi} Berhasil`);
       playBeep(beepSuccess);
@@ -344,7 +311,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         timestamp: Date.now(),
       });
 
-      lastOptimisticIdRef.current = null;
+      lastOptimisticIdRef.current = null; // Clear after successful addition to IndexedDB
       
       triggerSync();
 
@@ -362,43 +329,24 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       showError(errorMessage);
       playBeep(beepFailure);
 
-      // Revert optimistic updates within startTransition on error
-      startTransition(() => {
-        if (lastOptimisticIdRef.current) {
-            queryClient.setQueryData(queryKeyForInputPageDisplay, (oldData: ResiExpedisiData[] | undefined) => {
-                const revertedData = (oldData || []).filter(item => item.optimisticId !== lastOptimisticIdRef.current);
-                return revertedData;
-            });
-            queryClient.setQueryData(queryKeyForKarungSummary, (oldSummary: { karung_number: string; quantity: number; }[] | undefined) => {
-              const newSummary = oldSummary ? [...oldSummary] : [];
-              const existingKarungIndex = newSummary.findIndex(item => item.karung_number === selectedKarung);
-
-              if (existingKarungIndex !== -1) {
-                newSummary[existingKarungIndex] = {
-                  ...newSummary[existingKarungIndex],
-                  quantity: newSummary[existingKarungIndex].quantity - 1,
-                };
-                if (newSummary[existingKarungIndex].quantity <= 0) {
-                  newSummary.splice(existingKarungIndex, 1);
-                }
-              }
-              return newSummary;
-            });
-            // Invalidate these queries to ensure they refetch to correct state
-            queryClient.invalidateQueries({ queryKey: ["recentScannedResiNumbers", formattedToday] });
-            queryClient.invalidateQueries({ queryKey: ["allExpedisiDataUnfiltered", formattedToday] });
-            queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] });
-        }
-      });
       // Revert localCurrentCount on error (this remains synchronous for immediate feedback)
       setLocalCurrentCount(prevCount => Math.max(0, prevCount - 1));
+      
+      // Invalidate queries to ensure they refetch to correct state after error
+      startTransition(() => {
+        queryClient.invalidateQueries({ queryKey: queryKeyForInputPageDisplay });
+        queryClient.invalidateQueries({ queryKey: queryKeyForKarungSummary });
+        queryClient.invalidateQueries({ queryKey: ["recentScannedResiNumbers", formattedToday] });
+        queryClient.invalidateQueries({ queryKey: ["allExpedisiDataUnfiltered", formattedToday] });
+        queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] });
+      });
       lastOptimisticIdRef.current = null;
     } finally {
       setIsProcessing(false);
       keepFocus();
       console.timeEnd("handleScanResi_total"); // End total timing
     }
-  }, [resiNumber, expedition, selectedKarung, formattedDate, allExpedisiDataUnfiltered, recentScannedResiNumbers, allFlagNoExpedisiData, queryClient, triggerSync, validateInput, derivedRecentProcessedResiNumbers, startTransition, allResiForExpedition]); // Add allResiForExpedition to dependencies
+  }, [resiNumber, expedition, selectedKarung, formattedDate, allExpedisiDataUnfiltered, recentScannedResiNumbers, allFlagNoExpedisiData, queryClient, triggerSync, validateInput, derivedRecentProcessedResiNumbers, startTransition]);
 
   return {
     resiNumber,

@@ -164,6 +164,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
     try {
       let expedisiRecord = allExpedisiData?.get(resiNumber.toLowerCase());
       let originalCourierName: string | null = null;
+      let createdTimestampForResi: string;
       
       if (!expedisiRecord) {
         const { data: directExpedisiData, error: directExpedisiError } = await supabase
@@ -183,7 +184,8 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         }
       }
 
-      const createdTimestampFromExpedisi = expedisiRecord?.created || new Date().toISOString();
+      // Use the created timestamp from tbl_expedisi if available, otherwise use current time
+      createdTimestampForResi = expedisiRecord?.created ? new Date(expedisiRecord.created).toISOString() : new Date().toISOString();
       originalCourierName = expedisiRecord?.couriername || null;
 
       await addPendingOperation({
@@ -191,8 +193,9 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         type: "batal",
         payload: {
           resiNumber,
-          createdTimestampFromExpedisi,
+          createdTimestampFromExpedisi: createdTimestampForResi, // Ensure it's an ISO string
           keteranganValue: normalizeExpeditionName(originalCourierName),
+          expedisiFlagStatus: "NO", // Explicitly set flag to NO for tbl_expedisi
         },
         timestamp: Date.now(),
       });

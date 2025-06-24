@@ -12,6 +12,7 @@ export interface PendingOperation {
     selectedKarung?: string; // For 'scan'
     isRescan?: boolean; // NEW: Added for 'scan' type to indicate if it's an update
     keteranganValue?: string | null; // NEW: Added for 'batal' and 'confirm' to explicitly set Keterangan, now allows null
+    expedisiFlagStatus?: string; // NEW: Added for 'batal' to explicitly set flag in tbl_expedisi
   };
   timestamp: number; // Timestamp when the operation was added
   retries?: number; // Number of retry attempts

@@ -1,4 +1,4 @@
-import React, { useTransition } from "react"; // Import useTransition
+import React, { useTransition } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, showError, dismissToast } from "@/utils/toast";
 import { beepSuccess, beepFailure, beepDouble } from "@/utils/audio";
@@ -24,18 +24,35 @@ interface UseResiScannerProps {
   selectedKarung: string;
   formattedDate: string; // This prop is the formatted date for today
   allExpedisiDataUnfiltered: Map<string, any> | undefined;
+  // NEW: Pass allResiForExpedition from useResiInputData
+  allResiForExpedition: ResiExpedisiData[] | undefined;
 }
 
-export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allExpedisiDataUnfiltered }: UseResiScannerProps) => {
+export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allExpedisiDataUnfiltered, allResiForExpedition }: UseResiScannerProps) => {
   const [resiNumber, setResiNumber] = React.useState<string>("");
   const [isProcessing, setIsProcessing] = React.useState<boolean>(false);
+  const [localCurrentCount, setLocalCurrentCount] = React.useState(0); // NEW: Local state for currentCount
   const resiInputRef = React.useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const { triggerSync } = useBackgroundSync();
-  const [isPending, startTransition] = useTransition(); // Initialize useTransition
+  const [isPending, startTransition] = useTransition();
 
   const today = new Date();
   const formattedToday = format(today, "yyyy-MM-dd");
+
+  // NEW: Calculate localCurrentCount whenever relevant data changes
+  React.useEffect(() => {
+    if (allResiForExpedition && expedition && selectedKarung) {
+      const count = allResiForExpedition.filter(item =>
+        item.nokarung === selectedKarung &&
+        (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition)
+      ).length;
+      setLocalCurrentCount(count);
+    } else {
+      setLocalCurrentCount(0);
+    }
+  }, [allResiForExpedition, expedition, selectedKarung]);
+
 
   const { data: recentScannedResiNumbers, isLoading: isLoadingRecentScannedResiNumbers } = useQuery<Set<string>>({
     queryKey: ["recentScannedResiNumbers", formattedToday], // Only today's date
@@ -316,6 +333,8 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         }
         return newSummary;
       });
+      // NEW: Optimistically update localCurrentCount
+      setLocalCurrentCount(prevCount => prevCount + 1);
 
       // These updates can be deferred using startTransition
       startTransition(() => {
@@ -421,6 +440,8 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
             }
             return newSummary;
           });
+          // NEW: Revert localCurrentCount on error
+          setLocalCurrentCount(prevCount => Math.max(0, prevCount - 1));
       }
       lastOptimisticIdRef.current = null;
     } finally {
@@ -428,15 +449,16 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       keepFocus();
       console.timeEnd("handleScanResi_total"); // End total timing
     }
-  }, [resiNumber, expedition, selectedKarung, formattedDate, allExpedisiDataUnfiltered, recentScannedResiNumbers, allFlagNoExpedisiData, queryClient, triggerSync, validateInput, derivedRecentProcessedResiNumbers, startTransition]); // Add startTransition to dependencies
+  }, [resiNumber, expedition, selectedKarung, formattedDate, allExpedisiDataUnfiltered, recentScannedResiNumbers, allFlagNoExpedisiData, queryClient, triggerSync, validateInput, derivedRecentProcessedResiNumbers, startTransition, allResiForExpedition]); // Add allResiForExpedition to dependencies
 
   return {
     resiNumber,
     setResiNumber,
     handleScanResi,
     resiInputRef,
-    isProcessing: isProcessing || isPending, // Combine with isPending
+    isProcessing: isProcessing || isPending,
     isLoadingRecentScannedResiNumbers,
     isLoadingAllFlagNoExpedisiData,
+    currentCount: localCurrentCount, // Return the local state
   };
 };

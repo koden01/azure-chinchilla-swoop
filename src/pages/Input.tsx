@@ -62,7 +62,7 @@ const InputPage = () => {
     handleScanResi,
     resiInputRef,
     isProcessing,
-    isLoadingRecentScannedResiNumbers,
+    isLoadingRecentScannedResiNumbers, // This will now always be false
     isLoadingAllFlagNoExpedisiData,
     currentCount, // Now directly from useResiScanner
   } = useResiScanner({ 

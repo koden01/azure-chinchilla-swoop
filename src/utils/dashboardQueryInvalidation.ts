@@ -36,8 +36,8 @@ export const invalidateDashboardQueries = (queryClient: QueryClient, date: Date 
   // Invalidate the allExpedisiDataUnfiltered query with its new key (only today)
   queryClient.invalidateQueries({ queryKey: ["allExpedisiDataUnfiltered", actualCurrentFormattedDate] });
 
-  // Invalidate recentResiNumbersForValidation for local duplicate checks (only today)
-  queryClient.invalidateQueries({ queryKey: ["recentScannedResiNumbers", actualCurrentFormattedDate] });
+  // Removed: Invalidate recentResiNumbersForValidation for local duplicate checks (only today)
+  // queryClient.invalidateQueries({ queryKey: ["recentScannedResiNumbers", actualCurrentFormattedDate] });
 
   // Invalidate the allFlagNoExpedisiData query
   queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] });

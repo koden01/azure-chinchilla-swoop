@@ -4,6 +4,7 @@ import { Plus, History, LayoutDashboard } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { useDebouncedCallback } from "@/hooks/useDebouncedCallback"; // Import useDebouncedCallback
 
 const Navbar = () => {
   const location = useLocation();
@@ -173,15 +174,25 @@ const Navbar = () => {
     const endOfTodayFormatted = format(today, "yyyy-MM-dd");
 
     queryClient.prefetchQuery({
-      queryKey: ["allExpedisiDataUnfiltered", twoDaysAgoFormatted, endOfTodayFormatted],
+      queryKey: ["allExpedisiDataUnfiltered", endOfTodayFormatted], // Changed to only today's date
       queryFn: async () => {
         let allRecords: any[] = [];
         let offset = 0;
         const limit = 1000;
         let hasMore = true;
 
+        // Fetch only for today
+        const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+
         while (hasMore) {
-          const { data, error } = await supabase.from("tbl_expedisi").select("*").range(offset, offset + limit - 1);
+          const { data, error } = await supabase
+            .from("tbl_expedisi")
+            .select("*")
+            .gte("created", startOfToday.toISOString().split('T')[0])
+            .lt("created", endOfToday.toISOString().split('T')[0])
+            .range(offset, offset + limit - 1);
+          
           if (error) throw error;
           if (data && data.length > 0) {
             allRecords = allRecords.concat(data);
@@ -202,6 +213,9 @@ const Navbar = () => {
     });
   };
 
+  // Debounce the prefetch function
+  const debouncedPrefetchDashboardData = useDebouncedCallback(prefetchDashboardData, 500); // 500ms debounce
+
   return (
     <nav className="fixed top-0 w-full z-50 bg-gradient-to-r from-blue-600 to-purple-700 p-4 flex items-center justify-center shadow-lg">
       <div className="flex items-center space-x-4">
@@ -215,8 +229,8 @@ const Navbar = () => {
                 ? "bg-white bg-opacity-20"
                 : "hover:bg-white hover:bg-opacity-10"
             )}
-            onMouseEnter={item.name === "Dashboard" ? prefetchDashboardData : undefined}
-            onFocus={item.name === "Dashboard" ? prefetchDashboardData : undefined}
+            onMouseEnter={item.name === "Dashboard" ? debouncedPrefetchDashboardData : undefined}
+            onFocus={item.name === "Dashboard" ? debouncedPrefetchDashboardData : undefined}
           >
             <item.icon className="mr-2 h-4 w-4" />
             {item.name}

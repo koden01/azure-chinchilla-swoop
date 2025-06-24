@@ -110,8 +110,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
     return processedSet;
   }, [allExpedisiDataUnfiltered]);
 
-  const lastOptimisticIdRef = React.useRef<string | null>(null);
-
   const keepFocus = () => {
     setTimeout(() => {
       if (resiInputRef.current) {
@@ -222,9 +220,19 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
             
             if (directExpedisiDataArray && directExpedisiDataArray.length > 0) {
                 expedisiRecord = directExpedisiDataArray[0];
-                // Invalidate these queries instead of setting data directly
-                // This will trigger a background refetch for these large datasets
-                // Removed from here, will be handled by optimistic setQueryData below
+                // Optimistically update allExpedisiDataUnfiltered and allFlagNoExpedisiData if a new record is found via RPC
+                queryClient.setQueryData(["allExpedisiDataUnfiltered", formattedToday], (oldMap: Map<string, any> | undefined) => {
+                  const newMap = new Map(oldMap || []);
+                  newMap.set(normalizedCurrentResi, expedisiRecord);
+                  return newMap;
+                });
+                queryClient.setQueryData(["allFlagNoExpedisiData"], (oldMap: Map<string, any> | undefined) => {
+                  const newMap = new Map(oldMap || []);
+                  if (expedisiRecord.flag === 'NO') {
+                    newMap.set(normalizedCurrentResi, expedisiRecord);
+                  }
+                  return newMap;
+                });
             }
         }
         console.timeEnd("handleScanResi_expedisi_lookup");

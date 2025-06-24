@@ -24,14 +24,13 @@ interface UseResiScannerProps {
   selectedKarung: string;
   formattedDate: string; // This prop is the formatted date for today
   allExpedisiDataUnfiltered: Map<string, any> | undefined;
-  // NEW: Pass allResiForExpedition from useResiInputData
   allResiForExpedition: ResiExpedisiData[] | undefined;
 }
 
 export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allExpedisiDataUnfiltered, allResiForExpedition }: UseResiScannerProps) => {
   const [resiNumber, setResiNumber] = React.useState<string>("");
   const [isProcessing, setIsProcessing] = React.useState<boolean>(false);
-  const [localCurrentCount, setLocalCurrentCount] = React.useState(0); // NEW: Local state for currentCount
+  const [localCurrentCount, setLocalCurrentCount] = React.useState(0);
   const resiInputRef = React.useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const { triggerSync } = useBackgroundSync();
@@ -40,8 +39,8 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
   const today = new Date();
   const formattedToday = format(today, "yyyy-MM-dd");
 
-  // Initialize localCurrentCount based on allResiForExpedition when it loads or changes
-  // This useEffect is now primarily for initial load and background sync updates.
+  // Initialize localCurrentCount based on allResiForExpedition when expedition or karung changes
+  // This useEffect will now be the primary source for initial count and updates when filters change.
   React.useEffect(() => {
     if (allResiForExpedition && expedition && selectedKarung) {
       const count = allResiForExpedition.filter(item =>
@@ -226,26 +225,11 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
             
             if (directExpedisiDataArray && directExpedisiDataArray.length > 0) {
                 expedisiRecord = directExpedisiDataArray[0];
-                // Update cache for allExpedisiDataUnfiltered (can be deferred)
+                // Invalidate these queries instead of setting data directly
+                // This will trigger a background refetch for these large datasets
                 startTransition(() => {
-                  queryClient.setQueryData(
-                      ["allExpedisiDataUnfiltered", formattedToday],
-                      (oldMap: Map<string, any> | undefined) => {
-                          const newMap = oldMap ? new Map(oldMap) : new Map();
-                          newMap.set(normalizedCurrentResi, expedisiRecord);
-                          return newMap;
-                      }
-                  );
-                  if (expedisiRecord.flag === 'NO') {
-                    queryClient.setQueryData(
-                      ["allFlagNoExpedisiData"],
-                      (oldMap: Map<string, any> | undefined) => {
-                          const newMap = oldMap ? new Map(oldMap) : new Map();
-                          newMap.set(normalizedCurrentResi, expedisiRecord);
-                          return newMap;
-                      }
-                    );
-                  }
+                  queryClient.invalidateQueries({ queryKey: ["allExpedisiDataUnfiltered", formattedToday] });
+                  queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] });
                 });
             }
         }
@@ -307,25 +291,18 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         optimisticId: currentOptimisticId,
       };
 
-      // NEW: Optimistically update localCurrentCount immediately for instant UI feedback
+      // Optimistically update localCurrentCount immediately for instant UI feedback
       setLocalCurrentCount(prevCount => prevCount + 1);
 
       // All other updates can be deferred using startTransition
       startTransition(() => {
-        // Update allResiForExpedition
+        // Update allResiForExpedition (still important for Input page's derived data)
         queryClient.setQueryData(queryKeyForInputPageDisplay, (oldData: ResiExpedisiData[] | undefined) => {
           const newData = [...(oldData || []), newResiEntry];
           return newData;
         });
 
-        // Update recentScannedResiNumbers
-        queryClient.setQueryData(["recentScannedResiNumbers", formattedToday], (oldSet: Set<string> | undefined) => {
-          const newSet = oldSet ? new Set(oldSet) : new Set();
-          newSet.add(normalizedCurrentResi);
-          return newSet;
-        });
-
-        // Update karungSummary
+        // Update karungSummary (still important for Input page's derived data)
         queryClient.setQueryData(queryKeyForKarungSummary, (oldSummary: { karung_number: string; quantity: number; }[] | undefined) => {
           const newSummary = oldSummary ? [...oldSummary] : [];
           const existingKarungIndex = newSummary.findIndex(item => item.karung_number === selectedKarung);
@@ -344,29 +321,10 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
           return newSummary;
         });
         
-        // Update allExpedisiDataUnfiltered
-        queryClient.setQueryData(["allExpedisiDataUnfiltered", formattedToday], (oldMap: Map<string, any> | undefined) => {
-          const newMap = oldMap ? new Map(oldMap) : new Map();
-          const existingExpedisi = newMap.get(normalizedCurrentResi);
-          
-          newMap.set(normalizedCurrentResi, {
-            ...existingExpedisi,
-            resino: currentResi,
-            couriername: actualCourierName,
-            flag: "YES",
-            created: existingExpedisi?.created || new Date().toISOString(),
-            cekfu: existingExpedisi?.cekfu || false,
-            optimisticId: currentOptimisticId,
-          });
-          return newMap;
-        });
-
-        // Update allFlagNoExpedisiData
-        queryClient.setQueryData(["allFlagNoExpedisiData"], (oldMap: Map<string, any> | undefined) => {
-          const newMap = oldMap ? new Map(oldMap) : new Map();
-          newMap.delete(normalizedCurrentResi);
-          return newMap;
-        });
+        // Invalidate these queries instead of setting data directly
+        queryClient.invalidateQueries({ queryKey: ["recentScannedResiNumbers", formattedToday] });
+        queryClient.invalidateQueries({ queryKey: ["allExpedisiDataUnfiltered", formattedToday] });
+        queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] });
       });
       console.timeEnd("handleScanResi_optimistic_updates");
 
@@ -411,30 +369,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
                 const revertedData = (oldData || []).filter(item => item.optimisticId !== lastOptimisticIdRef.current);
                 return revertedData;
             });
-            queryClient.setQueryData(["recentScannedResiNumbers", formattedToday], (oldSet: Set<string> | undefined) => {
-              const newSet = oldSet ? new Set(oldSet) : new Set();
-              newSet.delete(normalizedCurrentResi);
-              return newSet;
-            });
-            queryClient.setQueryData(["allExpedisiDataUnfiltered", formattedToday], (oldMap: Map<string, any> | undefined) => {
-              const newMap = oldMap ? new Map(oldMap) : new Map();
-              const existingExpedisi = newMap.get(normalizedCurrentResi);
-              if (existingExpedisi && existingExpedisi.optimisticId === lastOptimisticIdRef.current) {
-                const revertedExpedisi = { ...existingExpedisi };
-                delete revertedExpedisi.optimisticId; 
-                revertedExpedisi.flag = "NO"; // Revert flag to NO
-                newMap.set(normalizedCurrentResi, revertedExpedisi);
-              }
-              return newMap;
-            });
-            queryClient.setQueryData(["allFlagNoExpedisiData"], (oldMap: Map<string, any> | undefined) => {
-              const newMap = oldMap ? new Map(oldMap) : new Map();
-              // If the item was originally in allFlagNoExpedisiData, add it back
-              // This requires knowing its original state, which is tricky.
-              // For simplicity, we'll just invalidate this query to refetch it.
-              queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] }); 
-              return newMap; 
-            });
             queryClient.setQueryData(queryKeyForKarungSummary, (oldSummary: { karung_number: string; quantity: number; }[] | undefined) => {
               const newSummary = oldSummary ? [...oldSummary] : [];
               const existingKarungIndex = newSummary.findIndex(item => item.karung_number === selectedKarung);
@@ -450,9 +384,13 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
               }
               return newSummary;
             });
+            // Invalidate these queries to ensure they refetch to correct state
+            queryClient.invalidateQueries({ queryKey: ["recentScannedResiNumbers", formattedToday] });
+            queryClient.invalidateQueries({ queryKey: ["allExpedisiDataUnfiltered", formattedToday] });
+            queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] });
         }
       });
-      // NEW: Revert localCurrentCount on error (this remains synchronous for immediate feedback)
+      // Revert localCurrentCount on error (this remains synchronous for immediate feedback)
       setLocalCurrentCount(prevCount => Math.max(0, prevCount - 1));
       lastOptimisticIdRef.current = null;
     } finally {

@@ -17,6 +17,7 @@ const Navbar = () => {
 
   // Function to pre-fetch dashboard data
   const prefetchDashboardData = async () => {
+    console.log("[Navbar] Prefetching dashboard data...");
     const today = new Date();
     const formattedDate = format(today, "yyyy-MM-dd");
     const formattedDateISO = today.toISOString().split('T')[0]; // For queries using date part only

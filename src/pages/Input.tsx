@@ -46,6 +46,7 @@ const InputPage = () => {
   });
 
   const {
+    allResiForExpedition, // NEW: Get this data from useResiInputData
     isLoadingAllResiForExpedition,
     lastKarung,
     highestKarung,
@@ -69,6 +70,7 @@ const InputPage = () => {
     selectedKarung, 
     formattedDate,
     allExpedisiDataUnfiltered,
+    allResiForExpedition, // NEW: Pass the data here
   });
 
   React.useEffect(() => {

@@ -62,7 +62,6 @@ const InputPage = () => {
     handleScanResi,
     resiInputRef,
     isProcessing,
-    isLoadingRecentScannedResiNumbers, // This will now always be false
     isLoadingAllFlagNoExpedisiData,
     currentCount, // Now directly from useResiScanner
   } = useResiScanner({ 
@@ -86,7 +85,7 @@ const InputPage = () => {
   }, [expedition, highestKarung]);
 
   React.useEffect(() => {
-    if (expedition && selectedKarung && resiInputRef.current && !isProcessing && !isLoadingRecentScannedResiNumbers && !isLoadingAllFlagNoExpedisiData) {
+    if (expedition && selectedKarung && resiInputRef.current && !isProcessing && !isLoadingAllFlagNoExpedisiData) {
       const timer = setTimeout(() => {
         if (resiInputRef.current) {
           resiInputRef.current.focus();
@@ -94,9 +93,9 @@ const InputPage = () => {
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [expedition, selectedKarung, isProcessing, isLoadingRecentScannedResiNumbers, isLoadingAllFlagNoExpedisiData]);
+  }, [expedition, selectedKarung, isProcessing, isLoadingAllFlagNoExpedisiData]);
 
-  const isInputDisabled = !expedition || !selectedKarung || isProcessing || isLoadingAllExpedisiUnfiltered || isLoadingRecentScannedResiNumbers || isLoadingAllFlagNoExpedisiData;
+  const isInputDisabled = !expedition || !selectedKarung || isProcessing || isLoadingAllExpedisiUnfiltered || isLoadingAllFlagNoExpedisiData;
 
   return (
     <React.Fragment>
@@ -106,7 +105,7 @@ const InputPage = () => {
           <div className="text-6xl font-bold">
             {!expedition
               ? "Pilih Expedisi"
-              : isLoadingAllResiForExpedition || isLoadingAllExpedisiUnfiltered || isLoadingRecentScannedResiNumbers || isLoadingAllFlagNoExpedisiData
+              : isLoadingAllResiForExpedition || isLoadingAllExpedisiUnfiltered || isLoadingAllFlagNoExpedisiData
               ? "..."
               : currentCount}
           </div>
@@ -129,7 +128,7 @@ const InputPage = () => {
               <label htmlFor="expedition-select" className="block text-left text-sm font-medium mb-2">
                 Expedisi
               </label>
-              <Select onValueChange={setExpedition} value={expedition} disabled={isProcessing || isLoadingRecentScannedResiNumbers || isLoadingAllFlagNoExpedisiData}>
+              <Select onValueChange={setExpedition} value={expedition} disabled={isProcessing || isLoadingAllFlagNoExpedisiData}>
                 <SelectTrigger id="expedition-select" className="w-full bg-white text-gray-800 h-12 text-center justify-center">
                   <SelectValue placeholder="Pilih Expedisi" />
                 </SelectTrigger>
@@ -144,7 +143,7 @@ const InputPage = () => {
               <label htmlFor="no-karung-select" className="block text-left text-sm font-medium mb-2">
                 No Karung
               </label>
-              <Select onValueChange={setSelectedKarung} value={selectedKarung} disabled={!expedition || isProcessing || isLoadingRecentScannedResiNumbers || isLoadingAllFlagNoExpedisiData}>
+              <Select onValueChange={setSelectedKarung} value={selectedKarung} disabled={!expedition || isProcessing || isLoadingAllFlagNoExpedisiData}>
                 <SelectTrigger id="no-karung-select" className="w-full bg-white text-gray-800 h-12 text-center justify-center">
                   <SelectValue placeholder="Pilih No Karung" />
                 </SelectTrigger>
@@ -181,7 +180,7 @@ const InputPage = () => {
               {isProcessing && (
                 <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-6 w-6 animate-spin text-gray-500" />
               )}
-              {(isLoadingRecentScannedResiNumbers || isLoadingAllFlagNoExpedisiData) && !isProcessing && (
+              {isLoadingAllFlagNoExpedisiData && !isProcessing && (
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center text-gray-500">
                   <Loader2 className="h-6 w-6 animate-spin mr-2" />
                   <span className="text-sm">Memuat validasi...</span>

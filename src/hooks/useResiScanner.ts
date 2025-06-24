@@ -306,38 +306,38 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         optimisticId: currentOptimisticId,
       };
 
-      // These updates are critical for immediate UI feedback on the input page
-      queryClient.setQueryData(queryKeyForInputPageDisplay, (oldData: ResiExpedisiData[] | undefined) => {
-        const newData = [...(oldData || []), newResiEntry];
-        return newData;
-      });
-      queryClient.setQueryData(["recentScannedResiNumbers", formattedToday], (oldSet: Set<string> | undefined) => {
-        const newSet = oldSet ? new Set(oldSet) : new Set();
-        newSet.add(normalizedCurrentResi);
-        return newSet;
-      });
-      queryClient.setQueryData(queryKeyForKarungSummary, (oldSummary: { karung_number: string; quantity: number; }[] | undefined) => {
-        const newSummary = oldSummary ? [...oldSummary] : [];
-        const existingKarungIndex = newSummary.findIndex(item => item.karung_number === selectedKarung);
-
-        if (existingKarungIndex !== -1) {
-          newSummary[existingKarungIndex] = {
-            ...newSummary[existingKarungIndex],
-            quantity: newSummary[existingKarungIndex].quantity + 1,
-          };
-        } else {
-          newSummary.push({
-            karung_number: selectedKarung,
-            quantity: 1,
-          });
-        }
-        return newSummary;
-      });
-      // NEW: Optimistically update localCurrentCount
+      // NEW: Optimistically update localCurrentCount immediately for instant UI feedback
       setLocalCurrentCount(prevCount => prevCount + 1);
 
-      // These updates can be deferred using startTransition
+      // All other updates can be deferred using startTransition
       startTransition(() => {
+        queryClient.setQueryData(queryKeyForInputPageDisplay, (oldData: ResiExpedisiData[] | undefined) => {
+          const newData = [...(oldData || []), newResiEntry];
+          return newData;
+        });
+        queryClient.setQueryData(["recentScannedResiNumbers", formattedToday], (oldSet: Set<string> | undefined) => {
+          const newSet = oldSet ? new Set(oldSet) : new Set();
+          newSet.add(normalizedCurrentResi);
+          return newSet;
+        });
+        queryClient.setQueryData(queryKeyForKarungSummary, (oldSummary: { karung_number: string; quantity: number; }[] | undefined) => {
+          const newSummary = oldSummary ? [...oldSummary] : [];
+          const existingKarungIndex = newSummary.findIndex(item => item.karung_number === selectedKarung);
+
+          if (existingKarungIndex !== -1) {
+            newSummary[existingKarungIndex] = {
+              ...newSummary[existingKarungIndex],
+              quantity: newSummary[existingKarungIndex].quantity + 1,
+            };
+          } else {
+            newSummary.push({
+              karung_number: selectedKarung,
+              quantity: 1,
+            });
+          }
+          return newSummary;
+        });
+        
         queryClient.setQueryData(["allExpedisiDataUnfiltered", formattedToday], (oldMap: Map<string, any> | undefined) => {
           const newMap = oldMap ? new Map(oldMap) : new Map();
           const existingExpedisi = newMap.get(normalizedCurrentResi);
@@ -395,54 +395,56 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       showError(errorMessage);
       playBeep(beepFailure);
 
-      if (lastOptimisticIdRef.current) {
-          queryClient.setQueryData(queryKeyForInputPageDisplay, (oldData: ResiExpedisiData[] | undefined) => {
-              const revertedData = (oldData || []).filter(item => item.optimisticId !== lastOptimisticIdRef.current);
-              return revertedData;
-          });
-          queryClient.setQueryData(["recentScannedResiNumbers", formattedToday], (oldSet: Set<string> | undefined) => {
-            const newSet = oldSet ? new Set(oldSet) : new Set();
-            newSet.delete(normalizedCurrentResi);
-            return newSet;
-          });
-          // Revert deferred updates immediately on error
-          queryClient.setQueryData(["allExpedisiDataUnfiltered", formattedToday], (oldMap: Map<string, any> | undefined) => {
-            const newMap = oldMap ? new Map(oldMap) : new Map();
-            const existingExpedisi = newMap.get(normalizedCurrentResi);
-            if (existingExpedisi && existingExpedisi.optimisticId === lastOptimisticIdRef.current) {
-              const revertedExpedisi = { ...existingExpedisi };
-              delete revertedExpedisi.optimisticId; 
-              revertedExpedisi.flag = "NO"; // Revert flag to NO
-              newMap.set(normalizedCurrentResi, revertedExpedisi);
-            }
-            return newMap;
-          });
-          queryClient.setQueryData(["allFlagNoExpedisiData"], (oldMap: Map<string, any> | undefined) => {
-            const newMap = oldMap ? new Map(oldMap) : new Map();
-            // If the item was originally in allFlagNoExpedisiData, add it back
-            // This requires knowing its original state, which is tricky.
-            // For simplicity, we'll just invalidate this query to refetch it.
-            queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] }); 
-            return newMap; 
-          });
-          queryClient.setQueryData(queryKeyForKarungSummary, (oldSummary: { karung_number: string; quantity: number; }[] | undefined) => {
-            const newSummary = oldSummary ? [...oldSummary] : [];
-            const existingKarungIndex = newSummary.findIndex(item => item.karung_number === selectedKarung);
-
-            if (existingKarungIndex !== -1) {
-              newSummary[existingKarungIndex] = {
-                ...newSummary[existingKarungIndex],
-                quantity: newSummary[existingKarungIndex].quantity - 1,
-              };
-              if (newSummary[existingKarungIndex].quantity <= 0) {
-                newSummary.splice(existingKarungIndex, 1);
+      // Revert optimistic updates within startTransition on error
+      startTransition(() => {
+        if (lastOptimisticIdRef.current) {
+            queryClient.setQueryData(queryKeyForInputPageDisplay, (oldData: ResiExpedisiData[] | undefined) => {
+                const revertedData = (oldData || []).filter(item => item.optimisticId !== lastOptimisticIdRef.current);
+                return revertedData;
+            });
+            queryClient.setQueryData(["recentScannedResiNumbers", formattedToday], (oldSet: Set<string> | undefined) => {
+              const newSet = oldSet ? new Set(oldSet) : new Set();
+              newSet.delete(normalizedCurrentResi);
+              return newSet;
+            });
+            queryClient.setQueryData(["allExpedisiDataUnfiltered", formattedToday], (oldMap: Map<string, any> | undefined) => {
+              const newMap = oldMap ? new Map(oldMap) : new Map();
+              const existingExpedisi = newMap.get(normalizedCurrentResi);
+              if (existingExpedisi && existingExpedisi.optimisticId === lastOptimisticIdRef.current) {
+                const revertedExpedisi = { ...existingExpedisi };
+                delete revertedExpedisi.optimisticId; 
+                revertedExpedisi.flag = "NO"; // Revert flag to NO
+                newMap.set(normalizedCurrentResi, revertedExpedisi);
               }
-            }
-            return newSummary;
-          });
-          // NEW: Revert localCurrentCount on error
-          setLocalCurrentCount(prevCount => Math.max(0, prevCount - 1));
-      }
+              return newMap;
+            });
+            queryClient.setQueryData(["allFlagNoExpedisiData"], (oldMap: Map<string, any> | undefined) => {
+              const newMap = oldMap ? new Map(oldMap) : new Map();
+              // If the item was originally in allFlagNoExpedisiData, add it back
+              // This requires knowing its original state, which is tricky.
+              // For simplicity, we'll just invalidate this query to refetch it.
+              queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] }); 
+              return newMap; 
+            });
+            queryClient.setQueryData(queryKeyForKarungSummary, (oldSummary: { karung_number: string; quantity: number; }[] | undefined) => {
+              const newSummary = oldSummary ? [...oldSummary] : [];
+              const existingKarungIndex = newSummary.findIndex(item => item.karung_number === selectedKarung);
+
+              if (existingKarungIndex !== -1) {
+                newSummary[existingKarungIndex] = {
+                  ...newSummary[existingKarungIndex],
+                  quantity: newSummary[existingKarungIndex].quantity - 1,
+                };
+                if (newSummary[existingKarungIndex].quantity <= 0) {
+                  newSummary.splice(existingKarungIndex, 1);
+                }
+              }
+              return newSummary;
+            });
+        }
+      });
+      // NEW: Revert localCurrentCount on error (this remains synchronous for immediate feedback)
+      setLocalCurrentCount(prevCount => Math.max(0, prevCount - 1));
       lastOptimisticIdRef.current = null;
     } finally {
       setIsProcessing(false);

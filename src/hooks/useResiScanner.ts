@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useTransition } from "react"; // Import useTransition
 import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, showError, dismissToast } from "@/utils/toast";
 import { beepSuccess, beepFailure, beepDouble } from "@/utils/audio";
@@ -32,6 +32,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
   const resiInputRef = React.useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const { triggerSync } = useBackgroundSync();
+  const [isPending, startTransition] = useTransition(); // Initialize useTransition
 
   const today = new Date();
   const formattedToday = format(today, "yyyy-MM-dd");
@@ -207,24 +208,27 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
             
             if (directExpedisiDataArray && directExpedisiDataArray.length > 0) {
                 expedisiRecord = directExpedisiDataArray[0];
-                queryClient.setQueryData(
-                    ["allExpedisiDataUnfiltered", formattedToday],
-                    (oldMap: Map<string, any> | undefined) => {
-                        const newMap = oldMap ? new Map(oldMap) : new Map();
-                        newMap.set(normalizedCurrentResi, expedisiRecord);
-                        return newMap;
-                    }
-                );
-                if (expedisiRecord.flag === 'NO') {
+                // Update cache for allExpedisiDataUnfiltered (can be deferred)
+                startTransition(() => {
                   queryClient.setQueryData(
-                    ["allFlagNoExpedisiData"],
-                    (oldMap: Map<string, any> | undefined) => {
-                        const newMap = oldMap ? new Map(oldMap) : new Map();
-                        newMap.set(normalizedCurrentResi, expedisiRecord);
-                        return newMap;
-                    }
+                      ["allExpedisiDataUnfiltered", formattedToday],
+                      (oldMap: Map<string, any> | undefined) => {
+                          const newMap = oldMap ? new Map(oldMap) : new Map();
+                          newMap.set(normalizedCurrentResi, expedisiRecord);
+                          return newMap;
+                      }
                   );
-                }
+                  if (expedisiRecord.flag === 'NO') {
+                    queryClient.setQueryData(
+                      ["allFlagNoExpedisiData"],
+                      (oldMap: Map<string, any> | undefined) => {
+                          const newMap = oldMap ? new Map(oldMap) : new Map();
+                          newMap.set(normalizedCurrentResi, expedisiRecord);
+                          return newMap;
+                      }
+                    );
+                  }
+                });
             }
         }
         console.timeEnd("handleScanResi_expedisi_lookup");
@@ -263,19 +267,11 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       // --- FINAL ERROR HANDLING BLOCK ---
       if (validationStatus !== 'OK') {
         showError(validationMessage || "Validasi gagal.");
-        switch (validationStatus) {
-          case 'NOT_FOUND_EXPEDISI':
-          case 'MISMATCH_EXPEDISI':
-            playBeep(beepFailure);
-            break;
-          case 'DUPLICATE_PROCESSED':
-          case 'DUPLICATE_SCANNED':
-            playBeep(beepDouble);
-            break;
-          default:
-            playBeep(beepFailure);
-            break;
-        }
+        playBeep(
+          validationStatus === 'DUPLICATE_PROCESSED' || validationStatus === 'DUPLICATE_SCANNED'
+            ? beepDouble
+            : beepFailure
+        );
         setIsProcessing(false);
         keepFocus();
         console.timeEnd("handleScanResi_total");
@@ -293,6 +289,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         optimisticId: currentOptimisticId,
       };
 
+      // These updates are critical for immediate UI feedback on the input page
       queryClient.setQueryData(queryKeyForInputPageDisplay, (oldData: ResiExpedisiData[] | undefined) => {
         const newData = [...(oldData || []), newResiEntry];
         return newData;
@@ -302,27 +299,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         newSet.add(normalizedCurrentResi);
         return newSet;
       });
-      queryClient.setQueryData(["allExpedisiDataUnfiltered", formattedToday], (oldMap: Map<string, any> | undefined) => {
-        const newMap = oldMap ? new Map(oldMap) : new Map();
-        const existingExpedisi = newMap.get(normalizedCurrentResi);
-        
-        newMap.set(normalizedCurrentResi, {
-          ...existingExpedisi,
-          resino: currentResi,
-          couriername: actualCourierName,
-          flag: "YES",
-          created: existingExpedisi?.created || new Date().toISOString(),
-          cekfu: existingExpedisi?.cekfu || false,
-          optimisticId: currentOptimisticId,
-        });
-        return newMap;
-      });
-      queryClient.setQueryData(["allFlagNoExpedisiData"], (oldMap: Map<string, any> | undefined) => {
-        const newMap = oldMap ? new Map(oldMap) : new Map();
-        newMap.delete(normalizedCurrentResi);
-        return newMap;
-      });
-
       queryClient.setQueryData(queryKeyForKarungSummary, (oldSummary: { karung_number: string; quantity: number; }[] | undefined) => {
         const newSummary = oldSummary ? [...oldSummary] : [];
         const existingKarungIndex = newSummary.findIndex(item => item.karung_number === selectedKarung);
@@ -339,6 +315,30 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
           });
         }
         return newSummary;
+      });
+
+      // These updates can be deferred using startTransition
+      startTransition(() => {
+        queryClient.setQueryData(["allExpedisiDataUnfiltered", formattedToday], (oldMap: Map<string, any> | undefined) => {
+          const newMap = oldMap ? new Map(oldMap) : new Map();
+          const existingExpedisi = newMap.get(normalizedCurrentResi);
+          
+          newMap.set(normalizedCurrentResi, {
+            ...existingExpedisi,
+            resino: currentResi,
+            couriername: actualCourierName,
+            flag: "YES",
+            created: existingExpedisi?.created || new Date().toISOString(),
+            cekfu: existingExpedisi?.cekfu || false,
+            optimisticId: currentOptimisticId,
+          });
+          return newMap;
+        });
+        queryClient.setQueryData(["allFlagNoExpedisiData"], (oldMap: Map<string, any> | undefined) => {
+          const newMap = oldMap ? new Map(oldMap) : new Map();
+          newMap.delete(normalizedCurrentResi);
+          return newMap;
+        });
       });
       console.timeEnd("handleScanResi_optimistic_updates");
 
@@ -386,19 +386,23 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
             newSet.delete(normalizedCurrentResi);
             return newSet;
           });
+          // Revert deferred updates immediately on error
           queryClient.setQueryData(["allExpedisiDataUnfiltered", formattedToday], (oldMap: Map<string, any> | undefined) => {
             const newMap = oldMap ? new Map(oldMap) : new Map();
             const existingExpedisi = newMap.get(normalizedCurrentResi);
             if (existingExpedisi && existingExpedisi.optimisticId === lastOptimisticIdRef.current) {
               const revertedExpedisi = { ...existingExpedisi };
               delete revertedExpedisi.optimisticId; 
-              revertedExpedisi.flag = "NO";
+              revertedExpedisi.flag = "NO"; // Revert flag to NO
               newMap.set(normalizedCurrentResi, revertedExpedisi);
             }
             return newMap;
           });
           queryClient.setQueryData(["allFlagNoExpedisiData"], (oldMap: Map<string, any> | undefined) => {
             const newMap = oldMap ? new Map(oldMap) : new Map();
+            // If the item was originally in allFlagNoExpedisiData, add it back
+            // This requires knowing its original state, which is tricky.
+            // For simplicity, we'll just invalidate this query to refetch it.
             queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] }); 
             return newMap; 
           });
@@ -424,14 +428,14 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       keepFocus();
       console.timeEnd("handleScanResi_total"); // End total timing
     }
-  }, [resiNumber, expedition, selectedKarung, formattedDate, allExpedisiDataUnfiltered, recentScannedResiNumbers, allFlagNoExpedisiData, queryClient, triggerSync, validateInput, derivedRecentProcessedResiNumbers]);
+  }, [resiNumber, expedition, selectedKarung, formattedDate, allExpedisiDataUnfiltered, recentScannedResiNumbers, allFlagNoExpedisiData, queryClient, triggerSync, validateInput, derivedRecentProcessedResiNumbers, startTransition]); // Add startTransition to dependencies
 
   return {
     resiNumber,
     setResiNumber,
     handleScanResi,
     resiInputRef,
-    isProcessing,
+    isProcessing: isProcessing || isPending, // Combine with isPending
     isLoadingRecentScannedResiNumbers,
     isLoadingAllFlagNoExpedisiData,
   };

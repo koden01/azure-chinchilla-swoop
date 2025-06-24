@@ -52,7 +52,7 @@ export const fetchAllDataPaginated = async (
     const { data, error } = await query;
 
     if (error) {
-      console.error(`Error fetching paginated data from ${tableName} at offset ${offset}:`, error);
+      console.error(`Error fetching paginated data from ${tableName}:`, error);
       throw error;
     }
 
@@ -66,7 +66,7 @@ export const fetchAllDataPaginated = async (
   }
 
   if (currentIteration >= maxIterations) {
-    console.warn(`Reached maxIterations (${maxIterations}) for ${tableName}. Stopping fetch early. Total records: ${allRecords.length}`);
+    console.warn(`[supabaseFetch] Reached maxIterations (${maxIterations}) for ${tableName}. Stopping fetch early. Total records: ${allRecords.length}`);
   }
   return allRecords;
 };

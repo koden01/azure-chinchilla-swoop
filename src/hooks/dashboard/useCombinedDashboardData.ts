@@ -264,7 +264,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
           summaries[normalizedCourierName].sisa++;
         }
       } else {
-        console.warn(`expedisiDataForSelectedDate: Normalized Courier name '${normalizedCourierName}' not found in summaries or is null/empty for resino: ${exp.resino}. This record will not be counted in expedition summaries.`);
+        // console.warn(`[useCombinedDashboardData] ExpedisiData: Normalized Courier name '${normalizedCourierName}' not found in summaries or is null/empty for resino: ${exp.resino}. This record will not be counted in expedition summaries.`);
       }
     });
 
@@ -296,7 +296,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
         if (attributedExpeditionName && summaries[attributedExpeditionName]) {
           summaries[attributedExpeditionName].totalBatal++;
         } else {
-          console.warn(`Resi ${resi.Resi} is 'batal' but original expedition '${attributedExpeditionName}' not found in summaries or is null/empty. Not counted in per-expedition 'totalBatal'.`);
+          // console.warn(`[useCombinedDashboardData] Resi ${resi.Resi} is 'batal' but original expedition '${attributedExpeditionName}' not found in summaries or is null/empty. Not counted in per-expedition 'totalBatal'.`);
         }
       }
       else if (attributedExpeditionName && summaries[attributedExpeditionName]) {
@@ -310,7 +310,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
           summaries[attributedExpeditionName].jumlahKarung.add(resi.nokarung);
         }
       } else {
-        console.warn(`Resi ${resi.Resi} (Keterangan: ${resi.Keterangan}, Schedule: ${resi.schedule}) not attributed to any known expedition summary.`);
+        // console.warn(`[useCombinedDashboardData] Resi ${resi.Resi} (Keterangan: ${resi.Keterangan}, Schedule: ${resi.schedule}) not attributed to any known expedition summary.`);
       }
     });
 

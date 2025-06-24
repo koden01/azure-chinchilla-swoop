@@ -28,12 +28,12 @@ export const useBackgroundSync = () => {
 
   const performSync = async () => {
     if (isSyncingRef.current) {
-      console.log(`[BackgroundSync] Sync already in progress. Skipping.`);
+      console.log(`[BackgroundSync] Sync in progress. Skipping.`);
       return;
     }
 
     isSyncingRef.current = true;
-    console.log(`[BackgroundSync] Starting sync...`);
+    console.log(`[BackgroundSync] Starting sync.`);
 
     let operationsSynced = 0;
     let operationsFailed = 0;
@@ -44,14 +44,14 @@ export const useBackgroundSync = () => {
       const pendingOperations = await getPendingOperations();
 
       if (pendingOperations.length === 0) {
-        console.log(`[BackgroundSync] No pending operations found. Exiting sync.`);
+        console.log(`[BackgroundSync] No pending operations. Exiting sync.`);
         return;
       }
 
       console.log(`[BackgroundSync] Found ${pendingOperations.length} pending operations.`);
 
       for (const op of pendingOperations) {
-        console.log(`[BackgroundSync] Processing operation ${op.type} for resi: ${op.payload.resiNumber || 'N/A'}`);
+        console.log(`[BackgroundSync] Processing ${op.type} for resi: ${op.payload.resiNumber || 'N/A'}`);
         try {
           let success = false;
           if (op.type === 'batal') {
@@ -66,7 +66,6 @@ export const useBackgroundSync = () => {
               }, { onConflict: 'Resi', ignoreDuplicates: false });
 
             if (resiUpsertError) throw resiUpsertError;
-            console.log(`[BackgroundSync] 'batal' for ${op.payload.resiNumber} successful.`);
             success = true;
             affectedDates.add(format(new Date(op.payload.createdTimestampFromExpedisi || op.timestamp), 'yyyy-MM-dd'));
             if (op.payload.keteranganValue) affectedExpeditions.add(op.payload.keteranganValue);
@@ -83,7 +82,6 @@ export const useBackgroundSync = () => {
               }, { onConflict: 'Resi', ignoreDuplicates: false });
 
             if (resiUpsertError) throw resiUpsertError;
-            console.log(`[BackgroundSync] 'confirm' for ${op.payload.resiNumber} successful.`);
             success = true;
             affectedDates.add(format(new Date(op.payload.expedisiCreatedTimestamp || op.timestamp), 'yyyy-MM-dd'));
             if (op.payload.keteranganValue) affectedExpeditions.add(op.payload.keteranganValue);
@@ -97,7 +95,6 @@ export const useBackgroundSync = () => {
               .returns<TblExpedisiRecord[]>();
 
             if (_fetchExpedisiError) throw _fetchExpedisiError;
-            console.log(`[BackgroundSync] 'cekfu' for ${op.payload.resiNumber} successful.`);
             success = true;
             if (expedisiRecord && expedisiRecord.length > 0) {
               affectedDates.add(format(new Date(expedisiRecord[0].created), 'yyyy-MM-dd'));
@@ -127,19 +124,16 @@ export const useBackgroundSync = () => {
               .update({ cekfu: false })
               .eq("resino", resiNumber);
 
-            if (expedisiUpdateError) {
-              if (expedisiUpdateError.code !== 'PGRST116') { // PGRST116 means "no rows found"
-                console.warn(`[BackgroundSync] Warning: Failed to update tbl_expedisi for resi ${resiNumber}: ${expedisiUpdateError.message}`);
-              }
+            if (expedisiUpdateError && expedisiUpdateError.code !== 'PGRST116') { // PGRST116 means "no rows found"
+              console.warn(`[BackgroundSync] Warning: Failed to update tbl_expedisi for resi ${resiNumber}: ${expedisiUpdateError.message}`);
             }
-            console.log(`[BackgroundSync] 'scan' for ${resiNumber} successful.`);
             success = true;
             affectedDates.add(format(new Date(op.timestamp), 'yyyy-MM-dd'));
             if (courierNameFromExpedisi) affectedExpeditions.add(courierNameFromExpedisi);
           }
 
           if (success) {
-            console.log(`[BackgroundSync] Deleting operation ${op.id} from IndexedDB.`);
+            console.log(`[BackgroundSync] Operation ${op.id} successful. Deleting.`);
             await deletePendingOperation(op.id);
             operationsSynced++;
           }
@@ -152,7 +146,7 @@ export const useBackgroundSync = () => {
             showError(`Gagal menyinkronkan resi ${op.payload.resiNumber || 'N/A'} setelah beberapa percobaan. Silakan coba lagi secara manual.`);
             await deletePendingOperation(op.id);
           } else {
-            console.log(`[BackgroundSync] Updating operation ${op.id} with new retry count: ${op.retries}.`);
+            console.log(`[BackgroundSync] Operation ${op.id} failed. Retrying (${op.retries}/${MAX_RETRIES}).`);
             await updatePendingOperation(op);
           }
           operationsFailed++;
@@ -190,7 +184,7 @@ export const useBackgroundSync = () => {
   };
 
   useEffect(() => {
-    console.log(`[BackgroundSync] Setting up initial sync and interval.`);
+    console.log(`[BackgroundSync] Initializing sync.`);
     performSync();
     syncIntervalRef.current = window.setInterval(performSync, SYNC_INTERVAL_MS);
     return () => {

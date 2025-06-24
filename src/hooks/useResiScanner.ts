@@ -41,6 +41,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
   const formattedToday = format(today, "yyyy-MM-dd");
 
   // Initialize localCurrentCount based on allResiForExpedition when it loads or changes
+  // This useEffect is now primarily for initial load and background sync updates.
   React.useEffect(() => {
     if (allResiForExpedition && expedition && selectedKarung) {
       const count = allResiForExpedition.filter(item =>
@@ -311,15 +312,20 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
 
       // All other updates can be deferred using startTransition
       startTransition(() => {
+        // Update allResiForExpedition
         queryClient.setQueryData(queryKeyForInputPageDisplay, (oldData: ResiExpedisiData[] | undefined) => {
           const newData = [...(oldData || []), newResiEntry];
           return newData;
         });
+
+        // Update recentScannedResiNumbers
         queryClient.setQueryData(["recentScannedResiNumbers", formattedToday], (oldSet: Set<string> | undefined) => {
           const newSet = oldSet ? new Set(oldSet) : new Set();
           newSet.add(normalizedCurrentResi);
           return newSet;
         });
+
+        // Update karungSummary
         queryClient.setQueryData(queryKeyForKarungSummary, (oldSummary: { karung_number: string; quantity: number; }[] | undefined) => {
           const newSummary = oldSummary ? [...oldSummary] : [];
           const existingKarungIndex = newSummary.findIndex(item => item.karung_number === selectedKarung);
@@ -338,6 +344,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
           return newSummary;
         });
         
+        // Update allExpedisiDataUnfiltered
         queryClient.setQueryData(["allExpedisiDataUnfiltered", formattedToday], (oldMap: Map<string, any> | undefined) => {
           const newMap = oldMap ? new Map(oldMap) : new Map();
           const existingExpedisi = newMap.get(normalizedCurrentResi);
@@ -353,6 +360,8 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
           });
           return newMap;
         });
+
+        // Update allFlagNoExpedisiData
         queryClient.setQueryData(["allFlagNoExpedisiData"], (oldMap: Map<string, any> | undefined) => {
           const newMap = oldMap ? new Map(oldMap) : new Map();
           newMap.delete(normalizedCurrentResi);

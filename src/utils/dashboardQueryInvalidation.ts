@@ -1,5 +1,5 @@
 import { QueryClient } from "@tanstack/react-query";
-import { format } from "date-fns"; // Menghapus subDays
+import { format } from "date-fns";
 
 export const invalidateDashboardQueries = (queryClient: QueryClient, date: Date | undefined, expedition?: string) => {
   const formattedDate = date ? format(date, "yyyy-MM-dd") : "";
@@ -17,13 +17,13 @@ export const invalidateDashboardQueries = (queryClient: QueryClient, date: Date 
   queryClient.invalidateQueries({ queryKey: ["followUpData", formattedDate] });
 
   // Invalidate date-specific data queries, but make them non-exact to catch any date
-  queryClient.invalidateQueries({ queryKey: ["expedisiDataForSelectedDate"], exact: false }); // Invalidate for any date
-  queryClient.invalidateQueries({ queryKey: ["allResiData"], exact: false }); // Invalidate for any date
+  queryClient.invalidateQueries({ queryKey: ["expedisiDataForSelectedDate"], exact: false });
+  queryClient.invalidateQueries({ queryKey: ["allResiData"], exact: false });
   
   // Invalidate queries specific to the Input page and comprehensive data
   // Normalize expedition name for invalidation if it's ID_REKOMENDASI, as Input page treats it as 'ID'
   let normalizedExpeditionForInput: string | undefined = expedition;
-  if (expedition === 'ID_REKOMENDasi') {
+  if (expedition === 'ID_REKOMENDASI') { // Fixed typo here
     normalizedExpeditionForInput = 'ID';
   }
 

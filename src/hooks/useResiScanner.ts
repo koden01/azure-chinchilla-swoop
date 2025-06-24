@@ -387,6 +387,14 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
 
       lastOptimisticIdRef.current = currentOptimisticId;
       
+      // Move success toast and beep here for instant feedback
+      showSuccess(`Resi ${currentResi} Berhasil`);
+      try {
+        beepSuccess.play();
+      } catch (e) {
+        console.error(`[${new Date().toISOString()}] [useResiScanner] Error playing beepSuccess:`, e);
+      }
+
       console.time("[useResiScanner] Add to IndexedDB"); // Fixed timer label
       // Add operation to IndexedDB for background sync
       await addPendingOperation({
@@ -400,13 +408,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         timestamp: Date.now(),
       });
       console.timeEnd("[useResiScanner] Add to IndexedDB"); // Fixed timer label
-
-      showSuccess(`Resi ${currentResi} Berhasil`); // Updated toast message
-      try {
-        beepSuccess.play();
-      } catch (e) {
-        console.error(`[${new Date().toISOString()}] [useResiScanner] Error playing beepSuccess:`, e);
-      }
 
       // Clear the optimistic ref as the operation was successfully added to IndexedDB
       lastOptimisticIdRef.current = null;

@@ -68,8 +68,8 @@ const InputPage = () => {
     handleScanResi,
     resiInputRef,
     isProcessing,
-    isLoadingRecentResiNumbersForValidation, // NEW: Get loading state
-    isLoadingAllFlagNoExpedisiData, // NEW: Get loading state
+    isLoadingRecentScannedResiNumbers, // Corrected name
+    isLoadingAllFlagNoExpedisiData,
   } = useResiScanner({ 
     expedition, 
     selectedKarung, 
@@ -90,7 +90,7 @@ const InputPage = () => {
   }, [expedition, highestKarung]);
 
   React.useEffect(() => {
-    if (expedition && selectedKarung && resiInputRef.current && !isProcessing && !isLoadingRecentResiNumbersForValidation && !isLoadingAllFlagNoExpedisiData) {
+    if (expedition && selectedKarung && resiInputRef.current && !isProcessing && !isLoadingRecentScannedResiNumbers && !isLoadingAllFlagNoExpedisiData) {
       const timer = setTimeout(() => {
         if (resiInputRef.current) {
           resiInputRef.current.focus();
@@ -98,9 +98,9 @@ const InputPage = () => {
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [expedition, selectedKarung, isProcessing, isLoadingRecentResiNumbersForValidation, isLoadingAllFlagNoExpedisiData]); // Add new loading states to dependencies
+  }, [expedition, selectedKarung, isProcessing, isLoadingRecentScannedResiNumbers, isLoadingAllFlagNoExpedisiData]); // Add new loading states to dependencies
 
-  const isInputDisabled = !expedition || !selectedKarung || isProcessing || isLoadingAllExpedisiUnfiltered || isLoadingRecentResiNumbersForValidation || isLoadingAllFlagNoExpedisiData;
+  const isInputDisabled = !expedition || !selectedKarung || isProcessing || isLoadingAllExpedisiUnfiltered || isLoadingRecentScannedResiNumbers || isLoadingAllFlagNoExpedisiData;
 
   return (
     <React.Fragment>
@@ -110,7 +110,7 @@ const InputPage = () => {
           <div className="text-6xl font-bold">
             {!expedition
               ? "Pilih Expedisi"
-              : isLoadingAllResiForExpedition || isLoadingAllExpedisiUnfiltered || isLoadingRecentResiNumbersForValidation || isLoadingAllFlagNoExpedisiData // Include new loading states
+              : isLoadingAllResiForExpedition || isLoadingAllExpedisiUnfiltered || isLoadingRecentScannedResiNumbers || isLoadingAllFlagNoExpedisiData // Include new loading states
               ? "..."
               : currentCount}
           </div>
@@ -133,7 +133,7 @@ const InputPage = () => {
               <label htmlFor="expedition-select" className="block text-left text-sm font-medium mb-2">
                 Expedisi
               </label>
-              <Select onValueChange={setExpedition} value={expedition} disabled={isProcessing || isLoadingRecentResiNumbersForValidation || isLoadingAllFlagNoExpedisiData}>
+              <Select onValueChange={setExpedition} value={expedition} disabled={isProcessing || isLoadingRecentScannedResiNumbers || isLoadingAllFlagNoExpedisiData}>
                 <SelectTrigger id="expedition-select" className="w-full bg-white text-gray-800 h-12 text-center justify-center">
                   <SelectValue placeholder="Pilih Expedisi" />
                 </SelectTrigger>
@@ -148,7 +148,7 @@ const InputPage = () => {
               <label htmlFor="no-karung-select" className="block text-left text-sm font-medium mb-2">
                 No Karung
               </label>
-              <Select onValueChange={setSelectedKarung} value={selectedKarung} disabled={!expedition || isProcessing || isLoadingRecentResiNumbersForValidation || isLoadingAllFlagNoExpedisiData}>
+              <Select onValueChange={setSelectedKarung} value={selectedKarung} disabled={!expedition || isProcessing || isLoadingRecentScannedResiNumbers || isLoadingAllFlagNoExpedisiData}>
                 <SelectTrigger id="no-karung-select" className="w-full bg-white text-gray-800 h-12 text-center justify-center">
                   <SelectValue placeholder="Pilih No Karung" />
                 </SelectTrigger>
@@ -185,7 +185,7 @@ const InputPage = () => {
               {isProcessing && (
                 <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-6 w-6 animate-spin text-gray-500" />
               )}
-              {(isLoadingRecentResiNumbersForValidation || isLoadingAllFlagNoExpedisiData) && !isProcessing && (
+              {(isLoadingRecentScannedResiNumbers || isLoadingAllFlagNoExpedisiData) && !isProcessing && (
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center text-gray-500">
                   <Loader2 className="h-6 w-6 animate-spin mr-2" />
                   <span className="text-sm">Memuat validasi...</span>

@@ -14,7 +14,8 @@ import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import KarungSummaryModal from "@/components/KarungSummaryModal";
 import { useQuery } from "@tanstack/react-query";
-import { format } from "date-fns"; // subDays dihapus karena tidak lagi diperlukan
+import { format } from "date-fns";
+import { fetchAllDataPaginated } from "@/utils/supabaseFetch"; // Import ini ditambahkan
 
 const InputPage = () => {
   const { expedition, setExpedition } = useExpedition();
@@ -32,7 +33,7 @@ const InputPage = () => {
     queryFn: async () => {
       const data = await fetchAllDataPaginated("tbl_expedisi", "created", today, today); // Hanya ambil data untuk hari ini
       const expedisiMap = new Map<string, any>();
-      data.forEach(item => {
+      data.forEach((item: { resino: string | null }) => { // Tipe 'item' ditambahkan di sini
         if (item.resino) {
           expedisiMap.set(item.resino.toLowerCase(), item);
         }

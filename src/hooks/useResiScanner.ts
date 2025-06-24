@@ -40,7 +40,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
   const today = new Date();
   const formattedToday = format(today, "yyyy-MM-dd");
 
-  // NEW: Calculate localCurrentCount whenever relevant data changes
+  // Initialize localCurrentCount based on allResiForExpedition when it loads or changes
   React.useEffect(() => {
     if (allResiForExpedition && expedition && selectedKarung) {
       const count = allResiForExpedition.filter(item =>

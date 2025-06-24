@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import KarungSummaryModal from "@/components/KarungSummaryModal";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { fetchAllDataPaginated } from "@/utils/supabaseFetch"; // Import ini ditambahkan
+import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 
 const InputPage = () => {
   const { expedition, setExpedition } = useExpedition();
@@ -47,7 +47,6 @@ const InputPage = () => {
 
   const {
     isLoadingAllResiForExpedition,
-    currentCount: getCountForSelectedKarung, // Renamed to avoid conflict with memoized value
     lastKarung,
     highestKarung,
     karungOptions,
@@ -56,20 +55,15 @@ const InputPage = () => {
     expeditionOptions,
   } = useResiInputData(expedition, false);
 
-  // Memoize the result of getCountForSelectedKarung
-  const currentCount = React.useMemo(() => {
-    return getCountForSelectedKarung(selectedKarung);
-  }, [getCountForSelectedKarung, selectedKarung]);
-
-
   const {
     resiNumber,
     setResiNumber,
     handleScanResi,
     resiInputRef,
     isProcessing,
-    isLoadingRecentScannedResiNumbers, // Corrected name
+    isLoadingRecentScannedResiNumbers,
     isLoadingAllFlagNoExpedisiData,
+    currentCount, // Now directly from useResiScanner
   } = useResiScanner({ 
     expedition, 
     selectedKarung, 
@@ -98,7 +92,7 @@ const InputPage = () => {
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [expedition, selectedKarung, isProcessing, isLoadingRecentScannedResiNumbers, isLoadingAllFlagNoExpedisiData]); // Add new loading states to dependencies
+  }, [expedition, selectedKarung, isProcessing, isLoadingRecentScannedResiNumbers, isLoadingAllFlagNoExpedisiData]);
 
   const isInputDisabled = !expedition || !selectedKarung || isProcessing || isLoadingAllExpedisiUnfiltered || isLoadingRecentScannedResiNumbers || isLoadingAllFlagNoExpedisiData;
 
@@ -110,7 +104,7 @@ const InputPage = () => {
           <div className="text-6xl font-bold">
             {!expedition
               ? "Pilih Expedisi"
-              : isLoadingAllResiForExpedition || isLoadingAllExpedisiUnfiltered || isLoadingRecentScannedResiNumbers || isLoadingAllFlagNoExpedisiData // Include new loading states
+              : isLoadingAllResiForExpedition || isLoadingAllExpedisiUnfiltered || isLoadingRecentScannedResiNumbers || isLoadingAllFlagNoExpedisiData
               ? "..."
               : currentCount}
           </div>

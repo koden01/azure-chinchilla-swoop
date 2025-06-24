@@ -33,11 +33,9 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
   const queryClient = useQueryClient();
   const { triggerSync } = useBackgroundSync();
 
-  // Calculate date range for today only
   const today = new Date();
-  const formattedToday = format(today, "yyyy-MM-dd"); // Use for query key and fetch arguments
+  const formattedToday = format(today, "yyyy-MM-dd");
 
-  // Query to fetch tbl_resi data for today for local duplicate validation (general scan history)
   const { data: recentScannedResiNumbers, isLoading: isLoadingRecentScannedResiNumbers } = useQuery<Set<string>>({
     queryKey: ["recentScannedResiNumbers", formattedToday], // Only today's date
     queryFn: async () => {
@@ -57,7 +55,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
     enabled: true, // Always enabled
   });
 
-  // NEW: Query to fetch ALL tbl_expedisi data with flag = 'NO' for comprehensive local validation
   const { data: allFlagNoExpedisiData, isLoading: isLoadingAllFlagNoExpedisiData } = useQuery<Map<string, any>>({
     queryKey: ["allFlagNoExpedisiData"], // This query remains global as it's for all 'NO' flags
     queryFn: async () => {
@@ -83,6 +80,19 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
     enabled: true, // Always enabled
   });
 
+  // Memoize derivedRecentProcessedResiNumbers to avoid re-calculation on every render
+  const derivedRecentProcessedResiNumbers = React.useMemo(() => {
+    const processedSet = new Set<string>();
+    if (allExpedisiDataUnfiltered) {
+      for (const [resi, data] of allExpedisiDataUnfiltered.entries()) {
+        if (data.flag === 'YES') {
+          processedSet.add(resi);
+        }
+      }
+    }
+    return processedSet;
+  }, [allExpedisiDataUnfiltered]);
+
   const lastOptimisticIdRef = React.useRef<string | null>(null);
 
   const keepFocus = () => {
@@ -93,41 +103,46 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
     }, 0);
   };
 
+  const playBeep = (audio: HTMLAudioElement) => {
+    setTimeout(() => {
+      try {
+        audio.play();
+      } catch (e) {
+        console.error("[useResiScanner] Error playing beep sound:", e);
+      }
+    }, 0); // Delay audio play to not block main thread
+  };
+
   const validateInput = (resi: string) => {
     if (!resi) {
       showError("Nomor resi tidak boleh kosong.");
-      try {
-        beepFailure.play();
-      } catch (e) {
-        console.error("[useResiScanner] Error playing beepFailure:", e);
-      }
+      playBeep(beepFailure);
       return false;
     }
     if (!expedition || !selectedKarung) {
       showError("Mohon pilih Expedisi dan No Karung terlebih dahulu.");
-      try {
-        beepFailure.play();
-      } catch (e) {
-        console.error("[useResiScanner] Error playing beepFailure:", e);
-      }
+      playBeep(beepFailure);
       return false;
     }
     return true;
   };
 
   const handleScanResi = React.useCallback(async () => {
-    console.time("handleScanResi_sync_part"); // Start timing synchronous part
+    console.time("handleScanResi_total"); // Start total timing
     dismissToast();
     const currentResi = resiNumber.trim();
     const normalizedCurrentResi = currentResi.toLowerCase().trim();
     setResiNumber("");
 
+    console.time("handleScanResi_validation_sync");
     if (!validateInput(currentResi)) {
       setIsProcessing(false);
       keepFocus();
-      console.timeEnd("handleScanResi_sync_part");
+      console.timeEnd("handleScanResi_validation_sync");
+      console.timeEnd("handleScanResi_total");
       return;
     }
+    console.timeEnd("handleScanResi_validation_sync");
 
     setIsProcessing(true);
 
@@ -143,15 +158,6 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
 
     try {
       // 1. Check if resi has already been PROCESSED (flag = YES in tbl_expedisi)
-      const derivedRecentProcessedResiNumbers = new Set<string>();
-      if (allExpedisiDataUnfiltered) {
-        for (const [resi, data] of allExpedisiDataUnfiltered.entries()) {
-          if (data.flag === 'YES') {
-            derivedRecentProcessedResiNumbers.add(resi);
-          }
-        }
-      }
-
       if (derivedRecentProcessedResiNumbers.has(normalizedCurrentResi)) {
         validationStatus = 'DUPLICATE_PROCESSED';
         validationMessage = `DOUBLE! Resi ini sudah diproses.`;
@@ -160,6 +166,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       // 2. Check if resi has already been SCANNED (in tbl_resi)
       if (validationStatus === 'OK') {
         if (recentScannedResiNumbers?.has(normalizedCurrentResi)) {
+          // Only fetch detail if it's a duplicate scanned resi
           const { data: existingResiDetail, error: _detailError } = await supabase
             .from("tbl_resi")
             .select("created")
@@ -178,6 +185,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
 
       // Only proceed with further checks if not already a duplicate
       if (validationStatus === 'OK') {
+        console.time("handleScanResi_expedisi_lookup");
         // 3. Attempt to find expedisiRecord from caches or direct RPC call
         expedisiRecord = allExpedisiDataUnfiltered?.get(normalizedCurrentResi);
 
@@ -219,6 +227,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
                 }
             }
         }
+        console.timeEnd("handleScanResi_expedisi_lookup");
       }
 
       // 4. Determine actualCourierName and final validationStatus
@@ -254,30 +263,27 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       // --- FINAL ERROR HANDLING BLOCK ---
       if (validationStatus !== 'OK') {
         showError(validationMessage || "Validasi gagal.");
-        try {
-          switch (validationStatus) {
-            case 'NOT_FOUND_EXPEDISI':
-            case 'MISMATCH_EXPEDISI':
-              beepFailure.play();
-              break;
-            case 'DUPLICATE_PROCESSED':
-            case 'DUPLICATE_SCANNED':
-              beepDouble.play();
-              break;
-            default:
-              beepFailure.play();
-              break;
-          }
-        } catch (e) {
-          console.error("[useResiScanner] Error playing beep sound:", e);
+        switch (validationStatus) {
+          case 'NOT_FOUND_EXPEDISI':
+          case 'MISMATCH_EXPEDISI':
+            playBeep(beepFailure);
+            break;
+          case 'DUPLICATE_PROCESSED':
+          case 'DUPLICATE_SCANNED':
+            playBeep(beepDouble);
+            break;
+          default:
+            playBeep(beepFailure);
+            break;
         }
         setIsProcessing(false);
         keepFocus();
-        console.timeEnd("handleScanResi_sync_part");
+        console.timeEnd("handleScanResi_total");
         return;
       }
 
       // --- If all OK, proceed with optimistic update and saving to IndexedDB ---
+      console.time("handleScanResi_optimistic_updates");
       const newResiEntry: ResiExpedisiData = {
         Resi: currentResi,
         nokarung: selectedKarung,
@@ -334,15 +340,12 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         }
         return newSummary;
       });
+      console.timeEnd("handleScanResi_optimistic_updates");
 
       lastOptimisticIdRef.current = currentOptimisticId;
       
       showSuccess(`Resi ${currentResi} Berhasil`);
-      try {
-        beepSuccess.play();
-      } catch (e) {
-        console.error("[useResiScanner] Error playing beepSuccess:", e);
-      }
+      playBeep(beepSuccess);
 
       await addPendingOperation({
         id: `scan-${currentResi}-${Date.now()}`,
@@ -371,11 +374,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         errorMessage = `Terjadi kesalahan Supabase (${error.code}): ${error.message || error.details}`;
       }
       showError(errorMessage);
-      try {
-        beepFailure.play();
-      } catch (e) {
-        console.error("[useResiScanner] Error playing beepFailure:", e);
-      }
+      playBeep(beepFailure);
 
       if (lastOptimisticIdRef.current) {
           queryClient.setQueryData(queryKeyForInputPageDisplay, (oldData: ResiExpedisiData[] | undefined) => {
@@ -423,9 +422,9 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
     } finally {
       setIsProcessing(false);
       keepFocus();
-      console.timeEnd("handleScanResi_sync_part"); // End timing synchronous part
+      console.timeEnd("handleScanResi_total"); // End total timing
     }
-  }, [resiNumber, expedition, selectedKarung, formattedDate, allExpedisiDataUnfiltered, recentScannedResiNumbers, allFlagNoExpedisiData, queryClient, triggerSync, validateInput]);
+  }, [resiNumber, expedition, selectedKarung, formattedDate, allExpedisiDataUnfiltered, recentScannedResiNumbers, allFlagNoExpedisiData, queryClient, triggerSync, validateInput, derivedRecentProcessedResiNumbers]);
 
   return {
     resiNumber,

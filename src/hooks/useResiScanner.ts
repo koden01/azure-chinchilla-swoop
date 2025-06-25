@@ -6,7 +6,27 @@ import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 import { normalizeExpeditionName } from "@/utils/expeditionUtils";
-import { addPendingOperation } => {
+import { addPendingOperation } from "@/integrations/indexeddb/pendingOperations"; // Baris ini yang diperbaiki
+
+interface UseResiScannerProps {
+  expedition: string;
+  selectedKarung: string;
+  formattedDate: string;
+  allExpedisiDataUnfiltered: Map<string, any> | undefined;
+  allResiForExpedition: any[] | undefined;
+  initialTotalExpeditionItems: number | undefined;
+  initialRemainingExpeditionItems: number | undefined;
+}
+
+export const useResiScanner = ({ 
+  expedition, 
+  selectedKarung, 
+  formattedDate,
+  allExpedisiDataUnfiltered,
+  allResiForExpedition,
+  initialTotalExpeditionItems,
+  initialRemainingExpeditionItems,
+}: UseResiScannerProps) => {
   const [resiNumber, setResiNumber] = React.useState<string>("");
   const [isProcessing, setIsProcessing] = React.useState<boolean>(false);
   const [optimisticTotalExpeditionItems, setOptimisticTotalExpeditionItems] = React.useState(initialTotalExpeditionItems || 0);

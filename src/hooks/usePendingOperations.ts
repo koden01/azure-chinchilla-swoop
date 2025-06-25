@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { getPendingOperations, PendingOperation } from '@/integrations/indexeddb/pendingOperations';
 import { initDB } from '@/integrations/indexeddb/db';
 
-const PENDING_OPERATIONS_POLL_INTERVAL = 1000 * 30; // Poll every 30 seconds (changed from 5 seconds)
+const PENDING_OPERATIONS_POLL_INTERVAL = 1000 * 60; // Poll every 1 minute
 
 export const usePendingOperations = () => {
   const [pendingOperations, setPendingOperations] = useState<PendingOperation[]>([]);

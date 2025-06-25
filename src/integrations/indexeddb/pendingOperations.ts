@@ -28,7 +28,7 @@ export const addPendingOperation = async (operation: PendingOperation) => {
 };
 
 export const getPendingOperations = async (): Promise<PendingOperation[]> => {
-  console.log(`[IndexedDB] Fetching all pending operations.`);
+  // console.log(`[IndexedDB] Fetching all pending operations.`); // Log ini dihapus karena redundan
   const db = await initDB();
   const operations = await db.getAll(STORE_NAME);
   return operations;

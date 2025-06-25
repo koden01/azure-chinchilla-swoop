@@ -81,7 +81,7 @@ const DashboardPage: React.FC = () => {
           />
 
           {/* Summary Cards Section */}
-          <DashboardSummaryCards
+          {/* <DashboardSummaryCards
             transaksiHariIni={transaksiHariIni}
             isLoadingTransaksiHariIni={isLoadingTransaksiHariIni}
             totalScan={totalScan}
@@ -100,18 +100,18 @@ const DashboardPage: React.FC = () => {
             handleOpenBelumKirimModal={handleOpenBelumKirimModal}
             handleOpenFollowUpFlagNoModal={handleOpenFollowUpFlagNoModal}
             handleOpenScanFollowupModal={handleOpenScanFollowupModal}
-          />
+          /> */}
 
           {/* Expedition Details Section */}
-          <DashboardExpeditionDetails
+          {/* <DashboardExpeditionDetails
             sortedExpeditionSummaries={sortedExpeditionSummaries}
             isLoadingAny={isLoadingAny}
             handleOpenExpeditionDetailModal={handleOpenExpeditionDetailModal}
-          />
+          /> */}
         </div>
       </div>
 
-      <ResiDetailModal
+      {/* <ResiDetailModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         title={modalTitle}
@@ -121,7 +121,7 @@ const DashboardPage: React.FC = () => {
         onBatalResi={handleBatalResi}
         onConfirmResi={onConfirmResi}
         onCekfuToggle={onCekfuToggle}
-      />
+      /> */}
     </React.Fragment>
   );
 };

@@ -40,7 +40,7 @@ export const useResiScanner = ({
 }: UseResiScannerProps) => {
   const [resiNumber, setResiNumber] = React.useState<string>("");
   const [isProcessing, setIsProcessing] = React.useState<boolean>(false);
-  const [localCurrentCount, setLocalCurrentCount] = React.useState(0);
+  // const [localCurrentCount, setLocalCurrentCount] = React.useState(0); // REMOVED: No longer needed
   const [optimisticTotalExpeditionItems, setOptimisticTotalExpeditionItems] = React.useState(initialTotalExpeditionItems || 0); // NEW
   const [optimisticRemainingExpeditionItems, setOptimisticRemainingExpeditionItems] = React.useState(initialRemainingExpeditionItems || 0); // NEW
   const resiInputRef = React.useRef<HTMLInputElement>(null);
@@ -51,18 +51,18 @@ export const useResiScanner = ({
   const today = new Date();
   const formattedToday = format(today, "yyyy-MM-dd");
 
-  // Initialize localCurrentCount based on allResiForExpedition when expedition or karung changes
-  React.useEffect(() => {
-    if (allResiForExpedition && expedition && selectedKarung) {
-      const count = allResiForExpedition.filter(item =>
-        item.nokarung === selectedKarung &&
-        (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition)
-      ).length;
-      setLocalCurrentCount(count);
-    } else {
-      setLocalCurrentCount(0);
-    }
-  }, [expedition, selectedKarung, allResiForExpedition]);
+  // REMOVED: No longer needed as currentCount is derived from useResiInputData
+  // React.useEffect(() => {
+  //   if (allResiForExpedition && expedition && selectedKarung) {
+  //     const count = allResiForExpedition.filter(item =>
+  //       item.nokarung === selectedKarung &&
+  //       (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition)
+  //     ).length;
+  //     setLocalCurrentCount(count);
+  //   } else {
+  //     setLocalCurrentCount(0);
+  //   }
+  // }, [expedition, selectedKarung, allResiForExpedition]);
 
   // NEW: Update optimistic states when initial values change (e.g., on expedition change)
   React.useEffect(() => {
@@ -132,12 +132,12 @@ export const useResiScanner = ({
   const validateInput = (resi: string) => {
     if (!resi) {
       showError("Nomor resi tidak boleh kosong.");
-      playBeep(beepFailure);
+      playBeep(beepFailure); // Changed to beepFailure
       return false;
     }
     if (!expedition || !selectedKarung) {
       showError("Mohon pilih Expedisi dan No Karung terlebih dahulu.");
-      playBeep(beepFailure);
+      playBeep(beepFailure); // Changed to beepFailure
       return false;
     }
     return true;
@@ -326,7 +326,7 @@ export const useResiScanner = ({
       console.time("handleScanResi_optimistic_updates");
       
       // Optimistically update localCurrentCount immediately for instant UI feedback
-      setLocalCurrentCount(prevCount => prevCount + 1);
+      // setLocalCurrentCount(prevCount => prevCount + 1); // REMOVED: No longer needed
 
       // NEW: Optimistically update total and remaining items
       setOptimisticTotalExpeditionItems(prev => prev + (isNewExpedisiEntry ? 1 : 0));
@@ -412,10 +412,10 @@ export const useResiScanner = ({
         errorMessage = `Terjadi kesalahan Supabase (${error.code}): ${error.message || error.details}`;
       }
       showError(errorMessage);
-      playBeep(beepFailure);
+      playBeep(beepFailure); // Changed to beepFailure
 
       // Revert localCurrentCount on error (this remains synchronous for immediate feedback)
-      setLocalCurrentCount(prevCount => Math.max(0, prevCount - 1));
+      // setLocalCurrentCount(prevCount => Math.max(0, prevCount - 1)); // REMOVED: No longer needed
       
       // NEW: Revert optimistic total and remaining items on error
       setOptimisticTotalExpeditionItems(prev => prev - (isNewExpedisiEntry ? 1 : 0));
@@ -446,7 +446,7 @@ export const useResiScanner = ({
     isProcessing: isProcessing || isPending,
     isLoadingRecentScannedResiNumbers: false, // Always false now as the query is removed
     isLoadingAllFlagNoExpedisiData,
-    currentCount: localCurrentCount, // Return the local state
+    // currentCount: localCurrentCount, // REMOVED: No longer returned from here
     optimisticTotalExpeditionItems, // NEW
     optimisticRemainingExpeditionItems, // NEW
   };

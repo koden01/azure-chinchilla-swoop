@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
+import { format, startOfDay, endOfDay } from "date-fns"; // Import startOfDay and endOfDay
 import React from "react";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 import { normalizeExpeditionName, KNOWN_EXPEDITIONS } from "@/utils/expeditionUtils";
@@ -162,6 +162,28 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     staleTime: 1000 * 30,
   });
 
+  // NEW: Query to get the specific scan count for 'ID' expedition from tbl_resi
+  const { data: idExpeditionScanCount, isLoading: isLoadingIdExpeditionScanCount } = useQuery<number>({
+    queryKey: ["idExpeditionScanCount", formattedToday],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("tbl_resi")
+        .select("*", { count: "exact" })
+        .in("Keterangan", ["ID", "ID_REKOMENDASI"])
+        .eq("schedule", "ontime")
+        .gte("created", startOfDay(today).toISOString())
+        .lt("created", endOfDay(today).toISOString());
+      
+      if (error) {
+        console.error("Error fetching ID expedition scan count:", error);
+        throw error;
+      }
+      return count || 0;
+    },
+    enabled: expedition === 'ID', // Only enable this query if 'ID' expedition is selected
+    staleTime: 1000 * 30,
+  });
+
   // Derive currentCount from allResiForExpedition
   const currentCount = React.useCallback((selectedKarung: string) => {
     if (!allResiForExpedition || !selectedKarung) return 0;
@@ -227,7 +249,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
 
   return {
     allResiForExpedition, // Now returned
-    isLoadingAllResiForExpedition: isLoadingAllResiForExpedition || isLoadingAllKarungSummaries || isLoadingUniqueExpeditionNames || isLoadingTotalExpeditionItems || isLoadingRemainingExpeditionItems, // Combine loading states
+    isLoadingAllResiForExpedition: isLoadingAllResiForExpedition || isLoadingAllKarungSummaries || isLoadingUniqueExpeditionNames || isLoadingTotalExpeditionItems || isLoadingRemainingExpeditionItems || isLoadingIdExpeditionScanCount, // Combine loading states
     currentCount,
     lastKarung,
     highestKarung,
@@ -242,5 +264,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     remainingExpeditionItems, // NEW: Return remaining expedition items
     isLoadingTotalExpeditionItems, // NEW: Return loading state
     isLoadingRemainingExpeditionItems, // NEW: Return loading state
+    idExpeditionScanCount, // NEW: Return ID expedition scan count
+    isLoadingIdExpeditionScanCount, // NEW: Return loading state for ID expedition scan count
   };
 };

@@ -10,9 +10,10 @@ export const usePendingOperations = () => {
 
   const fetchOperations = async () => {
     try {
-      console.time("[IndexedDB] Fetching all pending operations duration"); // Start timer
+      console.log(`[IndexedDB] Fetching all pending operations started at: ${new Date().toISOString()}`); // Timestamp added here
+      console.time("[IndexedDB] Fetching all pending operations duration");
       const ops = await getPendingOperations();
-      console.timeEnd("[IndexedDB] Fetching all pending operations duration"); // End timer
+      console.timeEnd("[IndexedDB] Fetching all pending operations duration");
       setPendingOperations(ops);
     } catch (error) {
       console.error("Error fetching pending operations from IndexedDB:", error);

@@ -1,12 +1,13 @@
 import React, { useTransition } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, showError, dismissToast } from "@/utils/toast";
-import { beepSuccess, beepFailure, beepDouble, beepSabar } from "@/utils/audio"; // Import beepSabar
+import { beepSuccess, beepFailure, beepDouble, beepSabar } from "@/utils/audio";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 import { normalizeExpeditionName } from "@/utils/expeditionUtils";
-import { addPendingOperation } from "@/integrations/indexeddb/pendingOperations"; // Baris ini yang diperbaiki
+import { addPendingOperation } from "@/integrations/indexeddb/pendingOperations";
+import { useBackgroundSync } from "@/hooks/useBackgroundSync"; // Menambahkan impor ini
 
 interface UseResiScannerProps {
   expedition: string;

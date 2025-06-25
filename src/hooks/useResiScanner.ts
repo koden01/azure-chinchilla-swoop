@@ -5,9 +5,10 @@ import { beepSuccess, beepFailure, beepDouble, beepSabar } from "@/utils/audio";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
-import { normalizeExpeditionName } from "@/utils/expeditionUtils"; // Memperbaiki sintaksis import
+import { normalizeExpeditionName } from "@/utils/expeditionUtils";
 import { addPendingOperation } from "@/integrations/indexeddb/pendingOperations";
 import { useBackgroundSync } from "@/hooks/useBackgroundSync";
+import { ResiExpedisiData } from "@/hooks/useResiInputData"; // Import ResiExpedisiData
 
 interface UseResiScannerProps {
   expedition: string;

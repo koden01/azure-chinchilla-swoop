@@ -48,7 +48,7 @@ const InputPage = () => {
   const {
     allResiForExpedition, // NEW: Get this data from useResiInputData
     isLoadingAllResiForExpedition,
-    lastKarung,
+    // lastKarung, // Removed as it's not used
     highestKarung,
     karungOptions,
     formattedDate,
@@ -198,7 +198,7 @@ const InputPage = () => {
       </div>
 
       <KarungSummaryModal
-        isOpen={isKarungSummaryModalOpen}
+        isOpen={isKarungSummaryModal}
         onClose={() => setIsKarungSummaryModal(false)}
         expedition={expedition}
         date={formattedDate}

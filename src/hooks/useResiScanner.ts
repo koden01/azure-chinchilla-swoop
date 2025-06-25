@@ -145,8 +145,8 @@ export const useResiScanner = ({
 
   const handleScanResi = React.useCallback(async () => {
     // NEW: Defensive check for rapid scans
-    if (isProcessing) {
-      console.warn("[useResiScanner] Already processing a scan. Ignoring rapid input.");
+    if (isProcessing || isPending) { // Changed condition to include isPending
+      console.warn("[useResiScanner] Already processing a scan or UI update pending. Ignoring rapid input.");
       playBeep(beepSabar); // Play beepSabar sound for rapid input attempts
       return;
     }
@@ -315,7 +315,11 @@ export const useResiScanner = ({
       // --- FINAL ERROR HANDLING BLOCK ---
       if (validationStatus !== 'OK') {
         showError(validationMessage || "Validasi gagal.");
-        playBeep(beepDouble); // Play double beep for any duplicate or validation error
+        if (validationStatus === 'NOT_FOUND_EXPEDISI') {
+          playBeep(beepFailure); // Play beepFailure for "not found"
+        } else {
+          playBeep(beepDouble); // Play beepDouble for duplicates/mismatches
+        }
         setIsProcessing(false);
         keepFocus();
         console.timeEnd("handleScanResi_total");
@@ -436,7 +440,7 @@ export const useResiScanner = ({
       keepFocus();
       console.timeEnd("handleScanResi_total"); // End total timing
     }
-  }, [resiNumber, expedition, selectedKarung, formattedDate, allExpedisiDataUnfiltered, allFlagNoExpedisiData, allResiForExpedition, queryClient, triggerSync, validateInput, derivedRecentProcessedResiNumbers, startTransition, isProcessing]);
+  }, [resiNumber, expedition, selectedKarung, formattedDate, allExpedisiDataUnfiltered, allFlagNoExpedisiData, allResiForExpedition, queryClient, triggerSync, validateInput, derivedRecentProcessedResiNumbers, startTransition, isProcessing, isPending, initialTotalExpeditionItems, initialRemainingExpeditionItems]); // Added missing dependencies
 
   return {
     resiNumber,

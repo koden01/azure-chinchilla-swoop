@@ -21,7 +21,7 @@ const InputPage = () => {
   const { expedition, setExpedition } = useExpedition();
   const [selectedKarung, setSelectedKarung] = React.useState<string>("1"); // Default to "1"
 
-  const [isKarungSummaryModalOpen, setIsKarungSummaryModal] = React.useState(false);
+  const [isKarungSummaryModalOpen, setIsKarungSummaryModalOpen] = React.useState(false);
 
   // Calculate date range for today only
   const today = new Date();
@@ -48,7 +48,6 @@ const InputPage = () => {
   const {
     allResiForExpedition, // NEW: Get this data from useResiInputData
     isLoadingAllResiForExpedition,
-    // lastKarung, // Removed as it's not used
     highestKarung,
     karungOptions,
     formattedDate,
@@ -119,7 +118,7 @@ const InputPage = () => {
             className="text-xl cursor-pointer hover:underline"
             onClick={() => {
               if (expedition) {
-                setIsKarungSummaryModal(true);
+                setIsKarungSummaryModalOpen(true);
               }
             }}
           >
@@ -198,8 +197,8 @@ const InputPage = () => {
       </div>
 
       <KarungSummaryModal
-        isOpen={isKarungSummaryModal}
-        onClose={() => setIsKarungSummaryModal(false)}
+        isOpen={isKarungSummaryModalOpen}
+        onClose={() => setIsKarungSummaryModalOpen(false)}
         expedition={expedition}
         date={formattedDate}
         summaryData={karungSummary}

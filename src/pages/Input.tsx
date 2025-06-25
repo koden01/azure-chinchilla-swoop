@@ -55,6 +55,7 @@ const InputPage = () => {
     expeditionOptions,
     totalExpeditionItems, // NEW
     remainingExpeditionItems, // NEW
+    idExpeditionScanCount, // NEW: Get ID scan count
     currentCount: getResiCountForKarung, // Rename to avoid conflict
   } = useResiInputData(expedition, false);
 
@@ -67,6 +68,7 @@ const InputPage = () => {
     isLoadingAllFlagNoExpedisiData,
     optimisticTotalExpeditionItems, // NEW
     optimisticRemainingExpeditionItems, // NEW
+    optimisticIdExpeditionScanCount, // NEW: Get optimistic ID scan count
   } = useResiScanner({ 
     expedition, 
     selectedKarung, 
@@ -75,12 +77,21 @@ const InputPage = () => {
     allResiForExpedition, // NEW: Pass the data here
     initialTotalExpeditionItems: totalExpeditionItems, // NEW: Pass initial values
     initialRemainingExpeditionItems: remainingExpeditionItems, // NEW: Pass initial values
+    initialIdExpeditionScanCount: idExpeditionScanCount, // NEW: Pass initial ID scan count
   });
 
   // Calculate the current count for the selected karung
   const currentCountForDisplay = React.useMemo(() => {
     return getResiCountForKarung(selectedKarung);
   }, [getResiCountForKarung, selectedKarung]);
+
+  // Determine the correct scan count to display
+  const scanCountToDisplay = React.useMemo(() => {
+    if (expedition === 'ID') {
+      return optimisticIdExpeditionScanCount;
+    }
+    return optimisticTotalExpeditionItems - optimisticRemainingExpeditionItems;
+  }, [expedition, optimisticIdExpeditionScanCount, optimisticTotalExpeditionItems, optimisticRemainingExpeditionItems]);
 
   React.useEffect(() => {
     if (expedition) {
@@ -130,7 +141,7 @@ const InputPage = () => {
             {expedition ? `${expedition} - Karung ${selectedKarung || '?'}` : "Pilih Expedisi"}
           </div>
           <p className="text-sm opacity-80">
-            Total: {isLoadingAllResiForExpedition || isLoadingAllExpedisiUnfiltered || isLoadingAllFlagNoExpedisiData ? "..." : optimisticTotalExpeditionItems} - Scan: {isLoadingAllResiForExpedition || isLoadingAllExpedisiUnfiltered || isLoadingAllFlagNoExpedisiData ? "..." : (optimisticTotalExpeditionItems - optimisticRemainingExpeditionItems)} - Sisa: {isLoadingAllResiForExpedition || isLoadingAllExpedisiUnfiltered || isLoadingAllFlagNoExpedisiData ? "..." : optimisticRemainingExpeditionItems}
+            Total: {isLoadingAllResiForExpedition || isLoadingAllExpedisiUnfiltered || isLoadingAllFlagNoExpedisiData ? "..." : optimisticTotalExpeditionItems} - Scan: {isLoadingAllResiForExpedition || isLoadingAllExpedisiUnfiltered || isLoadingAllFlagNoExpedisiData ? "..." : scanCountToDisplay} - Sisa: {isLoadingAllResiForExpedition || isLoadingAllExpedisiUnfiltered || isLoadingAllFlagNoExpedisiData ? "..." : optimisticRemainingExpeditionItems}
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">

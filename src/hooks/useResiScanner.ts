@@ -5,9 +5,9 @@ import { beepSuccess, beepFailure, beepDouble, beepSabar } from "@/utils/audio";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
-import { normalizeExpeditionName } from "@/utils/expeditionUtils";
+import { normalizeExpeditionName } => "@/utils/expeditionUtils";
 import { addPendingOperation } from "@/integrations/indexeddb/pendingOperations";
-import { useBackgroundSync } from "@/hooks/useBackgroundSync"; // Menambahkan impor ini
+import { useBackgroundSync } from "@/hooks/useBackgroundSync";
 
 interface UseResiScannerProps {
   expedition: string;
@@ -17,6 +17,7 @@ interface UseResiScannerProps {
   allResiForExpedition: any[] | undefined;
   initialTotalExpeditionItems: number | undefined;
   initialRemainingExpeditionItems: number | undefined;
+  initialIdExpeditionScanCount: number | undefined; // NEW: Add initial ID scan count
 }
 
 export const useResiScanner = ({ 
@@ -27,11 +28,13 @@ export const useResiScanner = ({
   allResiForExpedition,
   initialTotalExpeditionItems,
   initialRemainingExpeditionItems,
+  initialIdExpeditionScanCount, // NEW
 }: UseResiScannerProps) => {
   const [resiNumber, setResiNumber] = React.useState<string>("");
   const [isProcessing, setIsProcessing] = React.useState<boolean>(false);
   const [optimisticTotalExpeditionItems, setOptimisticTotalExpeditionItems] = React.useState(initialTotalExpeditionItems || 0);
   const [optimisticRemainingExpeditionItems, setOptimisticRemainingExpeditionItems] = React.useState(initialRemainingExpeditionItems || 0);
+  const [optimisticIdExpeditionScanCount, setOptimisticIdExpeditionScanCount] = React.useState(initialIdExpeditionScanCount || 0); // NEW
   const resiInputRef = React.useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const { triggerSync } = useBackgroundSync();
@@ -47,6 +50,10 @@ export const useResiScanner = ({
   React.useEffect(() => {
     setOptimisticRemainingExpeditionItems(initialRemainingExpeditionItems || 0);
   }, [initialRemainingExpeditionItems]);
+
+  React.useEffect(() => { // NEW: Effect for ID scan count
+    setOptimisticIdExpeditionScanCount(initialIdExpeditionScanCount || 0);
+  }, [initialIdExpeditionScanCount]);
 
   const { data: allFlagNoExpedisiData, isLoading: isLoadingAllFlagNoExpedisiData } = useQuery<Map<string, any>>({
     queryKey: ["allFlagNoExpedisiData"],
@@ -150,6 +157,7 @@ export const useResiScanner = ({
     const queryKeyForKarungSummary = ["karungSummary", expedition, formattedDate];
     const queryKeyForTotalExpeditionItems = ["totalExpeditionItems", expedition, formattedDate];
     const queryKeyForRemainingExpeditionItems = ["remainingExpeditionItems", expedition, formattedDate];
+    const queryKeyForIdExpeditionScanCount = ["idExpeditionScanCount", formattedDate]; // NEW
 
     let validationStatus: "OK" | "DUPLICATE_PROCESSED" | "DUPLICATE_SCANNED_TODAY_ID_REKOMENDASI" | "MISMATCH_EXPEDISI" | "NOT_FOUND_EXPEDISI" = "OK";
     let validationMessage: string | null = null;
@@ -295,6 +303,11 @@ export const useResiScanner = ({
       
       setOptimisticTotalExpeditionItems(prev => prev + (isNewExpedisiEntry ? 1 : 0));
       setOptimisticRemainingExpeditionItems(prev => prev - (wasFlagNo ? 1 : 0));
+      
+      // NEW: Optimistic update for ID scan count
+      if (expedition === 'ID') {
+        setOptimisticIdExpeditionScanCount(prev => prev + 1);
+      }
 
       queryClient.setQueryData(queryKeyForInputPageDisplay, (oldData: ResiExpedisiData[] | undefined) => {
         const newData = [...(oldData || [])];
@@ -341,6 +354,7 @@ export const useResiScanner = ({
         queryClient.invalidateQueries({ queryKey: queryKeyForTotalExpeditionItems });
         queryClient.invalidateQueries({ queryKey: queryKeyForRemainingExpeditionItems });
         queryClient.invalidateQueries({ queryKey: queryKeyForKarungSummary }); // Invalidate karung summary as it's derived from tbl_resi
+        queryClient.invalidateQueries({ queryKey: queryKeyForIdExpeditionScanCount }); // NEW: Invalidate ID scan count
       });
       
       console.timeEnd("handleScanResi_optimistic_updates");
@@ -377,6 +391,9 @@ export const useResiScanner = ({
 
       setOptimisticTotalExpeditionItems(prev => prev - (isNewExpedisiEntry ? 1 : 0));
       setOptimisticRemainingExpeditionItems(prev => prev + (wasFlagNo ? 1 : 0));
+      if (expedition === 'ID') { // NEW: Revert optimistic update for ID scan count on error
+        setOptimisticIdExpeditionScanCount(prev => prev - 1);
+      }
 
       // Invalidate queries to ensure they refetch to correct state after error
       startTransition(() => {
@@ -386,13 +403,14 @@ export const useResiScanner = ({
         queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] });
         queryClient.invalidateQueries({ queryKey: queryKeyForTotalExpeditionItems });
         queryClient.invalidateQueries({ queryKey: queryKeyForRemainingExpeditionItems });
+        queryClient.invalidateQueries({ queryKey: queryKeyForIdExpeditionScanCount }); // NEW: Invalidate ID scan count
       });
     } finally {
       setIsProcessing(false);
       keepFocus();
       console.timeEnd("handleScanResi_total");
     }
-  }, [resiNumber, expedition, selectedKarung, formattedDate, allExpedisiDataUnfiltered, allFlagNoExpedisiData, allResiForExpedition, queryClient, triggerSync, validateInput, derivedRecentProcessedResiNumbers, startTransition, isPending, initialTotalExpeditionItems, initialRemainingExpeditionItems]);
+  }, [resiNumber, expedition, selectedKarung, formattedDate, allExpedisiDataUnfiltered, allFlagNoExpedisiData, allResiForExpedition, queryClient, triggerSync, validateInput, derivedRecentProcessedResiNumbers, startTransition, isPending, initialTotalExpeditionItems, initialRemainingExpeditionItems, initialIdExpeditionScanCount]);
 
   return {
     resiNumber,
@@ -404,5 +422,6 @@ export const useResiScanner = ({
     isLoadingAllFlagNoExpedisiData,
     optimisticTotalExpeditionItems,
     optimisticRemainingExpeditionItems,
+    optimisticIdExpeditionScanCount, // NEW: Return optimistic ID scan count
   };
 };

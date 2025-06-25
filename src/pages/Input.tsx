@@ -21,7 +21,7 @@ const InputPage = () => {
   const { expedition, setExpedition } = useExpedition();
   const [selectedKarung, setSelectedKarung] = React.useState<string>("1"); // Default to "1"
 
-  const [isKarungSummaryModalOpen, setIsKarungSummaryModalOpen] = React.useState(false);
+  const [isKarungSummaryModalOpen, setIsKarungSummaryModal] = React.useState(false);
 
   // Calculate date range for today only
   const today = new Date();
@@ -54,6 +54,8 @@ const InputPage = () => {
     formattedDate,
     karungSummary,
     expeditionOptions,
+    totalExpeditionItems, // NEW
+    remainingExpeditionItems, // NEW
   } = useResiInputData(expedition, false);
 
   const {
@@ -64,12 +66,16 @@ const InputPage = () => {
     isProcessing,
     isLoadingAllFlagNoExpedisiData,
     currentCount, // Now directly from useResiScanner
+    optimisticTotalExpeditionItems, // NEW
+    optimisticRemainingExpeditionItems, // NEW
   } = useResiScanner({ 
     expedition, 
     selectedKarung, 
     formattedDate,
     allExpedisiDataUnfiltered,
     allResiForExpedition, // NEW: Pass the data here
+    initialTotalExpeditionItems: totalExpeditionItems, // NEW: Pass initial values
+    initialRemainingExpeditionItems: remainingExpeditionItems, // NEW: Pass initial values
   });
 
   React.useEffect(() => {
@@ -113,14 +119,14 @@ const InputPage = () => {
             className="text-xl cursor-pointer hover:underline"
             onClick={() => {
               if (expedition) {
-                setIsKarungSummaryModalOpen(true);
+                setIsKarungSummaryModal(true);
               }
             }}
           >
             {expedition ? `${expedition} - Karung ${selectedKarung || '?'}` : "Pilih Expedisi"}
           </div>
           <p className="text-sm opacity-80">
-            No Karung (Last: {isLoadingAllResiForExpedition ? "..." : lastKarung}, Highest: {isLoadingAllResiForExpedition ? "..." : highestKarung})
+            Total: {isLoadingAllResiForExpedition || isLoadingAllExpedisiUnfiltered || isLoadingAllFlagNoExpedisiData ? "..." : optimisticTotalExpeditionItems} - Sisa: {isLoadingAllResiForExpedition || isLoadingAllExpedisiUnfiltered || isLoadingAllFlagNoExpedisiData ? "..." : optimisticRemainingExpeditionItems}
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
@@ -193,7 +199,7 @@ const InputPage = () => {
 
       <KarungSummaryModal
         isOpen={isKarungSummaryModalOpen}
-        onClose={() => setIsKarungSummaryModalOpen(false)}
+        onClose={() => setIsKarungSummaryModal(false)}
         expedition={expedition}
         date={formattedDate}
         summaryData={karungSummary}

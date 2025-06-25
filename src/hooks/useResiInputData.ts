@@ -6,7 +6,7 @@ import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 import { normalizeExpeditionName, KNOWN_EXPEDITIONS } from "@/utils/expeditionUtils";
 
 // Define the type for ResiExpedisiData to match useResiInputData
-export interface ResiExpedisiData { // Ditambahkan 'export' di sini
+export interface ResiExpedisiData {
   Resi: string;
   nokarung: string | null;
   created: string;
@@ -170,7 +170,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
         .from("tbl_resi")
         .select("*", { count: "exact" })
         .in("Keterangan", ["ID", "ID_REKOMENDASI"])
-        .eq("schedule", "ontime")
+        .in("schedule", ["ontime", "idrek"]) // Diperbarui untuk menyertakan 'idrek'
         .gte("created", startOfDay(today).toISOString())
         .lt("created", endOfDay(today).toISOString());
       

@@ -6,7 +6,7 @@ import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 import { normalizeExpeditionName, KNOWN_EXPEDITIONS } from "@/utils/expeditionUtils";
 
 // Define the type for ResiExpedisiData to match useResiInputData
-interface ResiExpedisiData {
+export interface ResiExpedisiData { // Ditambahkan 'export' di sini
   Resi: string;
   nokarung: string | null;
   created: string;

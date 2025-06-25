@@ -25,12 +25,24 @@ interface UseResiScannerProps {
   formattedDate: string; // This prop is the formatted date for today
   allExpedisiDataUnfiltered: Map<string, any> | undefined;
   allResiForExpedition: ResiExpedisiData[] | undefined;
+  initialTotalExpeditionItems: number | undefined; // NEW: Initial total items
+  initialRemainingExpeditionItems: number | undefined; // NEW: Initial remaining items
 }
 
-export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allExpedisiDataUnfiltered, allResiForExpedition }: UseResiScannerProps) => {
+export const useResiScanner = ({ 
+  expedition, 
+  selectedKarung, 
+  formattedDate, 
+  allExpedisiDataUnfiltered, 
+  allResiForExpedition,
+  initialTotalExpeditionItems, // NEW
+  initialRemainingExpeditionItems, // NEW
+}: UseResiScannerProps) => {
   const [resiNumber, setResiNumber] = React.useState<string>("");
   const [isProcessing, setIsProcessing] = React.useState<boolean>(false);
   const [localCurrentCount, setLocalCurrentCount] = React.useState(0);
+  const [optimisticTotalExpeditionItems, setOptimisticTotalExpeditionItems] = React.useState(initialTotalExpeditionItems || 0); // NEW
+  const [optimisticRemainingExpeditionItems, setOptimisticRemainingExpeditionItems] = React.useState(initialRemainingExpeditionItems || 0); // NEW
   const resiInputRef = React.useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const { triggerSync } = useBackgroundSync();
@@ -51,6 +63,15 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       setLocalCurrentCount(0);
     }
   }, [expedition, selectedKarung, allResiForExpedition]);
+
+  // NEW: Update optimistic states when initial values change (e.g., on expedition change)
+  React.useEffect(() => {
+    setOptimisticTotalExpeditionItems(initialTotalExpeditionItems || 0);
+  }, [initialTotalExpeditionItems]);
+
+  React.useEffect(() => {
+    setOptimisticRemainingExpeditionItems(initialRemainingExpeditionItems || 0);
+  }, [initialRemainingExpeditionItems]);
 
   const { data: allFlagNoExpedisiData, isLoading: isLoadingAllFlagNoExpedisiData } = useQuery<Map<string, any>>({
     queryKey: ["allFlagNoExpedisiData"], // This query remains global as it's for all 'NO' flags
@@ -143,11 +164,17 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
 
     const queryKeyForInputPageDisplay = ["allResiForExpedition", expedition, formattedDate];
     const queryKeyForKarungSummary = ["karungSummary", expedition, formattedDate];
+    // NEW: Query keys for total and remaining items
+    const queryKeyForTotalExpeditionItems = ["totalExpeditionItems", expedition, formattedDate];
+    const queryKeyForRemainingExpeditionItems = ["remainingExpeditionItems", expedition, formattedDate];
+
 
     let validationStatus: "OK" | "DUPLICATE_PROCESSED" | "DUPLICATE_SCANNED_TODAY_ID_REKOMENDASI" | "MISMATCH_EXPEDISI" | "NOT_FOUND_EXPEDISI" = "OK";
     let validationMessage: string | null = null;
     let actualCourierName: string | null = null;
     let expedisiRecord: any = null;
+    let isNewExpedisiEntry = false; // NEW: Flag to track if this scan creates a new tbl_expedisi entry
+    let wasFlagNo = false; // NEW: Flag to track if the expedisi record was 'NO' before scan
 
     try {
       // 1. Check if resi has already been PROCESSED (flag = YES in tbl_expedisi)
@@ -210,6 +237,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
             
             if (directExpedisiDataArray && directExpedisiDataArray.length > 0) {
                 expedisiRecord = directExpedisiDataArray[0];
+                isNewExpedisiEntry = false; // It was found, so not a new entry
                 // Optimistically update allExpedisiDataUnfiltered and allFlagNoExpedisiData if a new record is found via RPC
                 queryClient.setQueryData(["allExpedisiDataUnfiltered", formattedToday], (oldMap: Map<string, any> | undefined) => {
                   const newMap = new Map(oldMap || []);
@@ -223,7 +251,15 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
                   }
                   return newMap;
                 });
+            } else {
+              // If not found in any cache and not found via direct RPC, it's a truly new entry for tbl_expedisi
+              isNewExpedisiEntry = true;
             }
+        } else {
+          // If found in cache, check its flag status
+          if (expedisiRecord.flag === 'NO') {
+            wasFlagNo = true;
+          }
         }
         console.timeEnd("handleScanResi_expedisi_lookup");
       }
@@ -285,6 +321,10 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       // Optimistically update localCurrentCount immediately for instant UI feedback
       setLocalCurrentCount(prevCount => prevCount + 1);
 
+      // NEW: Optimistically update total and remaining items
+      setOptimisticTotalExpeditionItems(prev => prev + (isNewExpedisiEntry ? 1 : 0));
+      setOptimisticRemainingExpeditionItems(prev => prev - (wasFlagNo ? 1 : 0));
+
       // Optimistically update allResiForExpedition (the local cache for tbl_resi)
       queryClient.setQueryData(queryKeyForInputPageDisplay, (oldData: ResiExpedisiData[] | undefined) => {
         const newData = [...(oldData || [])];
@@ -331,6 +371,8 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       startTransition(() => {
         queryClient.invalidateQueries({ queryKey: queryKeyForInputPageDisplay }); // allResiForExpedition
         queryClient.invalidateQueries({ queryKey: queryKeyForKarungSummary }); // karungSummary
+        queryClient.invalidateQueries({ queryKey: queryKeyForTotalExpeditionItems }); // NEW
+        queryClient.invalidateQueries({ queryKey: queryKeyForRemainingExpeditionItems }); // NEW
       });
       
       console.timeEnd("handleScanResi_optimistic_updates");
@@ -368,6 +410,10 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
       // Revert localCurrentCount on error (this remains synchronous for immediate feedback)
       setLocalCurrentCount(prevCount => Math.max(0, prevCount - 1));
       
+      // NEW: Revert optimistic total and remaining items on error
+      setOptimisticTotalExpeditionItems(prev => prev - (isNewExpedisiEntry ? 1 : 0));
+      setOptimisticRemainingExpeditionItems(prev => prev + (wasFlagNo ? 1 : 0));
+
       // Invalidate queries to ensure they refetch to correct state after error
       // These invalidations are important for reverting the UI to the correct state
       startTransition(() => {
@@ -375,6 +421,8 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
         queryClient.invalidateQueries({ queryKey: queryKeyForKarungSummary });
         queryClient.invalidateQueries({ queryKey: ["allExpedisiDataUnfiltered", formattedToday] });
         queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] });
+        queryClient.invalidateQueries({ queryKey: queryKeyForTotalExpeditionItems }); // NEW
+        queryClient.invalidateQueries({ queryKey: queryKeyForRemainingExpeditionItems }); // NEW
       });
     } finally {
       setIsProcessing(false);
@@ -392,5 +440,7 @@ export const useResiScanner = ({ expedition, selectedKarung, formattedDate, allE
     isLoadingRecentScannedResiNumbers: false, // Always false now as the query is removed
     isLoadingAllFlagNoExpedisiData,
     currentCount: localCurrentCount, // Return the local state
+    optimisticTotalExpeditionItems, // NEW
+    optimisticRemainingExpeditionItems, // NEW
   };
 };

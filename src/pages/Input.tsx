@@ -55,6 +55,7 @@ const InputPage = () => {
     expeditionOptions,
     totalExpeditionItems, // NEW
     remainingExpeditionItems, // NEW
+    currentCount: getResiCountForKarung, // Rename to avoid conflict
   } = useResiInputData(expedition, false);
 
   const {
@@ -64,7 +65,6 @@ const InputPage = () => {
     resiInputRef,
     isProcessing,
     isLoadingAllFlagNoExpedisiData,
-    currentCount, // Now directly from useResiScanner
     optimisticTotalExpeditionItems, // NEW
     optimisticRemainingExpeditionItems, // NEW
   } = useResiScanner({ 
@@ -76,6 +76,11 @@ const InputPage = () => {
     initialTotalExpeditionItems: totalExpeditionItems, // NEW: Pass initial values
     initialRemainingExpeditionItems: remainingExpeditionItems, // NEW: Pass initial values
   });
+
+  // Calculate the current count for the selected karung
+  const currentCountForDisplay = React.useMemo(() => {
+    return getResiCountForKarung(selectedKarung);
+  }, [getResiCountForKarung, selectedKarung]);
 
   React.useEffect(() => {
     if (expedition) {
@@ -112,7 +117,7 @@ const InputPage = () => {
               ? "Pilih Expedisi"
               : isLoadingAllResiForExpedition || isLoadingAllExpedisiUnfiltered || isLoadingAllFlagNoExpedisiData
               ? "..."
-              : currentCount}
+              : currentCountForDisplay}
           </div>
           <div
             className="text-xl cursor-pointer hover:underline"
@@ -125,7 +130,7 @@ const InputPage = () => {
             {expedition ? `${expedition} - Karung ${selectedKarung || '?'}` : "Pilih Expedisi"}
           </div>
           <p className="text-sm opacity-80">
-            Total: {isLoadingAllResiForExpedition || isLoadingAllExpedisiUnfiltered || isLoadingAllFlagNoExpedisiData ? "..." : optimisticTotalExpeditionItems} - Sisa: {isLoadingAllResiForExpedition || isLoadingAllExpedisiUnfiltered || isLoadingAllFlagNoExpedisiData ? "..." : optimisticRemainingExpeditionItems}
+            Total: {isLoadingAllResiForExpedition || isLoadingAllExpedisiUnfiltered || isLoadingAllFlagNoExpedisiData ? "..." : optimisticTotalExpeditionItems} - Scan: {isLoadingAllResiForExpedition || isLoadingAllExpedisiUnfiltered || isLoadingAllFlagNoExpedisiData ? "..." : (optimisticTotalExpeditionItems - optimisticRemainingExpeditionItems)} - Sisa: {isLoadingAllResiForExpedition || isLoadingAllExpedisiUnfiltered || isLoadingAllFlagNoExpedisiData ? "..." : optimisticRemainingExpeditionItems}
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">

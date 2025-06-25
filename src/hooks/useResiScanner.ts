@@ -1,7 +1,7 @@
 import React, { useTransition } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, showError, dismissToast } from "@/utils/toast";
-import { beepSuccess, beepFailure, beepDouble } from "@/utils/audio";
+import { beepSuccess, beepFailure, beepDouble, beepSabar } from "@/utils/audio"; // Import beepSabar
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
@@ -147,7 +147,7 @@ export const useResiScanner = ({
     // NEW: Defensive check for rapid scans
     if (isProcessing) {
       console.warn("[useResiScanner] Already processing a scan. Ignoring rapid input.");
-      playBeep(beepFailure); // Play failure sound for rapid input attempts
+      playBeep(beepSabar); // Play beepSabar sound for rapid input attempts
       return;
     }
 
@@ -213,7 +213,7 @@ export const useResiScanner = ({
             if (processedExpedisiRecord) {
                 keterangan = processedExpedisiRecord.couriername || "Tidak Diketahui";
                 processedDate = processedExpedisiRecord.created ? format(new Date(processedExpedisiRecord.created), "dd/MM/yyyy HH:mm") : "Tidak Diketahui";
-                validationMessage = `DOUBLE! Resi ini ${keterisiRecord.couriername} sudah diproses pada ${processedDate}.`; // No nokarung from expedisi
+                validationMessage = `DOUBLE! Resi ini ${expedisiRecord.couriername} sudah diproses pada ${processedDate}.`; // No nokarung from expedisi
             } else {
                 validationMessage = `DOUBLE! Resi ini sudah diproses.`; // Generic fallback
             }

@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns"; // Menghapus 'subDays'
+import { format } from "date-fns";
 import React from "react";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 import { normalizeExpeditionName, KNOWN_EXPEDITIONS } from "@/utils/expeditionUtils";
@@ -24,7 +24,6 @@ interface AllKarungSummaryItem {
 
 export const useResiInputData = (expedition: string, showAllExpeditionSummary: boolean) => {
   const today = new Date();
-  // Menghapus 'yesterday' karena currentCount hanya akan menampilkan data hari ini
   const formattedToday = format(today, "yyyy-MM-dd"); // Use for query key
 
   // Query to fetch all resi data for the current expedition and date range for local validation
@@ -125,6 +124,44 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     refetchOnWindowFocus: false, // Do not refetch on window focus
   });
 
+  // NEW: Query to get total items for the selected expedition
+  const { data: totalExpeditionItems, isLoading: isLoadingTotalExpeditionItems } = useQuery<number>({
+    queryKey: ["totalExpeditionItems", expedition, formattedToday],
+    queryFn: async () => {
+      if (!expedition) return 0;
+      const { data: countData, error } = await supabase.rpc("get_total_expedition_items_count", {
+        p_couriername: expedition,
+        p_selected_date: formattedToday,
+      });
+      if (error) {
+        console.error("Error fetching total expedition items count:", error);
+        throw error;
+      }
+      return countData || 0;
+    },
+    enabled: !!expedition,
+    staleTime: 1000 * 30,
+  });
+
+  // NEW: Query to get remaining items (flag 'NO') for the selected expedition
+  const { data: remainingExpeditionItems, isLoading: isLoadingRemainingExpeditionItems } = useQuery<number>({
+    queryKey: ["remainingExpeditionItems", expedition, formattedToday],
+    queryFn: async () => {
+      if (!expedition) return 0;
+      const { data: countData, error } = await supabase.rpc("get_belum_kirim_expedition_count", {
+        p_couriername: expedition,
+        p_selected_date: formattedToday,
+      });
+      if (error) {
+        console.error("Error fetching remaining expedition items count:", error);
+        throw error;
+      }
+      return countData || 0;
+    },
+    enabled: !!expedition,
+    staleTime: 1000 * 30,
+  });
+
   // Derive currentCount from allResiForExpedition
   const currentCount = React.useCallback((selectedKarung: string) => {
     if (!allResiForExpedition || !selectedKarung) return 0;
@@ -190,7 +227,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
 
   return {
     allResiForExpedition, // Now returned
-    isLoadingAllResiForExpedition: isLoadingAllResiForExpedition || isLoadingAllKarungSummaries || isLoadingUniqueExpeditionNames, // Combine loading states
+    isLoadingAllResiForExpedition: isLoadingAllResiForExpedition || isLoadingAllKarungSummaries || isLoadingUniqueExpeditionNames || isLoadingTotalExpeditionItems || isLoadingRemainingExpeditionItems, // Combine loading states
     currentCount,
     lastKarung,
     highestKarung,
@@ -201,5 +238,9 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     isLoadingKarungSummary: isLoadingKarungSummaryData, // Now depends on the new RPC query
     isLoadingAllKarungSummaries, // NEW: Loading state for all summaries
     expeditionOptions, // NEW: Return expedition options
+    totalExpeditionItems, // NEW: Return total expedition items
+    remainingExpeditionItems, // NEW: Return remaining expedition items
+    isLoadingTotalExpeditionItems, // NEW: Return loading state
+    isLoadingRemainingExpeditionItems, // NEW: Return loading state
   };
 };

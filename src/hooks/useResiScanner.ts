@@ -6,43 +6,11 @@ import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 import { normalizeExpeditionName } from "@/utils/expeditionUtils";
-import { addPendingOperation } from "@/integrations/indexeddb/pendingOperations";
-import { useBackgroundSync } from "./useBackgroundSync";
-
-// Define the type for ResiExpedisiData to match useResiInputData
-interface ResiExpedisiData {
-  Resi: string;
-  nokarung: string | null;
-  created: string;
-  Keterangan: string | null; // Changed to Keterangan to match tbl_resi
-  schedule: string | null;
-  optimisticId?: string;
-}
-
-interface UseResiScannerProps {
-  expedition: string;
-  selectedKarung: string;
-  formattedDate: string; // This prop is the formatted date for today
-  allExpedisiDataUnfiltered: Map<string, any> | undefined;
-  allResiForExpedition: ResiExpedisiData[] | undefined;
-  initialTotalExpeditionItems: number | undefined; // NEW: Initial total items
-  initialRemainingExpeditionItems: number | undefined; // NEW: Initial remaining items
-}
-
-export const useResiScanner = ({ 
-  expedition, 
-  selectedKarung, 
-  formattedDate, 
-  allExpedisiDataUnfiltered, 
-  allResiForExpedition,
-  initialTotalExpeditionItems, // NEW
-  initialRemainingExpeditionItems, // NEW
-}: UseResiScannerProps) => {
+import { addPendingOperation } => {
   const [resiNumber, setResiNumber] = React.useState<string>("");
   const [isProcessing, setIsProcessing] = React.useState<boolean>(false);
-  // const [localCurrentCount, setLocalCurrentCount] = React.useState(0); // REMOVED: No longer needed
-  const [optimisticTotalExpeditionItems, setOptimisticTotalExpeditionItems] = React.useState(initialTotalExpeditionItems || 0); // NEW
-  const [optimisticRemainingExpeditionItems, setOptimisticRemainingExpeditionItems] = React.useState(initialRemainingExpeditionItems || 0); // NEW
+  const [optimisticTotalExpeditionItems, setOptimisticTotalExpeditionItems] = React.useState(initialTotalExpeditionItems || 0);
+  const [optimisticRemainingExpeditionItems, setOptimisticRemainingExpeditionItems] = React.useState(initialRemainingExpeditionItems || 0);
   const resiInputRef = React.useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const { triggerSync } = useBackgroundSync();
@@ -51,20 +19,6 @@ export const useResiScanner = ({
   const today = new Date();
   const formattedToday = format(today, "yyyy-MM-dd");
 
-  // REMOVED: No longer needed as currentCount is derived from useResiInputData
-  // React.useEffect(() => {
-  //   if (allResiForExpedition && expedition && selectedKarung) {
-  //     const count = allResiForExpedition.filter(item =>
-  //       item.nokarung === selectedKarung &&
-  //       (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition)
-  //     ).length;
-  //     setLocalCurrentCount(count);
-  //   } else {
-  //     setLocalCurrentCount(0);
-  //   }
-  // }, [expedition, selectedKarung, allResiForExpedition]);
-
-  // NEW: Update optimistic states when initial values change (e.g., on expedition change)
   React.useEffect(() => {
     setOptimisticTotalExpeditionItems(initialTotalExpeditionItems || 0);
   }, [initialTotalExpeditionItems]);
@@ -74,15 +28,15 @@ export const useResiScanner = ({
   }, [initialRemainingExpeditionItems]);
 
   const { data: allFlagNoExpedisiData, isLoading: isLoadingAllFlagNoExpedisiData } = useQuery<Map<string, any>>({
-    queryKey: ["allFlagNoExpedisiData"], // This query remains global as it's for all 'NO' flags
+    queryKey: ["allFlagNoExpedisiData"],
     queryFn: async () => {
       const data = await fetchAllDataPaginated(
         "tbl_expedisi",
-        undefined, // No date filter
-        undefined, // No start date
-        undefined, // No end date
-        "*", // Select all columns needed for validation
-        (query) => query.eq("flag", "NO") // Add flag filter
+        undefined,
+        undefined,
+        undefined,
+        "*",
+        (query) => query.eq("flag", "NO")
       );
       const expedisiMap = new Map<string, any>();
       data.forEach(item => {
@@ -93,12 +47,11 @@ export const useResiScanner = ({
       console.log(`[useResiScanner] Fetched ${expedisiMap.size} Flag NO expedisi records.`);
       return expedisiMap;
     },
-    staleTime: 1000 * 60 * 5, // Changed to 5 minutes for faster invalidation
-    gcTime: 1000 * 60 * 60 * 24, // Garbage collect after 24 hours
-    enabled: true, // Always enabled
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 60 * 24,
+    enabled: true,
   });
 
-  // Memoize derivedRecentProcessedResiNumbers to avoid re-calculation on every render
   const derivedRecentProcessedResiNumbers = React.useMemo(() => {
     const processedSet = new Set<string>();
     if (allExpedisiDataUnfiltered) {
@@ -126,32 +79,37 @@ export const useResiScanner = ({
       } catch (e) {
         console.error("[useResiScanner] Error playing beep sound:", e);
       }
-    }, 0); // Delay audio play to not block main thread
+    }, 0);
   };
 
   const validateInput = (resi: string) => {
     if (!resi) {
       showError("Nomor resi tidak boleh kosong.");
-      playBeep(beepFailure); // Changed to beepFailure
+      playBeep(beepFailure);
       return false;
     }
     if (!expedition || !selectedKarung) {
       showError("Mohon pilih Expedisi dan No Karung terlebih dahulu.");
-      playBeep(beepFailure); // Changed to beepFailure
+      playBeep(beepFailure);
       return false;
     }
     return true;
   };
 
   const handleScanResi = React.useCallback(async () => {
-    // NEW: Defensive check for rapid scans
-    if (isProcessing || isPending) { // Changed condition to include isPending
-      console.warn("[useResiScanner] Already processing a scan or UI update pending. Ignoring rapid input.");
-      playBeep(beepSabar); // Play beepSabar sound for rapid input attempts
+    // Set isProcessing to true at the very beginning to immediately disable input
+    setIsProcessing(true); 
+
+    // NEW: Defensive check for rapid scans, now that isProcessing is true immediately
+    if (isPending) { // Only check isPending here, as isProcessing is already true
+      console.warn("[useResiScanner] UI update pending. Ignoring rapid input.");
+      playBeep(beepSabar);
+      setIsProcessing(false); // Reset if we're just waiting for UI transition
+      keepFocus();
       return;
     }
 
-    console.time("handleScanResi_total"); // Start total timing
+    console.time("handleScanResi_total");
     dismissToast();
     const currentResi = resiNumber.trim();
     const normalizedCurrentResi = currentResi.toLowerCase().trim();
@@ -159,7 +117,7 @@ export const useResiScanner = ({
 
     console.time("handleScanResi_validation_sync");
     if (!validateInput(currentResi)) {
-      setIsProcessing(false);
+      setIsProcessing(false); // Reset if validation fails
       keepFocus();
       console.timeEnd("handleScanResi_validation_sync");
       console.timeEnd("handleScanResi_total");
@@ -167,30 +125,24 @@ export const useResiScanner = ({
     }
     console.timeEnd("handleScanResi_validation_sync");
 
-    setIsProcessing(true);
-
     const queryKeyForInputPageDisplay = ["allResiForExpedition", expedition, formattedDate];
     const queryKeyForKarungSummary = ["karungSummary", expedition, formattedDate];
-    // NEW: Query keys for total and remaining items
     const queryKeyForTotalExpeditionItems = ["totalExpeditionItems", expedition, formattedDate];
     const queryKeyForRemainingExpeditionItems = ["remainingExpeditionItems", expedition, formattedDate];
-
 
     let validationStatus: "OK" | "DUPLICATE_PROCESSED" | "DUPLICATE_SCANNED_TODAY_ID_REKOMENDASI" | "MISMATCH_EXPEDISI" | "NOT_FOUND_EXPEDISI" = "OK";
     let validationMessage: string | null = null;
     let actualCourierName: string | null = null;
     let expedisiRecord: any = null;
-    let isNewExpedisiEntry = false; // NEW: Flag to track if this scan creates a new tbl_expedisi entry
-    let wasFlagNo = false; // NEW: Flag to track if the expedisi record was 'NO' before scan
+    let isNewExpedisiEntry = false;
+    let wasFlagNo = false;
 
     try {
-      // 1. Check if resi has already been PROCESSED (flag = YES in tbl_expedisi)
       if (derivedRecentProcessedResiNumbers.has(normalizedCurrentResi)) {
         validationStatus = 'DUPLICATE_PROCESSED';
-        // Fetch details from tbl_resi for the toast message
         const { data: resiDetails, error: resiDetailsError } = await supabase
             .from("tbl_resi")
-            .select("created, Keterangan, nokarung, schedule") // Include schedule
+            .select("created, Keterangan, nokarung, schedule")
             .eq("Resi", currentResi)
             .maybeSingle();
 
@@ -201,28 +153,25 @@ export const useResiScanner = ({
         if (resiDetails && !resiDetailsError) {
             processedDate = resiDetails.created ? format(new Date(resiDetails.created), "dd/MM/yyyy HH:mm") : "Tidak Diketahui";
             if (resiDetails.schedule === "batal") {
-              validationMessage = `BATAL ${processedDate}`; // Simplified message for 'batal' schedule
+              validationMessage = `BATAL ${processedDate}`;
             } else {
               keterangan = resiDetails.Keterangan || "Tidak Diketahui";
               nokarung = resiDetails.nokarung || "Tidak Diketahui";
               validationMessage = `DOUBLE! Resi ini ${keterangan} sudah diproses pada ${processedDate} di karung ${nokarung}.`;
             }
         } else {
-            // Fallback to expedisi data if resiDetails not found (shouldn't happen if flag is YES)
             const processedExpedisiRecord = allExpedisiDataUnfiltered?.get(normalizedCurrentResi);
             if (processedExpedisiRecord) {
                 keterangan = processedExpedisiRecord.couriername || "Tidak Diketahui";
                 processedDate = processedExpedisiRecord.created ? format(new Date(processedExpedisiRecord.created), "dd/MM/yyyy HH:mm") : "Tidak Diketahui";
-                validationMessage = `DOUBLE! Resi ini ${expedisiRecord.couriername} sudah diproses pada ${processedDate}.`; // No nokarung from expedisi
+                validationMessage = `DOUBLE! Resi ini ${expedisiRecord.couriername} sudah diproses pada ${processedDate}.`;
             } else {
-                validationMessage = `DOUBLE! Resi ini sudah diproses.`; // Generic fallback
+                validationMessage = `DOUBLE! Resi ini sudah diproses.`;
             }
         }
       }
 
-      // 2. Attempt to find expedisiRecord from caches or direct RPC call
-      // This step is crucial to determine if the resi exists in tbl_expedisi at all.
-      if (validationStatus === 'OK') { // Only proceed if not already a processed duplicate
+      if (validationStatus === 'OK') {
         console.time("handleScanResi_expedisi_lookup");
         expedisiRecord = allExpedisiDataUnfiltered?.get(normalizedCurrentResi);
 
@@ -231,11 +180,11 @@ export const useResiScanner = ({
         }
 
         if (!expedisiRecord) {
-            console.time("rpc_get_expedisi_by_resino"); // Start timing RPC call
+            console.time("rpc_get_expedisi_by_resino");
             const { data: directExpedisiDataArray, error: directExpedisiError } = await supabase.rpc("get_expedisi_by_resino_case_insensitive", {
               p_resino: currentResi,
             });
-            console.timeEnd("rpc_get_expedisi_by_resino"); // End timing RPC call
+            console.timeEnd("rpc_get_expedisi_by_resino");
 
             if (directExpedisiError) {
                 console.error(`[useResiScanner] Error during direct fetch:`, directExpedisiError);
@@ -244,8 +193,7 @@ export const useResiScanner = ({
             
             if (directExpedisiDataArray && directExpedisiDataArray.length > 0) {
                 expedisiRecord = directExpedisiDataArray[0];
-                isNewExpedisiEntry = false; // It was found, so not a new entry
-                // Optimistically update allExpedisiDataUnfiltered and allFlagNoExpedisiData if a new record is found via RPC
+                isNewExpedisiEntry = false;
                 queryClient.setQueryData(["allExpedisiDataUnfiltered", formattedToday], (oldMap: Map<string, any> | undefined) => {
                   const newMap = new Map(oldMap || []);
                   newMap.set(normalizedCurrentResi, expedisiRecord);
@@ -259,11 +207,9 @@ export const useResiScanner = ({
                   return newMap;
                 });
             } else {
-              // If not found in any cache and not found via direct RPC, it's a truly new entry for tbl_expedisi
               isNewExpedisiEntry = true;
             }
         } else {
-          // If found in cache, check its flag status
           if (expedisiRecord.flag === 'NO') {
             wasFlagNo = true;
           }
@@ -271,21 +217,18 @@ export const useResiScanner = ({
         console.timeEnd("handleScanResi_expedisi_lookup");
       }
 
-      // 3. Determine actualCourierName and final validationStatus based on expedisiRecord presence
-      if (validationStatus === 'OK') { // Still OK after processed check
+      if (validationStatus === 'OK') {
         if (expedition === 'ID') {
           if (expedisiRecord) {
             const normalizedExpedisiCourier = normalizeExpeditionName(expedisiRecord.couriername);
             if (normalizedExpedisiCourier === 'ID') {
-              actualCourierName = 'ID'; // Resi ID yang ada di tbl_expedisi
+              actualCourierName = 'ID';
             } else {
               validationStatus = 'MISMATCH_EXPEDISI';
               validationMessage = `Resi milik ${expedisiRecord.couriername}`;
             }
           } else {
-            // Resi ID yang TIDAK ada di tbl_expedisi (ID_REKOMENDASI)
             actualCourierName = 'ID_REKOMENDASI';
-            // For ID_REKOMENDASI, we MUST check tbl_resi for duplicates
             if (allResiForExpedition) {
               const isAlreadyScannedToday = allResiForExpedition.some(item =>
                 (item.Resi || "").toLowerCase() === normalizedCurrentResi
@@ -296,7 +239,7 @@ export const useResiScanner = ({
               }
             }
           }
-        } else { // Non-ID expedition
+        } else {
           if (!expedisiRecord) {
             validationStatus = 'NOT_FOUND_EXPEDISI';
             validationMessage = 'Data tidak ada di database ekspedisi.';
@@ -315,10 +258,10 @@ export const useResiScanner = ({
       // --- FINAL ERROR HANDLING BLOCK ---
       if (validationStatus !== 'OK') {
         showError(validationMessage || "Validasi gagal.");
-        if (validationStatus === 'NOT_FOUND_EXPEDISI') {
-          playBeep(beepFailure); // Play beepFailure for "not found"
-        } else {
-          playBeep(beepDouble); // Play beepDouble for duplicates/mismatches
+        if (validationStatus === 'NOT_FOUND_EXPEDISI' || validationStatus === 'MISMATCH_EXPEDISI') { // Play beepFailure for NOT_FOUND and MISMATCH
+          playBeep(beepFailure);
+        } else { // Play beepDouble for other duplicates
+          playBeep(beepDouble);
         }
         setIsProcessing(false);
         keepFocus();
@@ -329,14 +272,9 @@ export const useResiScanner = ({
       // --- If all OK, proceed with optimistic update and saving to IndexedDB ---
       console.time("handleScanResi_optimistic_updates");
       
-      // Optimistically update localCurrentCount immediately for instant UI feedback
-      // setLocalCurrentCount(prevCount => prevCount + 1); // REMOVED: No longer needed
-
-      // NEW: Optimistically update total and remaining items
       setOptimisticTotalExpeditionItems(prev => prev + (isNewExpedisiEntry ? 1 : 0));
       setOptimisticRemainingExpeditionItems(prev => prev - (wasFlagNo ? 1 : 0));
 
-      // Optimistically update allResiForExpedition (the local cache for tbl_resi)
       queryClient.setQueryData(queryKeyForInputPageDisplay, (oldData: ResiExpedisiData[] | undefined) => {
         const newData = [...(oldData || [])];
         const existingResiIndex = newData.findIndex(item => (item.Resi || "").toLowerCase() === normalizedCurrentResi);
@@ -345,45 +283,43 @@ export const useResiScanner = ({
           nokarung: selectedKarung,
           created: new Date().toISOString(),
           Keterangan: actualCourierName,
-          schedule: "ontime", // Default schedule for new scans
+          schedule: "ontime",
         };
 
         if (existingResiIndex !== -1) {
-          // If it exists (e.g., was 'batal' and now re-scanned), update it
           newData[existingResiIndex] = { ...newData[existingResiIndex], ...newResiEntry };
         } else {
-          // Otherwise, add as a new entry
           newData.push(newResiEntry);
         }
         return newData;
       });
 
-      // 1. Optimistically update allExpedisiDataUnfiltered
       queryClient.setQueryData(["allExpedisiDataUnfiltered", formattedToday], (oldMap: Map<string, any> | undefined) => {
         const newMap = new Map(oldMap || []);
         const existingExpedisi = newMap.get(normalizedCurrentResi);
         newMap.set(normalizedCurrentResi, {
-          ...(existingExpedisi || { resino: currentResi, created: new Date().toISOString() }), // Ensure basic fields if new
+          ...(existingExpedisi || { resino: currentResi, created: new Date().toISOString() }),
           flag: "YES",
-          cekfu: false, // As per background sync logic
-          couriername: actualCourierName || existingExpedisi?.couriername, // Keep existing or set new
+          cekfu: false,
+          couriername: actualCourierName || existingExpedisi?.couriername,
         });
         return newMap;
       });
 
-      // 2. Optimistically update allFlagNoExpedisiData (remove the scanned resi)
       queryClient.setQueryData(["allFlagNoExpedisiData"], (oldMap: Map<string, any> | undefined) => {
         const newMap = new Map(oldMap || []);
         newMap.delete(normalizedCurrentResi);
         return newMap;
       });
 
-      // 3. Invalidate queries for Input page display (these are smaller and derived)
+      // Removed specific invalidateQueries for Input page display here.
+      // Rely on triggerSync to invalidate and refetch after successful background sync.
+      // This ensures optimistic updates persist until actual data is fetched.
       startTransition(() => {
-        queryClient.invalidateQueries({ queryKey: queryKeyForInputPageDisplay }); // allResiForExpedition
-        queryClient.invalidateQueries({ queryKey: queryKeyForKarungSummary }); // karungSummary
-        queryClient.invalidateQueries({ queryKey: queryKeyForTotalExpeditionItems }); // NEW
-        queryClient.invalidateQueries({ queryKey: queryKeyForRemainingExpeditionItems }); // NEW
+        // Only invalidate the derived counts that are not directly updated by setQueryData
+        queryClient.invalidateQueries({ queryKey: queryKeyForTotalExpeditionItems });
+        queryClient.invalidateQueries({ queryKey: queryKeyForRemainingExpeditionItems });
+        queryClient.invalidateQueries({ queryKey: queryKeyForKarungSummary }); // Invalidate karung summary as it's derived from tbl_resi
       });
       
       console.timeEnd("handleScanResi_optimistic_updates");
@@ -416,31 +352,26 @@ export const useResiScanner = ({
         errorMessage = `Terjadi kesalahan Supabase (${error.code}): ${error.message || error.details}`;
       }
       showError(errorMessage);
-      playBeep(beepFailure); // Changed to beepFailure
+      playBeep(beepFailure);
 
-      // Revert localCurrentCount on error (this remains synchronous for immediate feedback)
-      // setLocalCurrentCount(prevCount => Math.max(0, prevCount - 1)); // REMOVED: No longer needed
-      
-      // NEW: Revert optimistic total and remaining items on error
       setOptimisticTotalExpeditionItems(prev => prev - (isNewExpedisiEntry ? 1 : 0));
       setOptimisticRemainingExpeditionItems(prev => prev + (wasFlagNo ? 1 : 0));
 
       // Invalidate queries to ensure they refetch to correct state after error
-      // These invalidations are important for reverting the UI to the correct state
       startTransition(() => {
         queryClient.invalidateQueries({ queryKey: queryKeyForInputPageDisplay });
         queryClient.invalidateQueries({ queryKey: queryKeyForKarungSummary });
         queryClient.invalidateQueries({ queryKey: ["allExpedisiDataUnfiltered", formattedToday] });
         queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] });
-        queryClient.invalidateQueries({ queryKey: queryKeyForTotalExpeditionItems }); // NEW
-        queryClient.invalidateQueries({ queryKey: queryKeyForRemainingExpeditionItems }); // NEW
+        queryClient.invalidateQueries({ queryKey: queryKeyForTotalExpeditionItems });
+        queryClient.invalidateQueries({ queryKey: queryKeyForRemainingExpeditionItems });
       });
     } finally {
       setIsProcessing(false);
       keepFocus();
-      console.timeEnd("handleScanResi_total"); // End total timing
+      console.timeEnd("handleScanResi_total");
     }
-  }, [resiNumber, expedition, selectedKarung, formattedDate, allExpedisiDataUnfiltered, allFlagNoExpedisiData, allResiForExpedition, queryClient, triggerSync, validateInput, derivedRecentProcessedResiNumbers, startTransition, isProcessing, isPending, initialTotalExpeditionItems, initialRemainingExpeditionItems]); // Added missing dependencies
+  }, [resiNumber, expedition, selectedKarung, formattedDate, allExpedisiDataUnfiltered, allFlagNoExpedisiData, allResiForExpedition, queryClient, triggerSync, validateInput, derivedRecentProcessedResiNumbers, startTransition, isPending, initialTotalExpeditionItems, initialRemainingExpeditionItems]);
 
   return {
     resiNumber,
@@ -448,10 +379,9 @@ export const useResiScanner = ({
     handleScanResi,
     resiInputRef,
     isProcessing: isProcessing || isPending,
-    isLoadingRecentScannedResiNumbers: false, // Always false now as the query is removed
+    isLoadingRecentScannedResiNumbers: false,
     isLoadingAllFlagNoExpedisiData,
-    // currentCount: localCurrentCount, // REMOVED: No longer returned from here
-    optimisticTotalExpeditionItems, // NEW
-    optimisticRemainingExpeditionItems, // NEW
+    optimisticTotalExpeditionItems,
+    optimisticRemainingExpeditionItems,
   };
 };

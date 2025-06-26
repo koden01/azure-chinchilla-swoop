@@ -227,14 +227,14 @@ export const useBackgroundSync = () => {
             queryClient.refetchQueries({ queryKey: ["batalCount", dashboardFormattedDateISO] });
             queryClient.refetchQueries({ queryKey: ["followUpData", dashboardFormattedDate] });
             queryClient.refetchQueries({ queryKey: ["expedisiDataForSelectedDate", dashboardFormattedDate] });
-            queryClient.refetchQueries({ queryKey: ["allResiData", dashboardFormattedDateISO] });
+            // queryClient.refetchQueries({ queryKey: ["allResiData", dashboardFormattedDateISO] }); // REMOVED THIS LINE
             queryClient.refetchQueries({ queryKey: ["followUpFlagNoCount", dashboardFormattedDate] }); 
 
             // Input page specific queries (date-specific, but also expedition-specific)
             affectedExpeditions.forEach(expName => {
                 const normalizedExpName = normalizeExpeditionName(expName);
                 if (normalizedExpName) {
-                    queryClient.refetchQueries({ queryKey: ["allResiForExpedition", normalizedExpName, dashboardFormattedDate] });
+                    // queryClient.refetchQueries({ queryKey: ["allResiForExpedition", normalizedExpName, dashboardFormattedDate] }); // REMOVED THIS LINE
                     queryClient.refetchQueries({ queryKey: ["karungSummary", normalizedExpName, dashboardFormattedDate] });
                     queryClient.refetchQueries({ queryKey: ["totalExpeditionItems", normalizedExpName, dashboardFormattedDate] });
                     queryClient.refetchQueries({ queryKey: ["remainingExpeditionItems", normalizedExpName, dashboardFormattedDate] });

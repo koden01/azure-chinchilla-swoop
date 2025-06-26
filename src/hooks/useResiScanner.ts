@@ -401,13 +401,8 @@ export const useResiScanner = ({
         return newMap;
       });
       
-      startTransition(() => {
-        queryClient.invalidateQueries({ queryKey: queryKeyForTotalExpeditionItems });
-        queryClient.invalidateQueries({ queryKey: queryKeyForRemainingExpeditionItems });
-        queryClient.invalidateQueries({ queryKey: queryKeyForKarungSummary });
-        queryClient.invalidateQueries({ queryKey: queryKeyForIdExpeditionScanCount });
-        console.log("[handleScanResi] Invalidated relevant queries for background refetch.");
-      });
+      // REMOVED: startTransition(() => { ... queryClient.invalidateQueries(...) });
+      // These invalidations will now be handled by useBackgroundSync after successful DB write.
       
       console.timeEnd("handleScanResi_optimistic_updates");
       
@@ -462,6 +457,7 @@ export const useResiScanner = ({
         });
       }
 
+      // Keep invalidation on error to ensure UI reflects actual DB state if optimistic update fails
       startTransition(() => {
         queryClient.invalidateQueries({ queryKey: queryKeyForInputPageDisplay });
         queryClient.invalidateQueries({ queryKey: queryKeyForKarungSummary });

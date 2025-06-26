@@ -1,7 +1,7 @@
 import React, { useTransition } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, showError, dismissToast } from "@/utils/toast";
-import { beepSuccess, beepFailure, beepDouble, beepSabar } from "@/utils/audio";
+import { beepSuccess, beepFailure, beepDouble, beepSabar, beepStart } from "@/utils/audio"; // Import beepStart
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
@@ -134,6 +134,9 @@ export const useResiScanner = ({
 
   const handleScanResi = React.useCallback(async () => {
     console.log("--- [handleScanResi] START ---");
+    // Play beepStart sound immediately when Enter is pressed
+    playBeep(beepStart); 
+    
     // Set isProcessing to true at the very beginning to immediately disable input
     setIsProcessing(true); 
 
@@ -404,8 +407,6 @@ export const useResiScanner = ({
       // REMOVED: startTransition(() => { ... queryClient.invalidateQueries(...) });
       // These invalidations will now be handled by useBackgroundSync after successful DB write.
       
-      console.timeEnd("handleScanResi_optimistic_updates");
-      
       showSuccess(`Resi ${currentResi} Berhasil`);
       playBeep(beepSuccess);
 
@@ -441,18 +442,18 @@ export const useResiScanner = ({
       // Revert optimistic updates on error
       setOptimisticTotalExpeditionItems(prev => {
         const revertedTotal = prev - (isNewExpedisiEntry ? 1 : 0);
-        console.log(`[handleScanResi] Reverting optimistic Total: ${prev} -> ${revertedTotal}`);
+        console.log(`[handleScanResi] Reverting optimistic Total: ${prev} -> revertedTotal`);
         return revertedTotal;
       });
       setOptimisticRemainingExpeditionItems(prev => {
         const revertedRemaining = prev + (wasFlagNo ? 1 : 0);
-        console.log(`[handleScanResi] Reverting optimistic Remaining: ${prev} -> ${revertedRemaining}`);
+        console.log(`[handleScanResi] Reverting optimistic Remaining: ${prev} -> revertedRemaining`);
         return revertedRemaining;
       });
       if (expedition === 'ID') {
         setOptimisticIdExpeditionScanCount(prev => {
           const revertedIdScanCount = prev - 1;
-          console.log(`[handleScanResi] Reverting optimistic ID Scan Count: ${prev} -> ${revertedIdScanCount}`);
+          console.log(`[handleScanResi] Reverting optimistic ID Scan Count: ${prev} -> revertedIdScanCount`);
           return revertedIdScanCount;
         });
       }

@@ -1,7 +1,7 @@
 import React, { useTransition } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, showError, dismissToast } from "@/utils/toast";
-import { beepSuccess, beepFailure, beepDouble, beepSabar, beepStart } from "@/utils/audio"; // Import beepStart
+import { beepSuccess, beepFailure, beepDouble, beepSabar, beepStart } from "@/utils/audio"; // Import beepSabar
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
@@ -131,7 +131,7 @@ export const useResiScanner = ({
 
     if (isPending) { 
       console.warn("[useResiScanner] UI update pending. Ignoring rapid input.");
-      playBeep(beepSabar);
+      // Removed: playBeep(beepSabar);
       setIsProcessing(false); 
       keepFocus();
       return;
@@ -232,44 +232,6 @@ export const useResiScanner = ({
         } else {
           if (expedisiRecord.flag === 'NO') {
             wasFlagNo = true;
-          }
-        }
-      }
-
-      if (validationStatus === 'OK') {
-        if (expedition === 'ID') {
-          if (expedisiRecord) {
-            const normalizedExpedisiCourier = normalizeExpeditionName(expedisiRecord.couriername);
-            if (normalizedExpedisiCourier === 'ID') {
-              actualCourierName = 'ID';
-            } else {
-              validationStatus = 'MISMATCH_EXPEDISI';
-              validationMessage = `Resi milik ${expedisiRecord.couriername}`;
-            }
-          } else {
-            actualCourierName = 'ID_REKOMENDASI';
-            if (allResiForExpedition) {
-              const isAlreadyScannedToday = allResiForExpedition.some(item =>
-                (item.Resi || "").toLowerCase() === normalizedCurrentResi
-              );
-              if (isAlreadyScannedToday) {
-                validationStatus = 'DUPLICATE_SCANNED_TODAY_ID_REKOMENDASI';
-                validationMessage = `DOUBLE! Resi ID Rekomendasi ini sudah dipindai hari ini.`;
-              }
-            }
-          }
-        } else {
-          if (!expedisiRecord) {
-            validationStatus = 'NOT_FOUND_EXPEDISI';
-            validationMessage = 'Data tidak ada di database ekspedisi.';
-          } else {
-            const normalizedExpedisiCourier = normalizeExpeditionName(expedisiRecord.couriername);
-            if (normalizedExpedisiCourier !== expedition.toUpperCase()) {
-              validationStatus = 'MISMATCH_EXPEDISI';
-              validationMessage = `Resi milik ${expedisiRecord.couriername}`;
-            } else {
-              actualCourierName = expedisiRecord.couriername;
-            }
           }
         }
       }

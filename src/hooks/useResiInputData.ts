@@ -1,18 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, startOfDay, endOfDay } from "date-fns"; // Import startOfDay and endOfDay
+import { format, startOfDay, endOfDay } from "date-fns";
 import React from "react";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 import { normalizeExpeditionName, KNOWN_EXPEDITIONS } from "@/utils/expeditionUtils";
 
 // Define the type for ResiExpedisiData to match useResiInputData
-export interface ResiExpedisiData {
+export interface ResiExpedisiData { // Pastikan 'export' ada di sini
   Resi: string;
   nokarung: string | null;
   created: string;
-  Keterangan: string | null; // Changed to Keterangan to match tbl_resi
+  Keterangan: string | null;
   schedule: string | null;
-  optimisticId?: string; // Added for optimistic updates
+  optimisticId?: string;
 }
 
 // NEW: Type for all karung summaries
@@ -24,22 +24,21 @@ interface AllKarungSummaryItem {
 
 export const useResiInputData = (expedition: string, showAllExpeditionSummary: boolean) => {
   const today = new Date();
-  const formattedToday = format(today, "yyyy-MM-dd"); // Use for query key
+  const formattedToday = format(today, "yyyy-MM-dd");
 
   // Query to fetch all resi data for the current expedition and date range for local validation
   const { data: allResiForExpedition, isLoading: isLoadingAllResiForExpedition } = useQuery<ResiExpedisiData[]>({
-    // Mengubah queryKey agar hanya bergantung pada tanggal hari ini
     queryKey: ["allResiForExpedition", expedition, formattedToday], 
     queryFn: async () => {
       if (!expedition) return [];
       
       const data = await fetchAllDataPaginated(
         "tbl_resi",
-        "created", // dateFilterColumn
-        today, // selectedStartDate (fetch only from today)
-        today, // selectedEndDate (fetch only up to end of today)
-        "Resi, nokarung, created, Keterangan, schedule", // Only select necessary columns
-        (baseQuery) => { // Custom filter function
+        "created",
+        today,
+        today,
+        "Resi, nokarung, created, Keterangan, schedule",
+        (baseQuery) => {
           if (expedition === 'ID') {
             return baseQuery.in("Keterangan", ['ID', 'ID_REKOMENDASI']);
           } else {
@@ -50,7 +49,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       return data || [];
     },
     enabled: !!expedition,
-    staleTime: 1000 * 30, // Data considered fresh for 30 seconds
+    staleTime: 1000 * 30,
   });
 
   // NEW: Query to fetch karung summary for the selected expedition and today's date
@@ -69,13 +68,13 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       }
       return data || [];
     },
-    enabled: !!expedition, // Only enabled if an expedition is selected
-    staleTime: 1000 * 30, // Data considered fresh for 30 seconds
+    enabled: !!expedition,
+    staleTime: 1000 * 30,
   });
 
   // NEW: Query to fetch ALL karung summaries directly from database using new RPC
   const { data: allKarungSummariesData, isLoading: isLoadingAllKarungSummaries } = useQuery<AllKarungSummaryItem[]>({
-    queryKey: ["allKarungSummaries", formattedToday], // Still only for today's summary
+    queryKey: ["allKarungSummaries", formattedToday],
     queryFn: async () => {
       const { data, error } = await supabase.rpc("get_all_karung_summaries_for_date", {
         p_selected_date: formattedToday,
@@ -87,8 +86,8 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       }
       return data || [];
     },
-    enabled: showAllExpeditionSummary, // Only enabled when explicitly requested
-    staleTime: 1000 * 60 * 60, // Changed to 60 minutes (from 1 minute)
+    enabled: showAllExpeditionSummary,
+    staleTime: 1000 * 60 * 60,
   });
 
   // Query to fetch unique expedition names
@@ -97,7 +96,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tbl_expedisi")
-        .select("couriername"); // Fetch all couriername values, then process distinctness in JS
+        .select("couriername");
 
       if (error) {
         console.error("Error fetching unique expedition names:", error);
@@ -105,10 +104,10 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       }
       
       const namesSet = new Set<string>();
-      KNOWN_EXPEDITIONS.forEach(name => namesSet.add(name)); // Add all known expeditions first
+      KNOWN_EXPEDITIONS.forEach(name => namesSet.add(name));
       data.forEach((item: { couriername: string | null }) => {
         if (item.couriername) {
-          const normalizedName = normalizeExpeditionName(item.couriername); // Use normalizeExpeditionName
+          const normalizedName = normalizeExpeditionName(item.couriername);
           if (normalizedName) {
             namesSet.add(normalizedName);
           }
@@ -118,10 +117,10 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       const names = Array.from(namesSet);
       return names.sort((a, b) => a.localeCompare(b));
     },
-    staleTime: Infinity, // Data is always fresh
-    gcTime: 1000 * 60 * 60 * 24 * 7, // Garbage collect after 7 days
-    refetchOnMount: false, // Do not refetch on component mount
-    refetchOnWindowFocus: false, // Do not refetch on window focus
+    staleTime: Infinity,
+    gcTime: 1000 * 60 * 60 * 24 * 7,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 
   // NEW: Query to get total items for the selected expedition
@@ -170,7 +169,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
         .from("tbl_resi")
         .select("*", { count: "exact" })
         .in("Keterangan", ["ID", "ID_REKOMENDASI"])
-        .in("schedule", ["ontime", "idrek"]) // Diperbarui untuk menyertakan 'idrek'
+        .in("schedule", ["ontime", "idrek"])
         .gte("created", startOfDay(today).toISOString())
         .lt("created", endOfDay(today).toISOString());
       
@@ -180,7 +179,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       }
       return count || 0;
     },
-    enabled: expedition === 'ID', // Only enable this query if 'ID' expedition is selected
+    enabled: expedition === 'ID',
     staleTime: 1000 * 30,
   });
 
@@ -222,7 +221,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
 
   // Karung options based on highestKarung (still client-side generation)
   const karungOptions = React.useMemo(() => {
-    const maxKarung = Math.max(1, highestKarung, 100); // Ensure at least 1 and up to 100 by default
+    const maxKarung = Math.max(1, highestKarung, 100);
     return Array.from({ length: maxKarung }, (_, i) => (i + 1).toString());
   }, [highestKarung]);
 
@@ -248,23 +247,23 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
   }, [uniqueExpeditionNames]);
 
   return {
-    allResiForExpedition, // Now returned
-    isLoadingAllResiForExpedition: isLoadingAllResiForExpedition || isLoadingAllKarungSummaries || isLoadingUniqueExpeditionNames || isLoadingTotalExpeditionItems || isLoadingRemainingExpeditionItems || isLoadingIdExpeditionScanCount, // Combine loading states
+    allResiForExpedition,
+    isLoadingAllResiForExpedition: isLoadingAllResiForExpedition || isLoadingAllKarungSummaries || isLoadingUniqueExpeditionNames || isLoadingTotalExpeditionItems || isLoadingRemainingExpeditionItems || isLoadingIdExpeditionScanCount,
     currentCount,
     lastKarung,
     highestKarung,
     karungOptions,
     formattedDate: formattedToday,
-    karungSummary, // Now directly from RPC
-    allExpeditionKarungSummary, // NEW: Return all expedition karung summary
-    isLoadingKarungSummary: isLoadingKarungSummaryData, // Now depends on the new RPC query
-    isLoadingAllKarungSummaries, // NEW: Loading state for all summaries
-    expeditionOptions, // NEW: Return expedition options
-    totalExpeditionItems, // NEW: Return total expedition items
-    remainingExpeditionItems, // NEW: Return remaining expedition items
-    isLoadingTotalExpeditionItems, // NEW: Return loading state
-    isLoadingRemainingExpeditionItems, // NEW: Return loading state
-    idExpeditionScanCount, // NEW: Return ID expedition scan count
-    isLoadingIdExpeditionScanCount, // NEW: Return loading state for ID expedition scan count
+    karungSummary,
+    allExpeditionKarungSummary,
+    isLoadingKarungSummary: isLoadingKarungSummaryData,
+    isLoadingAllKarungSummaries,
+    expeditionOptions,
+    totalExpeditionItems,
+    remainingExpeditionItems,
+    isLoadingTotalExpeditionItems,
+    isLoadingRemainingExpeditionItems,
+    idExpeditionScanCount,
+    isLoadingIdExpeditionScanCount,
   };
 };

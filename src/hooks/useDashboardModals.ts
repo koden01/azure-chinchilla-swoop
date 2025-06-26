@@ -40,7 +40,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
   >(null);
   const [selectedCourier, setSelectedCourier] = React.useState<string | null>(null);
 
-  const { triggerSync } = useBackgroundSync();
+  const { triggerSync: debouncedTriggerSync } = useBackgroundSync(); // Use debouncedTriggerSync
 
   const openResiModal = (
     title: string,
@@ -208,7 +208,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       });
 
       showSuccess(`Resi ${resiNumber} berhasil dibatalkan.`);
-      triggerSync();
+      debouncedTriggerSync(); // Use debouncedTriggerSync
 
     } catch (error: any) {
       if (itemToBatal) {
@@ -267,7 +267,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       });
 
       showSuccess(`Resi ${resiNumber} berhasil dikonfirmasi.`);
-      triggerSync();
+      debouncedTriggerSync(); // Use debouncedTriggerSync
 
     } catch (error: any) {
       if (itemToConfirm) {
@@ -321,7 +321,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       });
 
       showSuccess(`Status CEKFU resi ${resiNumber} berhasil diperbarui.`);
-      triggerSync();
+      debouncedTriggerSync(); // Use debouncedTriggerSync
     } catch (error: any) {
       setModalData(originalModalData);
       showError(`Gagal memperbarui status CEKFU resi ${resiNumber}. ${error.message || "Silakan coba lagi."}`);

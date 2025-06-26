@@ -38,7 +38,7 @@ export const useResiScanner = ({
   const [optimisticIdExpeditionScanCount, setOptimisticIdExpeditionScanCount] = React.useState(initialIdExpeditionScanCount || 0); // NEW
   const resiInputRef = React.useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
-  const { triggerSync } = useBackgroundSync();
+  const { triggerSync: debouncedTriggerSync } = useBackgroundSync(); // Use debouncedTriggerSync
   const [isPending, startTransition] = useTransition();
 
   const today = new Date();
@@ -353,7 +353,7 @@ export const useResiScanner = ({
         timestamp: Date.now(),
       });
       
-      triggerSync();
+      debouncedTriggerSync(); // Use debouncedTriggerSync
 
     } catch (error: any) {
       console.error(`[useResiScanner] Error during resi input:`, error);
@@ -397,7 +397,7 @@ export const useResiScanner = ({
       setIsProcessing(false);
       keepFocus();
     }
-  }, [resiNumber, expedition, selectedKarung, formattedDate, allExpedisiDataUnfiltered, allFlagNoExpedisiData, allResiForExpedition, queryClient, triggerSync, validateInput, derivedRecentProcessedResiNumbers, startTransition, isPending, initialTotalExpeditionItems, initialRemainingExpeditionItems, initialIdExpeditionScanCount]);
+  }, [resiNumber, expedition, selectedKarung, formattedDate, allExpedisiDataUnfiltered, allFlagNoExpedisiData, allResiForExpedition, queryClient, debouncedTriggerSync, validateInput, derivedRecentProcessedResiNumbers, startTransition, isPending, initialTotalExpeditionItems, initialRemainingExpeditionItems, initialIdExpeditionScanCount]);
 
   return {
     resiNumber,

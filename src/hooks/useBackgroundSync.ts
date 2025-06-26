@@ -5,9 +5,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { showError } from '@/utils/toast';
 import { format } from 'date-fns';
 import { normalizeExpeditionName } from '@/utils/expeditionUtils'; // Import normalizeExpeditionName
+import { useDebouncedCallback } from './useDebouncedCallback'; // Import useDebouncedCallback
 
 const SYNC_INTERVAL_MS = 1000 * 60; // Sync every 1 minute
 const MAX_RETRIES = 5; // Max attempts before giving up on an operation
+const SYNC_DEBOUNCE_MS = 500; // Debounce sync calls by 500ms
 
 // Define the type for tbl_expedisi records
 interface TblExpedisiRecord {
@@ -260,17 +262,22 @@ export const useBackgroundSync = () => {
     }
   };
 
+  // Debounce the performSync function
+  const debouncedPerformSync = useDebouncedCallback(performSync, SYNC_DEBOUNCE_MS);
+
   useEffect(() => {
     console.log(`[BackgroundSync] Initializing sync.`);
-    performSync();
-    syncIntervalRef.current = window.setInterval(performSync, SYNC_INTERVAL_MS);
+    // Initial sync on mount
+    debouncedPerformSync();
+    // Set up interval for periodic sync
+    syncIntervalRef.current = window.setInterval(debouncedPerformSync, SYNC_INTERVAL_MS);
     return () => {
       if (syncIntervalRef.current) {
         console.log(`[BackgroundSync] Clearing sync interval.`);
         clearInterval(syncIntervalRef.current);
       }
     };
-  }, []);
+  }, [debouncedPerformSync]);
 
-  return { triggerSync: performSync };
+  return { triggerSync: debouncedPerformSync };
 };

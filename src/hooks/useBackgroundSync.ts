@@ -3,8 +3,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { getPendingOperations, deletePendingOperation, updatePendingOperation } from '@/integrations/indexeddb/pendingOperations';
 import { supabase } from '@/integrations/supabase/client';
 import { showError } from '@/utils/toast';
-import { invalidateDashboardQueries } from '@/utils/dashboardQueryInvalidation';
 import { format } from 'date-fns';
+import { normalizeExpeditionName } from '@/utils/expeditionUtils'; // Import normalizeExpeditionName
 
 const SYNC_INTERVAL_MS = 1000 * 60; // Sync every 1 minute
 const MAX_RETRIES = 5; // Max attempts before giving up on an operation
@@ -46,8 +46,10 @@ export const useBackgroundSync = () => {
 
     let operationsSynced = 0;
     let operationsFailed = 0;
-    const affectedDates = new Set<string>();
-    const affectedExpeditions = new Set<string>();
+    
+    // Use sets to collect unique affected dates and expeditions for efficient invalidation/refetching
+    const affectedDates = new Set<string>(); // Stores 'yyyy-MM-dd'
+    const affectedExpeditions = new Set<string>(); // Stores normalized expedition names
 
     try {
       const pendingOperations = await getPendingOperations();
@@ -63,10 +65,12 @@ export const useBackgroundSync = () => {
         console.log(`[BackgroundSync] Processing ${op.type} for resi: ${op.payload.resiNumber || 'N/A'}`);
         try {
           let success = false;
+          let resiCreatedDateForInvalidation: Date | undefined;
+          let resiExpeditionForInvalidation: string | undefined;
+
           if (op.type === 'batal') {
             const { resiNumber, createdTimestampFromExpedisi, keteranganValue, expedisiFlagStatus } = op.payload;
 
-            // Try to fetch existing tbl_resi record to preserve original 'created' and 'nokarung'
             const { data: existingResi, error: fetchResiError } = await supabase
               .from("tbl_resi")
               .select("created, nokarung, Keterangan")
@@ -83,37 +87,32 @@ export const useBackgroundSync = () => {
             };
 
             if (existingResi) {
-              // If resi exists, update it, preserving original created date and nokarung
               resiToUpsert.created = existingResi.created;
               resiToUpsert.nokarung = existingResi.nokarung;
-              resiToUpsert.Keterangan = existingResi.Keterangan; // Preserve original Keterangan
+              resiToUpsert.Keterangan = existingResi.Keterangan;
             } else {
-              // If resi does not exist, insert new, using provided createdTimestamp or current time
               resiToUpsert.created = createdTimestampFromExpedisi || new Date(op.timestamp).toISOString();
-              resiToUpsert.nokarung = "0"; // Default to "0" for new batal entry
+              resiToUpsert.nokarung = "0";
               resiToUpsert.Keterangan = keteranganValue;
             }
 
-            // 1. Upsert into tbl_resi with schedule 'batal'
             const { error: resiUpsertError } = await supabase
               .from("tbl_resi")
               .upsert(resiToUpsert as TblResiRecord, { onConflict: 'Resi', ignoreDuplicates: false });
 
             if (resiUpsertError) throw resiUpsertError;
 
-            // 2. Update tbl_expedisi flag to 'NO'
             const { error: expedisiUpdateError } = await supabase
               .from("tbl_expedisi")
-              .update({ flag: expedisiFlagStatus || 'NO' }) // Use payload status or default to 'NO'
+              .update({ flag: expedisiFlagStatus || 'NO' })
               .eq("resino", resiNumber);
 
-            if (expedisiUpdateError && expedisiUpdateError.code !== 'PGRST116') { // PGRST116 means "no rows found"
+            if (expedisiUpdateError && expedisiUpdateError.code !== 'PGRST116') {
               console.warn(`[BackgroundSync] Warning: Failed to update tbl_expedisi flag for resi ${resiNumber}: ${expedisiUpdateError.message}`);
             }
             success = true;
-            // Use the created date from the upserted resi for invalidation
-            affectedDates.add(format(new Date(resiToUpsert.created!), 'yyyy-MM-dd'));
-            if (resiToUpsert.Keterangan) affectedExpeditions.add(resiToUpsert.Keterangan);
+            resiCreatedDateForInvalidation = new Date(resiToUpsert.created!);
+            resiExpeditionForInvalidation = resiToUpsert.Keterangan || undefined;
 
           } else if (op.type === 'confirm') {
             const { error: resiUpsertError } = await supabase
@@ -128,8 +127,8 @@ export const useBackgroundSync = () => {
 
             if (resiUpsertError) throw resiUpsertError;
             success = true;
-            affectedDates.add(format(new Date(op.payload.expedisiCreatedTimestamp || op.timestamp), 'yyyy-MM-dd'));
-            if (op.payload.keteranganValue) affectedExpeditions.add(op.payload.keteranganValue);
+            resiCreatedDateForInvalidation = new Date(op.payload.expedisiCreatedTimestamp || op.timestamp);
+            resiExpeditionForInvalidation = op.payload.keteranganValue || op.payload.courierNameFromExpedisi || undefined;
 
           } else if (op.type === 'cekfu') {
             const { data: expedisiRecord, error: _fetchExpedisiError } = await supabase
@@ -142,14 +141,13 @@ export const useBackgroundSync = () => {
             if (_fetchExpedisiError) throw _fetchExpedisiError;
             success = true;
             if (expedisiRecord && expedisiRecord.length > 0) {
-              affectedDates.add(format(new Date(expedisiRecord[0].created), 'yyyy-MM-dd'));
-              if (expedisiRecord[0].couriername) affectedExpeditions.add(expedisiRecord[0].couriername);
+              resiCreatedDateForInvalidation = new Date(expedisiRecord[0].created);
+              resiExpeditionForInvalidation = expedisiRecord[0].couriername || undefined;
             }
 
           } else if (op.type === 'scan') {
             const { resiNumber, selectedKarung, courierNameFromExpedisi } = op.payload;
 
-            // 1. Insert or Update into tbl_resi using upsert
             const { error: resiUpsertError } = await supabase
               .from("tbl_resi")
               .upsert({
@@ -163,24 +161,29 @@ export const useBackgroundSync = () => {
               throw resiUpsertError;
             }
 
-            // 2. Update tbl_expedisi cekfu to FALSE (flag dikelola oleh trigger)
             const { error: expedisiUpdateError } = await supabase
               .from("tbl_expedisi")
               .update({ cekfu: false })
               .eq("resino", resiNumber);
 
-            if (expedisiUpdateError && expedisiUpdateError.code !== 'PGRST116') { // PGRST116 means "no rows found"
+            if (expedisiUpdateError && expedisiUpdateError.code !== 'PGRST116') {
               console.warn(`[BackgroundSync] Warning: Failed to update tbl_expedisi for resi ${resiNumber}: ${expedisiUpdateError.message}`);
             }
             success = true;
-            affectedDates.add(format(new Date(op.timestamp), 'yyyy-MM-dd'));
-            if (courierNameFromExpedisi) affectedExpeditions.add(courierNameFromExpedisi);
+            resiCreatedDateForInvalidation = new Date(op.timestamp);
+            resiExpeditionForInvalidation = courierNameFromExpedisi || undefined;
           }
 
           if (success) {
             console.log(`[BackgroundSync] Operation ${op.id} successful. Deleting.`);
             await deletePendingOperation(op.id);
             operationsSynced++;
+            if (resiCreatedDateForInvalidation) {
+              affectedDates.add(format(resiCreatedDateForInvalidation, 'yyyy-MM-dd'));
+            }
+            if (resiExpeditionForInvalidation) {
+              affectedExpeditions.add(normalizeExpeditionName(resiExpeditionForInvalidation) || '');
+            }
           }
         } catch (error: any) {
           console.error(`[BackgroundSync] Failed to sync operation ${op.id} (type: ${op.type}, resi: ${op.payload.resiNumber || 'N/A'}):`, error.message);
@@ -199,22 +202,51 @@ export const useBackgroundSync = () => {
       }
 
       if (operationsSynced > 0) {
-        console.log(`[BackgroundSync] ${operationsSynced} operations synced. Invalidating queries.`);
-        const today = new Date();
-        affectedDates.forEach(dateStr => {
-          invalidateDashboardQueries(queryClient, new Date(dateStr));
-        });
-        affectedExpeditions.forEach(expName => {
-          invalidateDashboardQueries(queryClient, today, expName);
-        });
+        console.log(`[BackgroundSync] ${operationsSynced} operations synced. Refetching queries.`);
+        
+        // Always refetch global/unfiltered data that might change
+        // Note: allExpedisiDataUnfiltered query key includes formattedToday, so it's date-specific
+        queryClient.refetchQueries({ queryKey: ["allExpedisiDataUnfiltered"] }); 
+        queryClient.refetchQueries({ queryKey: ["allFlagNoExpedisiData"] });
+        queryClient.refetchQueries({ queryKey: ["uniqueExpeditionNames"] });
+        queryClient.refetchQueries({ queryKey: ["historyData"] }); // History is always affected
 
-        queryClient.invalidateQueries({ queryKey: ["historyData"] });
-        queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] });
-        queryClient.invalidateQueries({ queryKey: ["allExpedisiDataUnfiltered"] });
-        queryClient.invalidateQueries({ queryKey: ["recentScannedResiNumbers"] });
-        queryClient.invalidateQueries({ queryKey: ["karungSummary"] });
-        queryClient.invalidateQueries({ queryKey: ["lastKarung"] });
-        queryClient.invalidateQueries({ queryKey: ["uniqueExpeditionNames"] });
+        // Refetch dashboard summary counts (which are date-specific)
+        // and Input page specific counts (which are date and expedition specific)
+        affectedDates.forEach(dateStr => {
+            const dateObj = new Date(dateStr);
+            const dashboardFormattedDate = format(dateObj, "yyyy-MM-dd");
+            const dashboardFormattedDateISO = dateObj.toISOString().split('T')[0];
+
+            // Dashboard summary queries
+            queryClient.refetchQueries({ queryKey: ["transaksiHariIni", dashboardFormattedDate] });
+            queryClient.refetchQueries({ queryKey: ["totalScan", dashboardFormattedDateISO] });
+            queryClient.refetchQueries({ queryKey: ["idRekCount", dashboardFormattedDateISO] });
+            queryClient.refetchQueries({ queryKey: ["belumKirim", dashboardFormattedDate] });
+            queryClient.refetchQueries({ queryKey: ["scanFollowupLateCount", dashboardFormattedDateISO] });
+            queryClient.refetchQueries({ queryKey: ["batalCount", dashboardFormattedDateISO] });
+            queryClient.refetchQueries({ queryKey: ["followUpData", dashboardFormattedDate] });
+            queryClient.refetchQueries({ queryKey: ["expedisiDataForSelectedDate", dashboardFormattedDate] });
+            queryClient.refetchQueries({ queryKey: ["allResiData", dashboardFormattedDateISO] });
+            queryClient.refetchQueries({ queryKey: ["followUpFlagNoCount", dashboardFormattedDate] }); 
+
+            // Input page specific queries (date-specific, but also expedition-specific)
+            affectedExpeditions.forEach(expName => {
+                const normalizedExpName = normalizeExpeditionName(expName);
+                if (normalizedExpName) {
+                    queryClient.refetchQueries({ queryKey: ["allResiForExpedition", normalizedExpName, dashboardFormattedDate] });
+                    queryClient.refetchQueries({ queryKey: ["karungSummary", normalizedExpName, dashboardFormattedDate] });
+                    queryClient.refetchQueries({ queryKey: ["totalExpeditionItems", normalizedExpName, dashboardFormattedDate] });
+                    queryClient.refetchQueries({ queryKey: ["remainingExpeditionItems", normalizedExpName, dashboardFormattedDate] });
+                    // idExpeditionScanCount is already covered by the general dashboard refetch if expName is 'ID'
+                    if (normalizedExpName === 'ID') {
+                        queryClient.refetchQueries({ queryKey: ["idExpeditionScanCount", dashboardFormattedDate] });
+                    }
+                }
+            });
+            // Also refetch the "all karung summaries" for the dashboard, as it aggregates across all expeditions for a date
+            queryClient.refetchQueries({ queryKey: ["allKarungSummaries", dashboardFormattedDate] });
+        });
       }
       if (operationsFailed > 0) {
         console.warn(`[BackgroundSync] ${operationsFailed} operations failed to sync.`);

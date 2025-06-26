@@ -10,7 +10,7 @@ export const invalidateDashboardQueries = (queryClient: QueryClient, date: Date 
   // These are usually tied to a specific date.
   queryClient.invalidateQueries({ queryKey: ["transaksiHariIni", formattedDate] });
   queryClient.invalidateQueries({ queryKey: ["totalScan", formattedDate] });
-  queryClient.invalidateQueries({ queryKey: ["idRekCount", formattedDate] });
+  queryClient.invalidateQueries({ queryKey: ["idRekCount", formattedDate] }); // This is for Dashboard page
   queryClient.invalidateQueries({ queryKey: ["belumKirim", formattedDate] });
   queryClient.invalidateQueries({ queryKey: ["scanFollowupLateCount", formattedDate] });
   queryClient.invalidateQueries({ queryKey: ["batalCount", formattedDate] });
@@ -23,7 +23,7 @@ export const invalidateDashboardQueries = (queryClient: QueryClient, date: Date 
   // Invalidate queries specific to the Input page and comprehensive data
   // Normalize expedition name for invalidation if it's ID_REKOMENDASI, as Input page treats it as 'ID'
   let normalizedExpeditionForInput: string | undefined = expedition;
-  if (expedition === 'ID_REKOMENDASI') { // Fixed typo here
+  if (expedition === 'ID_REKOMENDASI') {
     normalizedExpeditionForInput = 'ID';
   }
 
@@ -31,13 +31,14 @@ export const invalidateDashboardQueries = (queryClient: QueryClient, date: Date 
     queryClient.invalidateQueries({ queryKey: ["karungSummary", normalizedExpeditionForInput, formattedDate] });
     queryClient.invalidateQueries({ queryKey: ["lastKarung", normalizedExpeditionForInput, formattedDate] });
     queryClient.invalidateQueries({ queryKey: ["allResiForExpedition", normalizedExpeditionForInput, formattedDate] });
+    // Menambahkan invalidasi untuk query Input page yang relevan
+    queryClient.invalidateQueries({ queryKey: ["idExpeditionScanCount", formattedDate] });
+    queryClient.invalidateQueries({ queryKey: ["totalExpeditionItems", normalizedExpeditionForInput, formattedDate] });
+    queryClient.invalidateQueries({ queryKey: ["remainingExpeditionItems", normalizedExpeditionForInput, formattedDate] });
   }
 
   // Invalidate the allExpedisiDataUnfiltered query with its new key (only today)
   queryClient.invalidateQueries({ queryKey: ["allExpedisiDataUnfiltered", actualCurrentFormattedDate] });
-
-  // Removed: Invalidate recentResiNumbersForValidation for local duplicate checks (only today)
-  // queryClient.invalidateQueries({ queryKey: ["recentScannedResiNumbers", actualCurrentFormattedDate] });
 
   // Invalidate the allFlagNoExpedisiData query
   queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] });

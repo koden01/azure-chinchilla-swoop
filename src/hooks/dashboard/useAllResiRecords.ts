@@ -9,7 +9,13 @@ export const useAllResiRecords = (date: Date | undefined) => {
     queryKey: ["allResiData", formattedDate],
     queryFn: async () => {
       if (!date) return [];
-      const data = await fetchAllDataPaginated("tbl_resi", "created", date, date);
+      const data = await fetchAllDataPaginated(
+        "tbl_resi",
+        "created",
+        date,
+        date,
+        "Resi, nokarung, created, Keterangan, schedule" // Hanya pilih kolom yang diperlukan
+      );
       return data;
     },
     enabled: !!date,

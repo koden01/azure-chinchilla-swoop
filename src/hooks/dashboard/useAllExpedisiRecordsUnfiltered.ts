@@ -9,7 +9,13 @@ export const useAllExpedisiRecordsUnfiltered = () => {
   return useQuery<Map<string, any>>({
     queryKey: ["allExpedisiDataUnfiltered", formattedToday], // Hanya menggunakan tanggal hari ini
     queryFn: async () => {
-      const data = await fetchAllDataPaginated("tbl_expedisi", "created", today, today); // Hanya ambil data untuk hari ini
+      const data = await fetchAllDataPaginated(
+        "tbl_expedisi",
+        "created",
+        today,
+        today,
+        "resino, couriername, created, flag, cekfu" // Hanya pilih kolom yang diperlukan
+      );
       const expedisiMap = new Map<string, any>();
       data.forEach(item => {
         if (item.resino) {

@@ -67,7 +67,7 @@ export const useResiScanner = ({
         undefined,
         undefined,
         undefined,
-        "*",
+        "resino, couriername, created, flag, cekfu", // Hanya pilih kolom yang diperlukan
         (query) => query.eq("flag", "NO")
       );
       const expedisiMap = new Map<string, any>();

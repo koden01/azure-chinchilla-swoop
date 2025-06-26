@@ -239,7 +239,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       if (!expedisiRecord) {
         const { data: directExpedisiData, error: directExpedisiError } = await supabase
             .from("tbl_expedisi")
-            .select("*")
+            .select("created, couriername") // Hanya pilih kolom yang diperlukan
             .eq("resino", resiNumber)
             .single();
 
@@ -298,7 +298,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       if (!expedisiRecord) {
         const { data: directExpedisiData, error: directExpedisiError } = await supabase
             .from("tbl_expedisi")
-            .select("*")
+            .select("created, couriername") // Hanya pilih kolom yang diperlukan
             .eq("resino", resiNumber)
             .single();
 

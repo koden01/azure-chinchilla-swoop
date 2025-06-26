@@ -10,10 +10,7 @@ export const usePendingOperations = () => {
 
   const fetchOperations = async () => {
     try {
-      // console.log(`[IndexedDB] Fetching all pending operations started at: ${new Date().toISOString()}`); // Dihapus
-      // console.time("[IndexedDB] Fetching all pending operations duration"); // Dihapus
       const ops = await getPendingOperations();
-      // console.timeEnd("[IndexedDB] Fetching all pending operations duration"); // Dihapus
       setPendingOperations(ops);
     } catch (error) {
       console.error("Error fetching pending operations from IndexedDB:", error);

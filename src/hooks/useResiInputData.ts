@@ -30,9 +30,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
   const { data: allResiForExpedition, isLoading: isLoadingAllResiForExpedition } = useQuery<ResiExpedisiData[]>({
     queryKey: ["allResiForExpedition", expedition, formattedToday], 
     queryFn: async () => {
-      console.log(`[useResiInputData] Fetching allResiForExpedition for '${expedition}' on '${formattedToday}'...`);
       if (!expedition) {
-        console.log("[useResiInputData] No expedition selected, returning empty array for allResiForExpedition.");
         return [];
       }
       
@@ -50,7 +48,6 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
           }
         }
       );
-      console.log(`[useResiInputData] Fetched ${data.length} records for allResiForExpedition.`);
       return data || [];
     },
     enabled: !!expedition,
@@ -61,9 +58,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
   const { data: karungSummaryData, isLoading: isLoadingKarungSummaryData } = useQuery<{ karung_number: string; quantity: number; }[]>({
     queryKey: ["karungSummary", expedition, formattedToday],
     queryFn: async () => {
-      console.log(`[useResiInputData] Fetching karungSummary for '${expedition}' on '${formattedToday}'...`);
       if (!expedition) {
-        console.log("[useResiInputData] No expedition selected, returning empty array for karungSummary.");
         return [];
       }
       const { data, error } = await supabase.rpc("get_karung_summary_for_expedition_and_date", {
@@ -75,7 +70,6 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
         console.error("Error fetching karung summary for expedition:", error);
         throw error;
       }
-      console.log(`[useResiInputData] Fetched ${data.length} karung summary records.`);
       return data || [];
     },
     enabled: !!expedition,
@@ -86,7 +80,6 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
   const { data: allKarungSummariesData, isLoading: isLoadingAllKarungSummaries } = useQuery<AllKarungSummaryItem[]>({
     queryKey: ["allKarungSummaries", formattedToday],
     queryFn: async () => {
-      console.log(`[useResiInputData] Fetching allKarungSummaries for '${formattedToday}'...`);
       const { data, error } = await supabase.rpc("get_all_karung_summaries_for_date", {
         p_selected_date: formattedToday,
       });
@@ -95,7 +88,6 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
         console.error("Error fetching all karung summaries:", error);
         throw error;
       }
-      console.log(`[useResiInputData] Fetched ${data.length} all karung summaries.`);
       return data || [];
     },
     enabled: showAllExpeditionSummary,
@@ -106,7 +98,6 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
   const { data: uniqueExpeditionNames, isLoading: isLoadingUniqueExpeditionNames } = useQuery<string[]>({
     queryKey: ["uniqueExpeditionNames"],
     queryFn: async () => {
-      console.log("[useResiInputData] Fetching uniqueExpeditionNames...");
       const { data, error } = await supabase
         .from("tbl_expedisi")
         .select("couriername");
@@ -128,7 +119,6 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       });
       
       const names = Array.from(namesSet);
-      console.log(`[useResiInputData] Fetched ${names.length} unique expedition names.`);
       return names.sort((a, b) => a.localeCompare(b));
     },
     staleTime: Infinity,
@@ -141,7 +131,6 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
   const { data: totalExpeditionItems, isLoading: isLoadingTotalExpeditionItems } = useQuery<number>({
     queryKey: ["totalExpeditionItems", expedition, formattedToday],
     queryFn: async () => {
-      console.log(`[useResiInputData] Fetching totalExpeditionItems for '${expedition}' on '${formattedToday}'...`);
       if (!expedition) return 0;
       const { data: countData, error } = await supabase.rpc("get_total_expedition_items_count", {
         p_couriername: expedition,
@@ -151,7 +140,6 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
         console.error("Error fetching total expedition items count:", error);
         throw error;
       }
-      console.log(`[useResiInputData] Total expedition items for '${expedition}': ${countData}`);
       return countData || 0;
     },
     enabled: !!expedition,
@@ -162,7 +150,6 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
   const { data: remainingExpeditionItems, isLoading: isLoadingRemainingExpeditionItems } = useQuery<number>({
     queryKey: ["remainingExpeditionItems", expedition, formattedToday],
     queryFn: async () => {
-      console.log(`[useResiInputData] Fetching remainingExpeditionItems for '${expedition}' on '${formattedToday}'...`);
       if (!expedition) return 0;
       const { data: countData, error } = await supabase.rpc("get_belum_kirim_expedition_count", {
         p_couriername: expedition,
@@ -172,7 +159,6 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
         console.error("Error fetching remaining expedition items count:", error);
         throw error;
       }
-      console.log(`[useResiInputData] Remaining expedition items for '${expedition}': ${countData}`);
       return countData || 0;
     },
     enabled: !!expedition,
@@ -183,7 +169,6 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
   const { data: idExpeditionScanCount, isLoading: isLoadingIdExpeditionScanCount } = useQuery<number>({
     queryKey: ["idExpeditionScanCount", formattedToday],
     queryFn: async () => {
-      console.log(`[useResiInputData] Fetching idExpeditionScanCount for 'ID' on '${formattedToday}'...`);
       const { count, error } = await supabase
         .from("tbl_resi")
         .select("*", { count: "exact" })
@@ -196,7 +181,6 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
         console.error("Error fetching ID expedition scan count:", error);
         throw error;
       }
-      console.log(`[useResiInputData] ID expedition scan count: ${count}`);
       return count || 0;
     },
     enabled: expedition === 'ID',
@@ -206,14 +190,12 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
   // Derive currentCount from allResiForExpedition
   const currentCount = React.useCallback((selectedKarung: string) => {
     if (!allResiForExpedition || !selectedKarung) {
-      console.log(`[useResiInputData] currentCount: No data or karung selected. Returning 0.`);
       return 0;
     }
     const count = allResiForExpedition.filter(item => 
       item.nokarung === selectedKarung && 
       (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition)
     ).length;
-    console.log(`[useResiInputData] currentCount for Karung '${selectedKarung}' (Expedition '${expedition}'): ${count}`);
     return count;
   }, [allResiForExpedition, expedition]);
 
@@ -228,7 +210,6 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
 
     const sortedResi = [...filteredResi].sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime());
     const last = sortedResi[0].nokarung || "0";
-    console.log(`[useResiInputData] Last Karung for '${expedition}': ${last}`);
     return last;
   }, [allResiForExpedition, expedition]);
 
@@ -243,7 +224,6 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       .map(item => parseInt(item.nokarung || "0"))
       .filter(num => !isNaN(num) && num > 0);
     const highest = validKarungNumbers.length > 0 ? Math.max(...validKarungNumbers) : 0;
-    console.log(`[useResiInputData] Highest Karung for '${expedition}': ${highest}`);
     return highest;
   }, [allResiForExpedition, expedition]);
 
@@ -251,7 +231,6 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
   const karungOptions = React.useMemo(() => {
     const maxKarung = Math.max(1, highestKarung, 100);
     const options = Array.from({ length: maxKarung }, (_, i) => (i + 1).toString());
-    console.log(`[useResiInputData] Generated ${options.length} karung options. Max: ${maxKarung}`);
     return options;
   }, [highestKarung]);
 
@@ -261,7 +240,6 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       karungNumber: item.karung_number,
       quantity: item.quantity,
     })) : [];
-    console.log(`[useResiInputData] Karung Summary for modal: ${summary.length} items.`);
     return summary;
   }, [karungSummaryData]);
 
@@ -272,13 +250,11 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       karungNumber: item.karung_number,
       quantity: item.quantity,
     })) : [];
-    console.log(`[useResiInputData] All Expedition Karung Summary: ${summary.length} items.`);
     return summary;
   }, [allKarungSummariesData]);
 
   const expeditionOptions = React.useMemo(() => {
     const options = uniqueExpeditionNames || [];
-    console.log(`[useResiInputData] Expedition Options: ${options.length} items.`);
     return options;
   }, [uniqueExpeditionNames]);
 

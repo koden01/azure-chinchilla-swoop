@@ -161,10 +161,8 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
     setModalData(prevData => {
       const newData = prevData.filter(item => {
         const itemResi = (item.Resi || item.resino || "").toLowerCase().trim();
-        console.log(`[handleBatalResi] Filtering: Comparing '${itemResi}' with '${normalizedResiNumber}'`);
         return itemResi !== normalizedResiNumber;
       });
-      console.log(`[handleBatalResi] Modal data after optimistic filter:`, newData);
       return newData;
     });
 
@@ -187,7 +185,6 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         
         if (directExpedisiData) {
             expedisiRecord = directExpedisiData;
-            console.log(`[handleBatalResi] Direct fetch successful for ${resiNumber}.`);
         } else {
             console.warn(`[handleBatalResi] Resi ${resiNumber} not found in tbl_expedisi. Proceeding with 'batal' in tbl_resi using default values.`);
         }

@@ -6,7 +6,7 @@ import { showError } from '@/utils/toast';
 import { format } from 'date-fns';
 import { normalizeExpeditionName } from '@/utils/expeditionUtils'; // Import normalizeExpeditionName
 import { useDebouncedCallback } from './useDebouncedCallback'; // Import useDebouncedCallback
-import { safeParseDate } from '@/lib/utils'; // Import safeParseDate
+import { safeParseDate, safeFormatDate } from '@/lib/utils'; // Import safeParseDate and safeFormatDate
 
 const SYNC_INTERVAL_MS = 1000 * 60; // Sync every 1 minute
 const MAX_RETRIES = 5; // Max attempts before giving up on an operation
@@ -184,7 +184,7 @@ export const useBackgroundSync = () => {
             await deletePendingOperation(op.id);
             operationsSynced++;
             if (resiCreatedDateForInvalidation) {
-              affectedDates.add(format(resiCreatedDateForInvalidation, 'yyyy-MM-dd'));
+              affectedDates.add(safeFormatDate(resiCreatedDateForInvalidation, 'yyyy-MM-dd', '')); // Use safeFormatDate
             }
             if (resiExpeditionForInvalidation) {
               affectedExpeditions.add(normalizeExpeditionName(resiExpeditionForInvalidation) || '');
@@ -222,8 +222,8 @@ export const useBackgroundSync = () => {
             const dateObj = safeParseDate(dateStr); // Use safeParseDate
             if (!dateObj) return; // Skip if date is invalid
 
-            const dashboardFormattedDate = format(dateObj, "yyyy-MM-dd");
-            const dashboardFormattedDateISO = dateObj.toISOString().split('T')[0];
+            const dashboardFormattedDate = safeFormatDate(dateObj, "yyyy-MM-dd", ''); // Use safeFormatDate
+            const dashboardFormattedDateISO = safeFormatDate(dateObj, "yyyy-MM-dd", ''); // Use safeFormatDate
 
             // Dashboard summary queries
             queryClient.refetchQueries({ queryKey: ["transaksiHariIni", dashboardFormattedDate] });

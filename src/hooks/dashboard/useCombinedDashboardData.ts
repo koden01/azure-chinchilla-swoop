@@ -123,7 +123,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
         });
 
         const opDate = safeParseDate(op.timestamp); // Use safeParseDate
-        if (opDate && isSameDay(opDate, date)) {
+        if (opDate && date && isSameDay(opDate, date)) { // Add null/undefined check for opDate and date
           const existingExpedisiForSelectedDate = currentExpedisiDataForSelectedDate.find((e: ModalDataItem) => (e.resino || "").toLowerCase() === normalizedResi);
           if (!existingExpedisiForSelectedDate) {
             currentExpedisiDataForSelectedDate.push({
@@ -184,7 +184,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
         }
 
         const opDate = safeParseDate(op.timestamp); // Use safeParseDate
-        if (opDate && isSameDay(opDate, date)) {
+        if (opDate && date && isSameDay(opDate, date)) { // Add null/undefined check for opDate and date
           const indexInSelectedDate = currentExpedisiDataForSelectedDate.findIndex((e: ModalDataItem) => (e.resino || "").toLowerCase() === normalizedResi);
           if (indexInSelectedDate !== -1) {
             currentExpedisiDataForSelectedDate[indexInSelectedDate].flag = "YES";
@@ -198,7 +198,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
         }
 
         const opDate = safeParseDate(op.timestamp); // Use safeParseDate
-        if (opDate && isSameDay(opDate, date)) {
+        if (opDate && date && isSameDay(opDate, date)) { // Add null/undefined check for opDate and date
           const indexInSelectedDate = currentExpedisiDataForSelectedDate.findIndex((e: ModalDataItem) => (e.resino || "").toLowerCase() === normalizedResi);
           if (indexInSelectedDate !== -1) {
             currentExpedisiDataForSelectedDate[indexInSelectedDate].cekfu = op.payload.newCekfuStatus;
@@ -238,7 +238,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
       const resiCreatedDate = safeParseDate(resi.created); // Use safeParseDate
       let attributedExpeditionName: string | null = null;
 
-      if (!resiCreatedDate || !date || !isSameDay(resiCreatedDate, date)) {
+      if (!resiCreatedDate || !date || !isSameDay(resiCreatedDate, date)) { // Add null/undefined check for resiCreatedDate and date
         return;
       }
 

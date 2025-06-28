@@ -1,6 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
 import { format, startOfDay, endOfDay, addDays } from "date-fns";
-import { safeParseDate } from "@/lib/utils"; // Import safeParseDate
 
 /**
  * Fetches all data from a Supabase table with pagination, handling the 1000-row limit.
@@ -42,11 +41,7 @@ export const fetchAllDataPaginated = async (
         query = query.gte(dateFilterColumn, formattedStart).lt(dateFilterColumn, formattedEnd);
       } else {
         // For tbl_resi.created (timestamp with time zone), use ISO strings for range
-        const startOfRange = safeParseDate(selectedStartDate.toISOString())?.toISOString(); // Use safeParseDate
-        const endOfRange = safeParseDate(endOfDay(selectedEndDate).toISOString())?.toISOString(); // Use safeParseDate
-        if (startOfRange && endOfRange) {
-          query = query.gte(dateFilterColumn, startOfRange).lt(dateFilterColumn, endOfRange);
-        }
+        query = query.gte(dateFilterColumn, startOfDay(selectedStartDate).toISOString()).lt(dateFilterColumn, endOfDay(selectedEndDate).toISOString());
       }
     }
 

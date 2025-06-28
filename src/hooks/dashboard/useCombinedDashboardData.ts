@@ -9,9 +9,8 @@ import { usePendingOperations } from "@/hooks/usePendingOperations";
 import { ModalDataItem } from "@/types/data";
 import { useFollowUpRecords } from "@/hooks/dashboard/useFollowUpRecords";
 import { useExpedisiRecordsForSelectedDate } from "@/hooks/dashboard/useExpedisiRecordsForSelectedDate";
-import { useAllResiRecords } from "@/hooks/dashboard/useAllResiRecords";
+import { useAllResiRecords } from "@/hooks/dashboard/useAllResiRecords"; // Memperbaiki sintaks impor
 import { useAllExpedisiRecordsUnfiltered } from "@/hooks/dashboard/useAllExpedisiRecordsUnfiltered";
-import { safeParseDate } from "@/lib/utils"; // Import safeParseDate
 
 // Import individual count hooks
 import { useTransaksiHariIniCount } from "@/hooks/dashboard/useTransaksiHariIniCount";
@@ -106,7 +105,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
         const newResiEntry: ModalDataItem = {
           Resi: op.payload.resiNumber,
           nokarung: op.payload.selectedKarung,
-          created: safeParseDate(op.timestamp)?.toISOString() || new Date().toISOString(), // Use safeParseDate
+          created: new Date(op.timestamp).toISOString(),
           Keterangan: op.payload.courierNameFromExpedisi,
           schedule: "ontime",
         };
@@ -118,12 +117,12 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
           resino: op.payload.resiNumber,
           couriername: op.payload.courierNameFromExpedisi,
           flag: "YES",
-          created: safeParseDate(existingExpedisi?.created)?.toISOString() || safeParseDate(op.timestamp)?.toISOString() || new Date().toISOString(), // Use safeParseDate
+          created: existingExpedisi?.created || new Date(op.timestamp).toISOString(),
           cekfu: existingExpedisi?.cekfu || false,
         });
 
-        const opDate = safeParseDate(op.timestamp); // Use safeParseDate
-        if (opDate && date && isSameDay(opDate, date)) { // Add null/undefined check for opDate and date
+        const opDate = new Date(op.timestamp);
+        if (isSameDay(opDate, date)) {
           const existingExpedisiForSelectedDate = currentExpedisiDataForSelectedDate.find((e: ModalDataItem) => (e.resino || "").toLowerCase() === normalizedResi);
           if (!existingExpedisiForSelectedDate) {
             currentExpedisiDataForSelectedDate.push({
@@ -131,7 +130,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
               orderno: null,
               chanelsales: null,
               couriername: op.payload.courierNameFromExpedisi,
-              created: safeParseDate(op.timestamp)?.toISOString() || new Date().toISOString(), // Use safeParseDate
+              created: new Date(op.timestamp).toISOString(),
               flag: "YES",
               datetrans: null,
               cekfu: false,
@@ -153,14 +152,13 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
           currentResiData.push({
             Resi: op.payload.resiNumber,
             nokarung: "0",
-            created: safeParseDate(op.payload.createdTimestampFromExpedisi)?.toISOString() || safeParseDate(op.timestamp)?.toISOString() || new Date().toISOString(), // Use safeParseDate
+            created: op.payload.createdTimestampFromExpedisi || new Date(op.timestamp).toISOString(),
             Keterangan: op.payload.keteranganValue,
             schedule: "batal",
           });
         }
 
       } else if (op.type === 'confirm') {
-        const createdDateString = safeParseDate(op.payload.expedisiCreatedTimestamp)?.toISOString() || safeParseDate(op.timestamp)?.toISOString() || new Date().toISOString(); // Use safeParseDate
         const resiIndex = currentResiData.findIndex(r => (r.Resi || "").toLowerCase() === normalizedResi);
         if (resiIndex !== -1) {
           currentResiData[resiIndex] = { 
@@ -172,7 +170,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
           currentResiData.push({
             Resi: op.payload.resiNumber,
             nokarung: "0",
-            created: createdDateString,
+            created: op.payload.expedisiCreatedTimestamp || new Date(op.timestamp).toISOString(),
             Keterangan: op.payload.courierNameFromExpedisi,
             schedule: "ontime",
           });
@@ -183,8 +181,8 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
           currentExpedisiData.set(normalizedResi, { ...expedisiRecord, flag: "YES" });
         }
 
-        const opDate = safeParseDate(op.timestamp); // Use safeParseDate
-        if (opDate && date && isSameDay(opDate, date)) { // Add null/undefined check for opDate and date
+        const opDate = new Date(op.timestamp);
+        if (isSameDay(opDate, date)) {
           const indexInSelectedDate = currentExpedisiDataForSelectedDate.findIndex((e: ModalDataItem) => (e.resino || "").toLowerCase() === normalizedResi);
           if (indexInSelectedDate !== -1) {
             currentExpedisiDataForSelectedDate[indexInSelectedDate].flag = "YES";
@@ -197,8 +195,8 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
           currentExpedisiData.set(normalizedResi, { ...expedisiRecord, cekfu: op.payload.newCekfuStatus });
         }
 
-        const opDate = safeParseDate(op.timestamp); // Use safeParseDate
-        if (opDate && date && isSameDay(opDate, date)) { // Add null/undefined check for opDate and date
+        const opDate = new Date(op.timestamp);
+        if (isSameDay(opDate, date)) {
           const indexInSelectedDate = currentExpedisiDataForSelectedDate.findIndex((e: ModalDataItem) => (e.resino || "").toLowerCase() === normalizedResi);
           if (indexInSelectedDate !== -1) {
             currentExpedisiDataForSelectedDate[indexInSelectedDate].cekfu = op.payload.newCekfuStatus;
@@ -235,10 +233,10 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
     });
 
     currentResiData.forEach((resi: ModalDataItem) => {
-      const resiCreatedDate = safeParseDate(resi.created); // Use safeParseDate
+      const resiCreatedDate = resi.created ? new Date(resi.created) : null;
       let attributedExpeditionName: string | null = null;
 
-      if (!resiCreatedDate || !date || !isSameDay(resiCreatedDate, date)) { // Add null/undefined check for resiCreatedDate and date
+      if (!resiCreatedDate || !date || !isSameDay(resiCreatedDate, date)) {
         return;
       }
 

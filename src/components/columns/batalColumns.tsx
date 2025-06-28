@@ -1,7 +1,7 @@
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
-import { safeFormatDate } from "@/lib/utils"; // Import safeFormatDate
+import { format } from "date-fns";
 
 export interface BatalData {
   Resi: string;
@@ -28,8 +28,8 @@ export const columns: ColumnDef<BatalData>[] = [
     accessorKey: "created",
     header: "Tanggal Input",
     cell: ({ row }) => {
-      const dateValue = row.getValue("created");
-      return safeFormatDate(dateValue as string, "dd/MM/yyyy HH:mm");
+      const date = row.getValue("created");
+      return date ? format(new Date(date as string), "dd/MM/yyyy HH:mm") : "-";
     },
   },
   {

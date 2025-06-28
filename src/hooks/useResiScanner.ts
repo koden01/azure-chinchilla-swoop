@@ -9,7 +9,6 @@ import { normalizeExpeditionName } from "@/utils/expeditionUtils";
 import { addPendingOperation } from "@/integrations/indexeddb/pendingOperations";
 import { useBackgroundSync } from "@/hooks/useBackgroundSync";
 import { ResiExpedisiData } from "@/hooks/useResiInputData";
-import { safeParseDate, safeFormatDate } from "@/lib/utils"; // Import safeParseDate and safeFormatDate
 
 interface UseResiScannerProps {
   expedition: string;
@@ -177,7 +176,7 @@ export const useResiScanner = ({
         let nokarung = "Tidak Diketahui";
         
         if (resiDetails && !resiDetailsError) {
-            processedDate = safeFormatDate(resiDetails.created, "dd/MM/yyyy HH:mm", "Tidak Diketahui"); // Use safeFormatDate
+            processedDate = resiDetails.created ? format(new Date(resiDetails.created), "dd/MM/yyyy HH:mm") : "Tidak Diketahui";
             if (resiDetails.schedule === "batal") {
               validationMessage = `BATAL ${processedDate}`;
             } else {
@@ -189,7 +188,7 @@ export const useResiScanner = ({
             const processedExpedisiRecord = allExpedisiDataUnfiltered?.get(normalizedCurrentResi);
             if (processedExpedisiRecord) {
                 keterangan = processedExpedisiRecord.couriername || "Tidak Diketahui";
-                processedDate = safeFormatDate(processedExpedisiRecord.created, "dd/MM/yyyy HH:mm", "Tidak Diketahui"); // Use safeFormatDate
+                processedDate = processedExpedisiRecord.created ? format(new Date(processedExpedisiRecord.created), "dd/MM/yyyy HH:mm") : "Tidak Diketahui";
                 validationMessage = `DOUBLE! Resi ini ${processedExpedisiRecord.couriername} sudah diproses pada ${processedDate}.`;
             } else {
                 validationMessage = `DOUBLE! Resi ini sudah diproses.`;

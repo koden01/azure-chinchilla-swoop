@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Copy } from "lucide-react";
-import { safeFormatDate } from "@/lib/utils"; // Import safeFormatDate
+import { format } from "date-fns";
 import { useDebounce } from "@/hooks/useDebounce";
 import { showSuccess, showError } from "@/utils/toast";
 import { ModalDataItem } from "@/types/data";
@@ -105,8 +105,8 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
           accessorKey: "datetrans",
           header: "Tanggal Pembelian",
           cell: ({ row }) => {
-            const dateValue = row.original.datetrans;
-            return safeFormatDate(dateValue, "dd/MM/yyyy HH:mm");
+            const date = row.original.datetrans;
+            return date ? format(new Date(date as string), "dd/MM/yyyy HH:mm") : "-";
           },
         },
         {
@@ -152,16 +152,16 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
           accessorKey: "created_resi",
           header: "Tanggal Resi",
           cell: ({ row }) => {
-            const dateValue = row.original.created_resi;
-            return safeFormatDate(dateValue, "dd/MM/yyyy HH:mm");
+            const date = row.original.created_resi;
+            return date ? format(new Date(date as string), "dd/MM/yyyy HH:mm") : "-";
           },
         },
         {
           accessorKey: "created_expedisi",
           header: "Tanggal Expedisi",
           cell: ({ row }) => {
-            const dateValue = row.original.created_expedisi;
-            return safeFormatDate(dateValue, "dd/MM/yyyy HH:mm");
+            const date = row.original.created_expedisi;
+            return date ? format(new Date(date as string), "dd/MM/yyyy HH:mm") : "-";
           },
         },
         {
@@ -242,7 +242,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
         .map(cell => {
           if (cell.column.id === "datetrans" || cell.column.id === "created_resi" || cell.column.id === "created_expedisi") {
             const dateValue = cell.getValue() as string | null;
-            return safeFormatDate(dateValue, "dd/MM/yyyy HH:mm");
+            return dateValue ? format(new Date(dateValue), "dd/MM/yyyy HH:mm") : "-";
           }
           if (cell.column.id === "cekfu") {
             return cell.getValue() ? "YES" : "NO";

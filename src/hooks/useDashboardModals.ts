@@ -6,7 +6,6 @@ import { normalizeExpeditionName } from "@/utils/expeditionUtils";
 import { addPendingOperation } from "@/integrations/indexeddb/pendingOperations";
 import { useBackgroundSync } from "@/hooks/useBackgroundSync";
 import { format } from "date-fns";
-import { safeParseDate } from "@/lib/utils"; // Import safeParseDate
 
 interface UseDashboardModalsProps {
   date: Date | undefined;
@@ -192,7 +191,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       }
 
       // Use the created timestamp from tbl_expedisi if available, otherwise use current time
-      createdTimestampForResi = safeParseDate(expedisiRecord?.created)?.toISOString() || new Date().toISOString(); // Use safeParseDate
+      createdTimestampForResi = expedisiRecord?.created ? new Date(expedisiRecord.created).toISOString() : new Date().toISOString();
       originalCourierName = expedisiRecord?.couriername || null;
 
       console.log(`[handleBatalResi] Adding pending operation for batal: ${resiNumber}, created: ${createdTimestampForResi}, courier: ${originalCourierName}`);
@@ -253,7 +252,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       }
 
       const courierNameFromExpedisi = normalizeExpeditionName(expedisiRecord.couriername);
-      const expedisiCreatedTimestamp = safeParseDate(expedisiRecord.created)?.toISOString() || new Date().toISOString(); // Use safeParseDate
+      const expedisiCreatedTimestamp = expedisiRecord.created;
 
       await addPendingOperation({
         id: `confirm-${resiNumber}-${Date.now()}`,

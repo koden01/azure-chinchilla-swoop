@@ -6,7 +6,6 @@ import { showError } from '@/utils/toast';
 import { format } from 'date-fns';
 import { normalizeExpeditionName } from '@/utils/expeditionUtils'; // Import normalizeExpeditionName
 import { useDebouncedCallback } from './useDebouncedCallback'; // Import useDebouncedCallback
-import { safeParseDate, safeFormatDate } from '@/lib/utils'; // Import safeParseDate and safeFormatDate
 
 const SYNC_INTERVAL_MS = 1000 * 60; // Sync every 1 minute
 const MAX_RETRIES = 5; // Max attempts before giving up on an operation
@@ -90,11 +89,11 @@ export const useBackgroundSync = () => {
             };
 
             if (existingResi) {
-              resiToUpsert.created = safeParseDate(existingResi.created)?.toISOString() || new Date().toISOString(); // Use safeParseDate
+              resiToUpsert.created = existingResi.created;
               resiToUpsert.nokarung = existingResi.nokarung;
               resiToUpsert.Keterangan = existingResi.Keterangan;
             } else {
-              resiToUpsert.created = safeParseDate(createdTimestampFromExpedisi)?.toISOString() || safeParseDate(op.timestamp)?.toISOString() || new Date().toISOString(); // Use safeParseDate
+              resiToUpsert.created = createdTimestampFromExpedisi || new Date(op.timestamp).toISOString();
               resiToUpsert.nokarung = "0";
               resiToUpsert.Keterangan = keteranganValue;
             }
@@ -113,25 +112,24 @@ export const useBackgroundSync = () => {
             if (expedisiUpdateError && expedisiUpdateError.code !== 'PGRST116') {
               console.warn(`[BackgroundSync] Warning: Failed to update tbl_expedisi flag for resi ${resiNumber}: ${expedisiUpdateError.message}`);
             }
-            resiCreatedDateForInvalidation = safeParseDate(resiToUpsert.created!); // Use safeParseDate
-            resiExpeditionForInvalidation = resiToUpsert.Keterangan || undefined;
             success = true;
+            resiCreatedDateForInvalidation = new Date(resiToUpsert.created!);
+            resiExpeditionForInvalidation = resiToUpsert.Keterangan || undefined;
 
           } else if (op.type === 'confirm') {
-            const createdDateString = safeParseDate(op.payload.expedisiCreatedTimestamp)?.toISOString() || safeParseDate(op.timestamp)?.toISOString() || new Date().toISOString(); // Use safeParseDate
             const { error: resiUpsertError } = await supabase
               .from("tbl_resi")
               .upsert({
                 Resi: op.payload.resiNumber,
                 nokarung: "0",
-                created: createdDateString,
+                created: op.payload.expedisiCreatedTimestamp || new Date(op.timestamp).toISOString(),
                 Keterangan: op.payload.keteranganValue || op.payload.courierNameFromExpedisi,
                 schedule: "ontime",
               }, { onConflict: 'Resi', ignoreDuplicates: false });
 
             if (resiUpsertError) throw resiUpsertError;
             success = true;
-            resiCreatedDateForInvalidation = safeParseDate(createdDateString); // Use safeParseDate
+            resiCreatedDateForInvalidation = new Date(op.payload.expedisiCreatedTimestamp || op.timestamp);
             resiExpeditionForInvalidation = op.payload.keteranganValue || op.payload.courierNameFromExpedisi || undefined;
 
           } else if (op.type === 'cekfu') {
@@ -145,8 +143,7 @@ export const useBackgroundSync = () => {
             if (_fetchExpedisiError) throw _fetchExpedisiError;
             success = true;
             if (expedisiRecord && expedisiRecord.length > 0) {
-              const createdDateString = safeParseDate(expedisiRecord[0].created)?.toISOString() || new Date().toISOString(); // Use safeParseDate
-              resiCreatedDateForInvalidation = safeParseDate(createdDateString); // Use safeParseDate
+              resiCreatedDateForInvalidation = new Date(expedisiRecord[0].created);
               resiExpeditionForInvalidation = expedisiRecord[0].couriername || undefined;
             }
 
@@ -158,7 +155,7 @@ export const useBackgroundSync = () => {
               .upsert({
                 Resi: resiNumber,
                 nokarung: selectedKarung,
-                created: safeParseDate(op.timestamp)?.toISOString() || new Date().toISOString(), // Use safeParseDate
+                created: new Date(op.timestamp).toISOString(),
                 Keterangan: courierNameFromExpedisi,
               }, { onConflict: 'Resi', ignoreDuplicates: false });
 
@@ -175,7 +172,7 @@ export const useBackgroundSync = () => {
               console.warn(`[BackgroundSync] Warning: Failed to update tbl_expedisi for resi ${resiNumber}: ${expedisiUpdateError.message}`);
             }
             success = true;
-            resiCreatedDateForInvalidation = safeParseDate(op.timestamp); // Use safeParseDate
+            resiCreatedDateForInvalidation = new Date(op.timestamp);
             resiExpeditionForInvalidation = courierNameFromExpedisi || undefined;
           }
 
@@ -184,7 +181,7 @@ export const useBackgroundSync = () => {
             await deletePendingOperation(op.id);
             operationsSynced++;
             if (resiCreatedDateForInvalidation) {
-              affectedDates.add(safeFormatDate(resiCreatedDateForInvalidation, 'yyyy-MM-dd', '')); // Use safeFormatDate
+              affectedDates.add(format(resiCreatedDateForInvalidation, 'yyyy-MM-dd'));
             }
             if (resiExpeditionForInvalidation) {
               affectedExpeditions.add(normalizeExpeditionName(resiExpeditionForInvalidation) || '');
@@ -219,11 +216,9 @@ export const useBackgroundSync = () => {
         // Refetch dashboard summary counts (which are date-specific)
         // and Input page specific counts (which are date and expedition specific)
         affectedDates.forEach(dateStr => {
-            const dateObj = safeParseDate(dateStr); // Use safeParseDate
-            if (!dateObj) return; // Skip if date is invalid
-
-            const dashboardFormattedDate = safeFormatDate(dateObj, "yyyy-MM-dd", ''); // Use safeFormatDate
-            const dashboardFormattedDateISO = safeFormatDate(dateObj, "yyyy-MM-dd", ''); // Use safeFormatDate
+            const dateObj = new Date(dateStr);
+            const dashboardFormattedDate = format(dateObj, "yyyy-MM-dd");
+            const dashboardFormattedDateISO = dateObj.toISOString().split('T')[0];
 
             // Dashboard summary queries
             queryClient.refetchQueries({ queryKey: ["transaksiHariIni", dashboardFormattedDate] });

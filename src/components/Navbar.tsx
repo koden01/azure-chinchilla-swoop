@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { cn, safeParseDate } from "@/lib/utils"; // Import safeParseDate
+import { cn } from "@/lib/utils";
 import { Plus, History, LayoutDashboard } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -38,15 +38,12 @@ const Navbar = () => {
     queryClient.prefetchQuery({
       queryKey: ["totalScan", formattedDateISO], // Use formattedDateISO
       queryFn: async () => {
-        const startOfDayISO = safeParseDate(formattedDateISO + 'T00:00:00.000Z')?.toISOString() || '';
-        const endOfDayISO = safeParseDate(new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0] + 'T00:00:00.000Z')?.toISOString() || '';
-
         const { count, error } = await supabase
           .from("tbl_resi")
           .select("*", { count: "exact" })
           .eq("schedule", "ontime")
-          .gte("created", startOfDayISO)
-          .lt("created", endOfDayISO);
+          .gte("created", today.toISOString().split('T')[0] + 'T00:00:00.000Z') // Start of day
+          .lt("created", new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0] + 'T00:00:00.000Z'); // End of day
         if (error) throw error;
         return count || 0;
       },
@@ -56,15 +53,12 @@ const Navbar = () => {
     queryClient.prefetchQuery({
       queryKey: ["idRekCount", formattedDateISO], // Use formattedDateISO
       queryFn: async () => {
-        const startOfDayISO = safeParseDate(formattedDateISO + 'T00:00:00.000Z')?.toISOString() || '';
-        const endOfDayISO = safeParseDate(new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0] + 'T00:00:00.000Z')?.toISOString() || '';
-
         const { count, error } = await supabase
           .from("tbl_resi")
           .select("*", { count: "exact" })
           .eq("Keterangan", "ID_REKOMENDASI")
-          .gte("created", startOfDayISO)
-          .lt("created", endOfDayISO);
+          .gte("created", today.toISOString().split('T')[0] + 'T00:00:00.000Z')
+          .lt("created", new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0] + 'T00:00:00.000Z');
         if (error) throw error;
         return count || 0;
       },
@@ -99,15 +93,12 @@ const Navbar = () => {
     queryClient.prefetchQuery({
       queryKey: ["scanFollowupLateCount", formattedDateISO], // Use formattedDateISO
       queryFn: async () => {
-        const startOfDayISO = safeParseDate(formattedDateISO + 'T00:00:00.000Z')?.toISOString() || '';
-        const endOfDayISO = safeParseDate(new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0] + 'T00:00:00.000Z')?.toISOString() || '';
-
         const { count, error } = await supabase
           .from("tbl_resi")
           .select("*", { count: "exact" })
           .eq("schedule", "late")
-          .gte("created", startOfDayISO)
-          .lt("created", endOfDayISO);
+          .gte("created", today.toISOString().split('T')[0] + 'T00:00:00.000Z')
+          .lt("created", new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0] + 'T00:00:00.000Z');
         if (error) throw error;
         return count || 0;
       },
@@ -117,15 +108,12 @@ const Navbar = () => {
     queryClient.prefetchQuery({
       queryKey: ["batalCount", formattedDateISO], // Use formattedDateISO
       queryFn: async () => {
-        const startOfDayISO = safeParseDate(formattedDateISO + 'T00:00:00.000Z')?.toISOString() || '';
-        const endOfDayISO = safeParseDate(new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0] + 'T00:00:00.000Z')?.toISOString() || '';
-
         const { count, error } = await supabase
           .from("tbl_resi")
           .select("*", { count: "exact" })
           .eq("schedule", "batal")
-          .gte("created", startOfDayISO)
-          .lt("created", endOfDayISO);
+          .gte("created", today.toISOString().split('T')[0] + 'T00:00:00.000Z')
+          .lt("created", new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0] + 'T00:00:00.000Z');
         if (error) throw error;
         return count || 0;
       },
@@ -152,8 +140,8 @@ const Navbar = () => {
         const limit = 1000;
         let hasMore = true;
 
-        const startOfTodayISO = safeParseDate(formattedDateISO + 'T00:00:00.000Z')?.toISOString() || '';
-        const endOfTodayISO = safeParseDate(new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0] + 'T00:00:00.000Z')?.toISOString() || '';
+        const startOfTodayISO = today.toISOString().split('T')[0] + 'T00:00:00.000Z';
+        const endOfTodayISO = new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0] + 'T00:00:00.000Z';
 
         while (hasMore) {
           const { data, error } = await supabase
@@ -190,8 +178,8 @@ const Navbar = () => {
         let hasMore = true;
 
         // Fetch only for today
-        const startOfToday = safeParseDate(today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate()) || new Date();
-        const endOfToday = safeParseDate(today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + (today.getDate() + 1)) || new Date();
+        const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
 
         while (hasMore) {
           const { data, error } = await supabase

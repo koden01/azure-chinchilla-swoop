@@ -1,66 +1,51 @@
-import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { normalizeExpeditionName } from "@/utils/expeditionUtils"; // Import new utility
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { id } from "date-fns/locale";
 
 interface ExpeditionDetailCardProps {
-  name: string;
+  expeditionName: string;
   totalTransaksi: number;
-  totalScan: number;
-  sisa: number;
-  jumlahKarung: number;
-  idRekomendasi?: number;
-  totalBatal: number;
-  totalScanFollowUp: number;
-  // gradientFrom dan gradientTo tidak lagi digunakan untuk background card itu sendiri
-  // tetapi tetap ada di props jika ada kebutuhan lain di masa depan
-  // gradientFrom?: string; // Dihapus karena tidak lagi digunakan untuk styling internal
-  // gradientTo?: string; // Dihapus karena tidak lagi digunakan untuk styling internal
+  belumKirim: number;
+  scanFollowUp: number;
+  idRekomendasiCount?: number; // New prop for ID Rekomendasi count
+  showIdRekomendasi: boolean;
+  className?: string;
 }
 
-const ExpeditionDetailCard: React.FC<ExpeditionDetailCardProps> = React.memo(({
-  name,
+export function ExpeditionDetailCard({
+  expeditionName,
   totalTransaksi,
-  totalScan,
-  sisa,
-  jumlahKarung,
-  idRekomendasi,
-  totalBatal,
-  totalScanFollowUp,
-}) => {
-  const normalizedName = normalizeExpeditionName(name);
-  const showIdRekomendasi = normalizedName === "ID" && idRekomendasi !== undefined;
+  belumKirim,
+  scanFollowUp,
+  idRekomendasiCount,
+  showIdRekomendasi,
+  className,
+}: ExpeditionDetailCardProps) {
+  const today = format(new Date(), "dd MMMM yyyy", { locale: id });
 
   return (
-    <Card
-      className={`rounded-lg shadow-md transform transition-transform hover:scale-105 cursor-pointer bg-gradient-to-r from-blue-600 to-purple-700 text-white`}
-    >
-      <div className="relative z-10">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg font-semibold text-white">{name}</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-2 gap-2 text-sm text-white">
-          <div>
+    <Card className={cn("w-full", className)}>
+      <CardHeader>
+        <CardTitle className="text-lg">{expeditionName}</CardTitle>
+        <p className="text-sm text-muted-foreground">{today}</p>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-2 gap-2 text-sm">
+          <div className="font-semibold">
             <p>Total Transaksi:</p>
-            <p>Total Scan:</p>
-            <p>Sisa:</p>
-            <p>Jumlah Karung:</p>
-            <p>Batal:</p>
+            <p>Belum Kirim:</p>
             <p>Scan Follow Up:</p>
             {showIdRekomendasi && <p>ID Rekomendasi:</p>}
           </div>
           <div className="text-right font-medium">
             <p>{totalTransaksi}</p>
-            <p>{totalScan}</p>
-            <p>{sisa}</p>
-            <p>{jumlahKarung}</p>
-            <p>{totalBatal}</p>
-            <p>{totalScanFollowUp}</p>
-            {showIdRekomendasi && <p>{idRekomendasi}</p>}
+            <p>{belumKirim}</p>
+            <p>{scanFollowUp}</p>
+            {showIdRekomendasi && <p>{idRekomendasiCount !== undefined ? idRekomendasiCount : '-'}</p>}
           </div>
-        </CardContent>
-      </div>
+        </div>
+      </CardContent>
     </Card>
   );
-});
-
-export default ExpeditionDetailCard;
+}

@@ -9,7 +9,7 @@ import { usePendingOperations } from "@/hooks/usePendingOperations";
 import { ModalDataItem } from "@/types/data";
 import { useFollowUpRecords } from "@/hooks/dashboard/useFollowUpRecords";
 import { useExpedisiRecordsForSelectedDate } from "@/hooks/dashboard/useExpedisiRecordsForSelectedDate";
-import { useAllResiRecords } from "@/hooks/dashboard/useAllResiRecords"; // Memperbaiki sintaks impor
+import { useAllResiRecords } from "@/hooks/dashboard/useAllResiRecords";
 import { useAllExpedisiRecordsUnfiltered } from "@/hooks/dashboard/useAllExpedisiRecordsUnfiltered";
 
 // Import individual count hooks
@@ -117,7 +117,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
           resino: op.payload.resiNumber,
           couriername: op.payload.courierNameFromExpedisi,
           flag: "YES",
-          created: existingExpedisi?.created || new Date(op.timestamp).toISOString(),
+          created: (existingExpedisi?.created && !isNaN(new Date(existingExpedisi.created).getTime())) ? existingExpedisi.created : new Date(op.timestamp).toISOString(),
           cekfu: existingExpedisi?.cekfu || false,
         });
 
@@ -152,7 +152,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
           currentResiData.push({
             Resi: op.payload.resiNumber,
             nokarung: "0",
-            created: op.payload.createdTimestampFromExpedisi || new Date(op.timestamp).toISOString(),
+            created: (op.payload.createdTimestampFromExpedisi && !isNaN(new Date(op.payload.createdTimestampFromExpedisi).getTime())) ? op.payload.createdTimestampFromExpedisi : new Date(op.timestamp).toISOString(),
             Keterangan: op.payload.keteranganValue,
             schedule: "batal",
           });
@@ -170,7 +170,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
           currentResiData.push({
             Resi: op.payload.resiNumber,
             nokarung: "0",
-            created: op.payload.expedisiCreatedTimestamp || new Date(op.timestamp).toISOString(),
+            created: (op.payload.expedisiCreatedTimestamp && !isNaN(new Date(op.payload.expedisiCreatedTimestamp).getTime())) ? op.payload.expedisiCreatedTimestamp : new Date(op.timestamp).toISOString(),
             Keterangan: op.payload.courierNameFromExpedisi,
             schedule: "ontime",
           });
@@ -233,7 +233,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
     });
 
     currentResiData.forEach((resi: ModalDataItem) => {
-      const resiCreatedDate = resi.created ? new Date(resi.created) : null;
+      const resiCreatedDate = (resi.created && !isNaN(new Date(resi.created).getTime())) ? new Date(resi.created) : null;
       let attributedExpeditionName: string | null = null;
 
       if (!resiCreatedDate || !date || !isSameDay(resiCreatedDate, date)) {

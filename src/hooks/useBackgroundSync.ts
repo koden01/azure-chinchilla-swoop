@@ -89,11 +89,11 @@ export const useBackgroundSync = () => {
             };
 
             if (existingResi) {
-              resiToUpsert.created = existingResi.created;
+              resiToUpsert.created = (existingResi.created && !isNaN(new Date(existingResi.created).getTime())) ? existingResi.created : new Date().toISOString();
               resiToUpsert.nokarung = existingResi.nokarung;
               resiToUpsert.Keterangan = existingResi.Keterangan;
             } else {
-              resiToUpsert.created = createdTimestampFromExpedisi || new Date(op.timestamp).toISOString();
+              resiToUpsert.created = (createdTimestampFromExpedisi && !isNaN(new Date(createdTimestampFromExpedisi).getTime())) ? createdTimestampFromExpedisi : new Date(op.timestamp).toISOString();
               resiToUpsert.nokarung = "0";
               resiToUpsert.Keterangan = keteranganValue;
             }
@@ -117,19 +117,20 @@ export const useBackgroundSync = () => {
             resiExpeditionForInvalidation = resiToUpsert.Keterangan || undefined;
 
           } else if (op.type === 'confirm') {
+            const createdDateString = (op.payload.expedisiCreatedTimestamp && !isNaN(new Date(op.payload.expedisiCreatedTimestamp).getTime())) ? op.payload.expedisiCreatedTimestamp : new Date(op.timestamp).toISOString();
             const { error: resiUpsertError } = await supabase
               .from("tbl_resi")
               .upsert({
                 Resi: op.payload.resiNumber,
                 nokarung: "0",
-                created: op.payload.expedisiCreatedTimestamp || new Date(op.timestamp).toISOString(),
+                created: createdDateString,
                 Keterangan: op.payload.keteranganValue || op.payload.courierNameFromExpedisi,
                 schedule: "ontime",
               }, { onConflict: 'Resi', ignoreDuplicates: false });
 
             if (resiUpsertError) throw resiUpsertError;
             success = true;
-            resiCreatedDateForInvalidation = new Date(op.payload.expedisiCreatedTimestamp || op.timestamp);
+            resiCreatedDateForInvalidation = new Date(createdDateString);
             resiExpeditionForInvalidation = op.payload.keteranganValue || op.payload.courierNameFromExpedisi || undefined;
 
           } else if (op.type === 'cekfu') {
@@ -143,7 +144,8 @@ export const useBackgroundSync = () => {
             if (_fetchExpedisiError) throw _fetchExpedisiError;
             success = true;
             if (expedisiRecord && expedisiRecord.length > 0) {
-              resiCreatedDateForInvalidation = new Date(expedisiRecord[0].created);
+              const createdDateString = (expedisiRecord[0].created && !isNaN(new Date(expedisiRecord[0].created).getTime())) ? expedisiRecord[0].created : new Date().toISOString();
+              resiCreatedDateForInvalidation = new Date(createdDateString);
               resiExpeditionForInvalidation = expedisiRecord[0].couriername || undefined;
             }
 

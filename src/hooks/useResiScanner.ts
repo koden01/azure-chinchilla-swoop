@@ -155,7 +155,8 @@ export const useResiScanner = ({
 
     let validationStatus: "OK" | "DUPLICATE_PROCESSED" | "MISMATCH_EXPEDISI" | "NOT_FOUND_IN_EXPEDISI" = "OK";
     let validationMessage: string | null = null;
-    let actualCourierName: string | null = null;
+    let actualCourierNameForResiTable: string | null = null; // New variable for Keterangan in tbl_resi
+    let actualScheduleForResiTable: string | null = null; // New variable for schedule in tbl_resi
     let expedisiRecord: any = null;
     let isNewExpedisiEntry = false;
     let wasFlagNo = false;
@@ -260,12 +261,18 @@ export const useResiScanner = ({
         }
       }
 
-      // Determine actualCourierName based on validation outcome
+      // Determine actualCourierNameForResiTable and actualScheduleForResiTable based on validation outcome
       if (validationStatus === 'OK') {
-        if (expedisiRecord) { // Resi found in tbl_expedisi
-          actualCourierName = normalizeExpeditionName(expedisiRecord.couriername);
-        } else { // isNewExpedisiEntry is true, and it must be 'ID' expedition to reach here
-          actualCourierName = normalizeExpeditionName(expedition);
+        if (expedition === 'ID' && isNewExpedisiEntry) {
+          // For new 'ID' entries not found in tbl_expedisi
+          actualCourierNameForResiTable = "ID_REKOMENDASI";
+          actualScheduleForResiTable = "idrek";
+        } else if (expedisiRecord) { // Resi found in tbl_expedisi
+          actualCourierNameForResiTable = normalizeExpeditionName(expedisiRecord.couriername);
+          actualScheduleForResiTable = "ontime"; // Default schedule for existing resi
+        } else { // Should not happen if validationStatus is 'OK' and not a new ID entry
+          actualCourierNameForResiTable = normalizeExpeditionName(expedition);
+          actualScheduleForResiTable = "ontime";
         }
       }
 
@@ -305,8 +312,8 @@ export const useResiScanner = ({
           Resi: currentResi,
           nokarung: selectedKarung,
           created: new Date().toISOString(),
-          Keterangan: actualCourierName,
-          schedule: "ontime",
+          Keterangan: actualCourierNameForResiTable, // Use the new variable
+          schedule: actualScheduleForResiTable, // Use the new variable
         };
 
         if (existingResiIndex !== -1) {
@@ -324,7 +331,7 @@ export const useResiScanner = ({
           ...(existingExpedisi || { resino: currentResi, created: new Date().toISOString() }),
           flag: "YES",
           cekfu: false,
-          couriername: actualCourierName || existingExpedisi?.couriername,
+          couriername: actualCourierNameForResiTable, // Use the new variable
         });
         return newMap;
       });
@@ -344,7 +351,7 @@ export const useResiScanner = ({
         payload: {
           resiNumber: currentResi,
           selectedKarung: selectedKarung,
-          courierNameFromExpedisi: actualCourierName,
+          courierNameFromExpedisi: actualCourierNameForResiTable, // Use the new variable
         },
         timestamp: Date.now(),
       });

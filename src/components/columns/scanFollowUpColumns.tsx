@@ -1,7 +1,7 @@
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
-import { format } from "date-fns";
+import { format, isValid } from "date-fns"; // Import isValid
 
 export interface ScanFollowUpData {
   Resi: string;
@@ -28,8 +28,9 @@ export const columns: ColumnDef<ScanFollowUpData>[] = [
     accessorKey: "created",
     header: "Tanggal Input",
     cell: ({ row }) => {
-      const date = row.getValue("created");
-      return date ? format(new Date(date as string), "dd/MM/yyyy HH:mm") : "-";
+      const dateValue = row.getValue("created") as string | null;
+      const dateObject = dateValue ? new Date(dateValue) : null;
+      return dateObject && isValid(dateObject) ? format(dateObject, "dd/MM/yyyy HH:mm") : "-";
     },
   },
   {

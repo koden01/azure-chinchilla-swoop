@@ -1,7 +1,7 @@
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
-import { format } from "date-fns";
+import { format, isValid } from "date-fns"; // Import isValid
 
 export interface FollowUpData {
   Resi: string;
@@ -19,16 +19,18 @@ export const columns: ColumnDef<FollowUpData>[] = [
     accessorKey: "created_resi",
     header: "Tanggal Resi",
     cell: ({ row }) => {
-      const date = row.getValue("created_resi");
-      return date ? format(new Date(date as string), "dd/MM/yyyy HH:mm") : "-";
+      const dateValue = row.getValue("created_resi") as string | null;
+      const dateObject = dateValue ? new Date(dateValue) : null;
+      return dateObject && isValid(dateObject) ? format(dateObject, "dd/MM/yyyy HH:mm") : "-";
     },
   },
   {
     accessorKey: "created_expedisi",
     header: "Tanggal Expedisi",
     cell: ({ row }) => {
-      const date = row.getValue("created_expedisi");
-      return date ? format(new Date(date as string), "dd/MM/yyyy HH:mm") : "-";
+      const dateValue = row.getValue("created_expedisi") as string | null;
+      const dateObject = dateValue ? new Date(dateValue) : null;
+      return dateObject && isValid(dateObject) ? format(dateObject, "dd/MM/yyyy HH:mm") : "-";
     },
   },
   {

@@ -1,7 +1,7 @@
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
-import { format } from "date-fns";
+import { format, isValid } from "date-fns"; // Import isValid
 
 export interface BelumKirimData {
   resino: string;
@@ -31,8 +31,9 @@ export const columns: ColumnDef<BelumKirimData>[] = [
     accessorKey: "datetrans",
     header: "Tanggal Pembelian",
     cell: ({ row }) => {
-      const date = row.getValue("datetrans");
-      return date ? format(new Date(date as string), "dd/MM/yyyy HH:mm") : "-";
+      const dateValue = row.getValue("datetrans") as string | null;
+      const dateObject = dateValue ? new Date(dateValue) : null;
+      return dateObject && isValid(dateObject) ? format(dateObject, "dd/MM/yyyy HH:mm") : "-";
     },
   },
   {

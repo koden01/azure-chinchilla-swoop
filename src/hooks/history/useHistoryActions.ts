@@ -3,10 +3,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, showError } from "@/utils/toast";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
-import { format, isValid } from "date-fns"; // Import isValid
-import { flexRender } from "@tanstack/react-table";
-import { HistoryData } from "@/components/columns/historyColumns";
-import { Table as ReactTableType } from "@tanstack/react-table";
+import { format } from "date-fns"; 
+import { flexRender } from "@tanstack/react-table"; // Corrected import for flexRender
+import { HistoryData } from "@/components/columns/historyColumns"; // Import HistoryData type
+import { Table as ReactTableType } from "@tanstack/react-table"; // Import Table type
 
 interface UseHistoryActionsProps {
   historyData: HistoryData[] | undefined;
@@ -74,6 +74,7 @@ export const useHistoryActions = ({ historyData, formattedStartDate, formattedEn
         exact: false,
       });
 
+      // Corrected query key from allResiDataComprehensive to allResiData
       await queryClient.refetchQueries({ queryKey: ["allResiData"] }); 
 
       invalidateDashboardQueries(queryClient, dateOfDeletedResi, expeditionOfDeletedResi); 
@@ -100,8 +101,7 @@ export const useHistoryActions = ({ historyData, formattedStartDate, formattedEn
         .map(cell => {
           if (cell.column.id === "created") {
             const dateValue = cell.getValue() as string;
-            const dateObject = dateValue ? new Date(dateValue) : null;
-            return dateObject && isValid(dateObject) ? format(dateObject, "dd/MM/yyyy HH:mm") : "-";
+            return format(new Date(dateValue), "dd/MM/yyyy HH:mm");
           }
           return String(cell.getValue() || "");
         });

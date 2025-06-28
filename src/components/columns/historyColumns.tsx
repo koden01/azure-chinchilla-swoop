@@ -1,7 +1,8 @@
 import { ColumnDef } from "@tanstack/react-table";
-import { format, isValid } from "date-fns"; // Import isValid
+import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { getKeteranganBadgeClasses } from "@/utils/expeditionUtils";
+// import React from "react"; // Removed unused import
 
 export interface HistoryData {
   Resi: string;
@@ -46,10 +47,6 @@ export const columns: ColumnDef<HistoryData>[] = [
   {
     accessorKey: "created",
     header: "Tanggal Input",
-    cell: ({ row }) => {
-      const dateValue = row.original.created;
-      const dateObject = dateValue ? new Date(dateValue) : null;
-      return dateObject && isValid(dateObject) ? format(dateObject, "dd/MM/yyyy HH:mm") : "-";
-    },
+    cell: ({ row }) => format(new Date(row.original.created), "dd/MM/yyyy HH:mm"),
   },
 ];

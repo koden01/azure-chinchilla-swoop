@@ -1,7 +1,7 @@
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
-import { format, isValid } from "date-fns"; // Import isValid
+import { format } from "date-fns";
 
 export interface BatalData {
   Resi: string;
@@ -28,9 +28,8 @@ export const columns: ColumnDef<BatalData>[] = [
     accessorKey: "created",
     header: "Tanggal Input",
     cell: ({ row }) => {
-      const dateValue = row.getValue("created") as string | null;
-      const dateObject = dateValue ? new Date(dateValue) : null;
-      return dateObject && isValid(dateObject) ? format(dateObject, "dd/MM/yyyy HH:mm") : "-";
+      const date = row.getValue("created");
+      return date ? format(new Date(date as string), "dd/MM/yyyy HH:mm") : "-";
     },
   },
   {

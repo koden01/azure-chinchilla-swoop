@@ -3,9 +3,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import { getPendingOperations, deletePendingOperation, updatePendingOperation } from '@/integrations/indexeddb/pendingOperations';
 import { supabase } from '@/integrations/supabase/client';
 import { showError } from '@/utils/toast';
-import { format, isValid } from 'date-fns'; // Import isValid
-import { normalizeExpeditionName } from '@/utils/expeditionUtils';
-import { useDebouncedCallback } from './useDebouncedCallback';
+import { format } from 'date-fns';
+import { normalizeExpeditionName } from '@/utils/expeditionUtils'; // Import normalizeExpeditionName
+import { useDebouncedCallback } from './useDebouncedCallback'; // Import useDebouncedCallback
 
 const SYNC_INTERVAL_MS = 1000 * 60; // Sync every 1 minute
 const MAX_RETRIES = 5; // Max attempts before giving up on an operation
@@ -143,18 +143,8 @@ export const useBackgroundSync = () => {
             if (_fetchExpedisiError) throw _fetchExpedisiError;
             success = true;
             if (expedisiRecord && expedisiRecord.length > 0) {
-              const createdDateStr = expedisiRecord[0].created;
-              const dateObj = createdDateStr ? new Date(createdDateStr) : null;
-              if (dateObj && isValid(dateObj)) {
-                resiCreatedDateForInvalidation = dateObj;
-              } else {
-                // Fallback to current timestamp if created date is invalid/null
-                resiCreatedDateForInvalidation = new Date(op.timestamp);
-              }
+              resiCreatedDateForInvalidation = new Date(expedisiRecord[0].created);
               resiExpeditionForInvalidation = expedisiRecord[0].couriername || undefined;
-            } else {
-              // If no record found after update, use current timestamp for invalidation
-              resiCreatedDateForInvalidation = new Date(op.timestamp);
             }
 
           } else if (op.type === 'scan') {
@@ -227,11 +217,6 @@ export const useBackgroundSync = () => {
         // and Input page specific counts (which are date and expedition specific)
         affectedDates.forEach(dateStr => {
             const dateObj = new Date(dateStr);
-            // Ensure dateObj is valid before formatting
-            if (!isValid(dateObj)) {
-              console.warn(`[BackgroundSync] Skipping invalid date string for refetch: ${dateStr}`);
-              return;
-            }
             const dashboardFormattedDate = format(dateObj, "yyyy-MM-dd");
             const dashboardFormattedDateISO = dateObj.toISOString().split('T')[0];
 

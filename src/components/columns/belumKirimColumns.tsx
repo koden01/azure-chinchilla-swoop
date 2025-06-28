@@ -1,7 +1,7 @@
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
-import { format } from "date-fns";
+import { safeFormatDate } from "@/lib/utils"; // Import safeFormatDate
 
 export interface BelumKirimData {
   resino: string;
@@ -32,8 +32,7 @@ export const columns: ColumnDef<BelumKirimData>[] = [
     header: "Tanggal Pembelian",
     cell: ({ row }) => {
       const dateValue = row.getValue("datetrans");
-      const date = new Date(dateValue as string);
-      return dateValue && !isNaN(date.getTime()) ? format(date, "dd/MM/yyyy HH:mm") : "-";
+      return safeFormatDate(dateValue as string, "dd/MM/yyyy HH:mm");
     },
   },
   {

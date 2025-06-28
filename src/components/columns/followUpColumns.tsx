@@ -1,7 +1,7 @@
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
-import { format } from "date-fns";
+import { safeFormatDate } from "@/lib/utils"; // Import safeFormatDate
 
 export interface FollowUpData {
   Resi: string;
@@ -20,8 +20,7 @@ export const columns: ColumnDef<FollowUpData>[] = [
     header: "Tanggal Resi",
     cell: ({ row }) => {
       const dateValue = row.getValue("created_resi");
-      const date = new Date(dateValue as string);
-      return dateValue && !isNaN(date.getTime()) ? format(date, "dd/MM/yyyy HH:mm") : "-";
+      return safeFormatDate(dateValue as string, "dd/MM/yyyy HH:mm");
     },
   },
   {
@@ -29,8 +28,7 @@ export const columns: ColumnDef<FollowUpData>[] = [
     header: "Tanggal Expedisi",
     cell: ({ row }) => {
       const dateValue = row.getValue("created_expedisi");
-      const date = new Date(dateValue as string);
-      return dateValue && !isNaN(date.getTime()) ? format(date, "dd/MM/yyyy HH:mm") : "-";
+      return safeFormatDate(dateValue as string, "dd/MM/yyyy HH:mm");
     },
   },
   {

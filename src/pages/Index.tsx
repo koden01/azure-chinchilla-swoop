@@ -1,8 +1,7 @@
 import { useState } from "react";
-import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import { Calendar as CalendarIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, safeFormatDate } from "@/lib/utils"; // Import safeFormatDate
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -12,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Index() {
   const [date, setDate] = useState<Date | undefined>(new Date());
-  const formattedDate = date ? format(date, "yyyy-MM-dd") : "";
+  const formattedDate = date ? safeFormatDate(date, "yyyy-MM-dd") : ""; // Use safeFormatDate
 
   const {
     transaksiHariIniCount,
@@ -40,7 +39,7 @@ export default function Index() {
               )}
             >
               <CalendarIcon className="mr-2 h-4 w-4" />
-              {date ? format(date, "PPP", { locale: id }) : <span>Pilih tanggal</span>}
+              {safeFormatDate(date, "PPP", "Pilih tanggal", { locale: id })} {/* Use safeFormatDate */}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="start">

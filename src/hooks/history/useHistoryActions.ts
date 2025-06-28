@@ -3,10 +3,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, showError } from "@/utils/toast";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
-import { format } from "date-fns"; 
 import { flexRender } from "@tanstack/react-table"; // Corrected import for flexRender
 import { HistoryData } from "@/components/columns/historyColumns"; // Import HistoryData type
 import { Table as ReactTableType } from "@tanstack/react-table"; // Import Table type
+import { safeFormatDate } from "@/lib/utils"; // Import safeFormatDate
 
 interface UseHistoryActionsProps {
   historyData: HistoryData[] | undefined;
@@ -101,7 +101,7 @@ export const useHistoryActions = ({ historyData, formattedStartDate, formattedEn
         .map(cell => {
           if (cell.column.id === "created") {
             const dateValue = cell.getValue() as string;
-            return format(new Date(dateValue), "dd/MM/yyyy HH:mm");
+            return safeFormatDate(dateValue, "dd/MM/yyyy HH:mm"); // Use safeFormatDate
           }
           return String(cell.getValue() || "");
         });

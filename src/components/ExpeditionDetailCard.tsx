@@ -1,6 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { cn, safeFormatDate } from "@/lib/utils"; // Import safeFormatDate
 import { id } from "date-fns/locale";
 
 interface ExpeditionDetailCardProps {
@@ -22,7 +21,7 @@ export function ExpeditionDetailCard({
   showIdRekomendasi,
   className,
 }: ExpeditionDetailCardProps) {
-  const today = format(new Date(), "dd MMMM yyyy", { locale: id });
+  const today = safeFormatDate(new Date(), "dd MMMM yyyy", "-", { locale: id }); // Use safeFormatDate
 
   return (
     <Card className={cn("w-full", className)}>

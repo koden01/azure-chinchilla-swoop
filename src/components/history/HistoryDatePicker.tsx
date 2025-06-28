@@ -3,8 +3,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { CalendarIcon, CalendarDays } from "lucide-react";
-import { format, isAfter, isBefore } from "date-fns"; // Import date-fns utilities
-import { cn } from "@/lib/utils";
+import { isAfter, isBefore } from "date-fns"; // Import date-fns utilities
+import { cn, safeFormatDate } from "@/lib/utils"; // Import safeFormatDate
 
 interface HistoryDatePickerProps {
   startDate: Date | undefined;
@@ -69,7 +69,7 @@ const HistoryDatePicker: React.FC<HistoryDatePickerProps> = ({
                 )}
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {startDate ? format(startDate, "dd/MM/yyyy") : <span>Pilih tanggal</span>}
+                {safeFormatDate(startDate, "dd/MM/yyyy", "Pilih tanggal")}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0">
@@ -96,7 +96,7 @@ const HistoryDatePicker: React.FC<HistoryDatePickerProps> = ({
                 )}
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {endDate ? format(endDate, "dd/MM/yyyy") : <span>Pilih tanggal</span>}
+                {safeFormatDate(endDate, "dd/MM/yyyy", "Pilih tanggal")}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0">

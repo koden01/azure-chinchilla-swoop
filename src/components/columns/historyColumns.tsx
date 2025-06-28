@@ -1,8 +1,6 @@
 import { ColumnDef } from "@tanstack/react-table";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
+import { cn, safeFormatDate } from "@/lib/utils"; // Import safeFormatDate
 import { getKeteranganBadgeClasses } from "@/utils/expeditionUtils";
-// import React from "react"; // Removed unused import
 
 export interface HistoryData {
   Resi: string;
@@ -49,8 +47,7 @@ export const columns: ColumnDef<HistoryData>[] = [
     header: "Tanggal Input",
     cell: ({ row }) => {
       const dateValue = row.original.created;
-      const date = new Date(dateValue);
-      return dateValue && !isNaN(date.getTime()) ? format(date, "dd/MM/yyyy HH:mm") : "-";
+      return safeFormatDate(dateValue, "dd/MM/yyyy HH:mm");
     },
   },
 ];

@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { startOfDay, endOfDay } from "date-fns"; // Menghapus 'format'
+import { safeParseDate } from "@/lib/utils"; // Import safeParseDate
 
 /**
  * Menyesuaikan jumlah resi untuk ekspedisi dan nomor karung tertentu pada tanggal tertentu.

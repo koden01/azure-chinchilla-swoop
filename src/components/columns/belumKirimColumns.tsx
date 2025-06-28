@@ -31,8 +31,9 @@ export const columns: ColumnDef<BelumKirimData>[] = [
     accessorKey: "datetrans",
     header: "Tanggal Pembelian",
     cell: ({ row }) => {
-      const date = row.getValue("datetrans");
-      return date ? format(new Date(date as string), "dd/MM/yyyy HH:mm") : "-";
+      const dateValue = row.getValue("datetrans");
+      const date = new Date(dateValue as string);
+      return dateValue && !isNaN(date.getTime()) ? format(date, "dd/MM/yyyy HH:mm") : "-";
     },
   },
   {

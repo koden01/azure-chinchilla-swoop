@@ -28,8 +28,9 @@ export const columns: ColumnDef<BatalData>[] = [
     accessorKey: "created",
     header: "Tanggal Input",
     cell: ({ row }) => {
-      const date = row.getValue("created");
-      return date ? format(new Date(date as string), "dd/MM/yyyy HH:mm") : "-";
+      const dateValue = row.getValue("created");
+      const date = new Date(dateValue as string);
+      return dateValue && !isNaN(date.getTime()) ? format(date, "dd/MM/yyyy HH:mm") : "-";
     },
   },
   {

@@ -105,8 +105,9 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
           accessorKey: "datetrans",
           header: "Tanggal Pembelian",
           cell: ({ row }) => {
-            const date = row.original.datetrans;
-            return date ? format(new Date(date as string), "dd/MM/yyyy HH:mm") : "-";
+            const dateValue = row.original.datetrans;
+            const date = new Date(dateValue as string);
+            return dateValue && !isNaN(date.getTime()) ? format(date, "dd/MM/yyyy HH:mm") : "-";
           },
         },
         {
@@ -152,16 +153,18 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
           accessorKey: "created_resi",
           header: "Tanggal Resi",
           cell: ({ row }) => {
-            const date = row.original.created_resi;
-            return date ? format(new Date(date as string), "dd/MM/yyyy HH:mm") : "-";
+            const dateValue = row.original.created_resi;
+            const date = new Date(dateValue as string);
+            return dateValue && !isNaN(date.getTime()) ? format(date, "dd/MM/yyyy HH:mm") : "-";
           },
         },
         {
           accessorKey: "created_expedisi",
           header: "Tanggal Expedisi",
           cell: ({ row }) => {
-            const date = row.original.created_expedisi;
-            return date ? format(new Date(date as string), "dd/MM/yyyy HH:mm") : "-";
+            const dateValue = row.original.created_expedisi;
+            const date = new Date(dateValue as string);
+            return dateValue && !isNaN(date.getTime()) ? format(date, "dd/MM/yyyy HH:mm") : "-";
           },
         },
         {
@@ -242,7 +245,8 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
         .map(cell => {
           if (cell.column.id === "datetrans" || cell.column.id === "created_resi" || cell.column.id === "created_expedisi") {
             const dateValue = cell.getValue() as string | null;
-            return dateValue ? format(new Date(dateValue), "dd/MM/yyyy HH:mm") : "-";
+            const date = new Date(dateValue as string);
+            return dateValue && !isNaN(date.getTime()) ? format(date, "dd/MM/yyyy HH:mm") : "-";
           }
           if (cell.column.id === "cekfu") {
             return cell.getValue() ? "YES" : "NO";

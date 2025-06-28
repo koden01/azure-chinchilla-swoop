@@ -47,6 +47,10 @@ export const columns: ColumnDef<HistoryData>[] = [
   {
     accessorKey: "created",
     header: "Tanggal Input",
-    cell: ({ row }) => format(new Date(row.original.created), "dd/MM/yyyy HH:mm"),
+    cell: ({ row }) => {
+      const dateValue = row.original.created;
+      const date = new Date(dateValue);
+      return dateValue && !isNaN(date.getTime()) ? format(date, "dd/MM/yyyy HH:mm") : "-";
+    },
   },
 ];

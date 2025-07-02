@@ -81,6 +81,16 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
     table.setPageIndex(0); // Reset to first page
   }, [data, isOpen, modalType]);
 
+  const handleCopyToClipboard = useCallback(async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      showSuccess(`${label} '${text}' berhasil disalin!`);
+    } catch (err: any) {
+      showError(`Gagal menyalin ${label}: ${err.message || "Unknown error"}`);
+      console.error(`Failed to copy ${label}:`, err);
+    }
+  }, []);
+
   const columns = useMemo<ColumnDef<ModalDataItem>[]>(() => {
     const baseColumns: ColumnDef<ModalDataItem>[] = [];
 
@@ -89,12 +99,46 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
         {
           accessorKey: "resino",
           header: "No. Resi",
-          cell: ({ row }) => row.original.resino,
+          cell: ({ row }) => (
+            <div className="flex items-center space-x-1">
+              <span>{row.original.resino}</span>
+              {row.original.resino && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent row click
+                    handleCopyToClipboard(row.original.resino!, "Nomor Resi");
+                  }}
+                >
+                  <Copy className="h-3 w-3" />
+                </Button>
+              )}
+            </div>
+          ),
         },
         {
           accessorKey: "orderno",
           header: "No Order",
-          cell: ({ row }) => row.original.orderno || "-",
+          cell: ({ row }) => (
+            <div className="flex items-center space-x-1">
+              <span>{row.original.orderno || "-"}</span>
+              {row.original.orderno && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent row click
+                    handleCopyToClipboard(row.original.orderno!, "Nomor Order");
+                  }}
+                >
+                  <Copy className="h-3 w-3" />
+                </Button>
+              )}
+            </div>
+          ),
         },
         {
           accessorKey: "chanelsales",
@@ -146,7 +190,24 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
         {
           accessorKey: "Resi",
           header: "No. Resi",
-          cell: ({ row }) => row.original.Resi,
+          cell: ({ row }) => (
+            <div className="flex items-center space-x-1">
+              <span>{row.original.Resi}</span>
+              {row.original.Resi && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent row click
+                    handleCopyToClipboard(row.original.Resi!, "Nomor Resi");
+                  }}
+                >
+                  <Copy className="h-3 w-3" />
+                </Button>
+              )}
+            </div>
+          ),
         },
         {
           accessorKey: "created_resi",
@@ -198,7 +259,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
       );
     }
     return baseColumns;
-  }, [modalType, onBatalResi, onConfirmResi, onCekfuToggle]);
+  }, [modalType, onBatalResi, onConfirmResi, onCekfuToggle, handleCopyToClipboard]);
 
   const table = useReactTable({
     data,
@@ -246,6 +307,12 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
           }
           if (cell.column.id === "cekfu") {
             return cell.getValue() ? "YES" : "NO";
+          }
+          // Handle the case where cell.column.id is 'resino' or 'orderno' and it contains a button
+          // We only want the text content, not the button HTML.
+          if (cell.column.id === "resino" || cell.column.id === "orderno" || cell.column.id === "Resi") {
+            const value = cell.getValue();
+            return String(value || "");
           }
           return String(cell.getValue() || "");
         });

@@ -196,7 +196,7 @@ const InputPage = () => {
                   isInputDisabled && "opacity-70 cursor-not-allowed"
                 )}
                 disabled={isInputDisabled}
-                inputMode="none"
+                // Removed inputMode="none"
               />
               {isProcessing && (
                 <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-6 w-6 animate-spin text-gray-500" />

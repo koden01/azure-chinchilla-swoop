@@ -76,7 +76,7 @@ const InputPage = () => {
     allExpedisiDataUnfiltered,
     allResiForExpedition, // NEW: Pass the data here
     initialTotalExpeditionItems: totalExpeditionItems, // NEW: Pass initial values
-    initialRemainingExpeditionItems: remainingExpeditionItems, // NEW: Pass initial values
+    initialRemainingExpeditionItems: remainingExpadingItems, // NEW: Pass initial values
     initialIdExpeditionScanCount: idExpeditionScanCount, // NEW: Pass initial ID scan count
   });
 
@@ -196,7 +196,8 @@ const InputPage = () => {
                   isInputDisabled && "opacity-70 cursor-not-allowed"
                 )}
                 disabled={isInputDisabled}
-                inputMode="none" // Mengembalikan properti ini
+                inputMode="none"
+                readOnly // Menambahkan properti readOnly
               />
               {isProcessing && (
                 <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-6 w-6 animate-spin text-gray-500" />

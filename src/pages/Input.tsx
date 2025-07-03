@@ -134,7 +134,7 @@ const InputPage = () => {
             className="text-xl cursor-pointer hover:underline"
             onClick={() => {
               if (expedition) {
-                setIsKarungSummaryModal(true); // Perbaikan di sini
+                setIsKarungSummaryModal(true);
               }
             }}
           >
@@ -197,7 +197,7 @@ const InputPage = () => {
                 )}
                 disabled={isInputDisabled}
                 inputMode="none"
-                readOnly
+                // readOnly // Properti ini dihapus
               />
               {isProcessing && (
                 <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-6 w-6 animate-spin text-gray-500" />

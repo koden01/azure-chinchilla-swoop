@@ -21,7 +21,7 @@ const InputPage = () => {
   const { expedition, setExpedition } = useExpedition();
   const [selectedKarung, setSelectedKarung] = React.useState<string>("1"); // Default to "1"
 
-  const [isKarungSummaryModalOpen, setIsKarungSummaryModalOpen] = React.useState(false);
+  const [isKarungSummaryModalOpen, setIsKarungSummaryModal] = React.useState(false);
 
   // Calculate date range for today only
   const today = new Date();
@@ -196,7 +196,7 @@ const InputPage = () => {
                   isInputDisabled && "opacity-70 cursor-not-allowed"
                 )}
                 disabled={isInputDisabled}
-                // Removed inputMode="none"
+                inputMode="none" // Mengembalikan properti ini
               />
               {isProcessing && (
                 <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-6 w-6 animate-spin text-gray-500" />
@@ -214,7 +214,7 @@ const InputPage = () => {
 
       <KarungSummaryModal
         isOpen={isKarungSummaryModalOpen}
-        onClose={() => setIsKarungSummaryModalOpen(false)}
+        onClose={() => setIsKarungSummaryModal(false)}
         expedition={expedition}
         date={formattedDate}
         summaryData={karungSummary}

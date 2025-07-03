@@ -134,7 +134,7 @@ const InputPage = () => {
             className="text-xl cursor-pointer hover:underline"
             onClick={() => {
               if (expedition) {
-                setIsKarungSummaryModalOpen(true);
+                setIsKarungSummaryModal(true); // Perbaikan di sini
               }
             }}
           >

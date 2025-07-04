@@ -47,7 +47,7 @@ export const useResiScanner = ({
   // Buffer untuk input dari scanner
   const scannerInputBuffer = React.useRef<string>('');
   const lastKeyPressTime = React.useRef<number>(0);
-  const SCANNER_TIMEOUT_MS = 200; // Waktu maksimum antar karakter untuk dianggap sebagai bagian dari satu scan (ditingkatkan lagi)
+  const SCANNER_TIMEOUT_MS = 300; // Waktu maksimum antar karakter untuk dianggap sebagai bagian dari satu scan (ditingkatkan lagi)
 
   React.useEffect(() => {
     setOptimisticTotalExpeditionItems(initialTotalExpeditionItems || 0);

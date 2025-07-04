@@ -62,7 +62,7 @@ const InputPage = () => {
   const {
     resiNumber,
     setResiNumber,
-    handleScanResi,
+    // handleScanResi, // Tidak lagi dipanggil langsung dari sini
     resiInputRef,
     isProcessing,
     isLoadingAllFlagNoExpedisiData,
@@ -105,19 +105,18 @@ const InputPage = () => {
     }
   }, [expedition, highestKarung]);
 
-  React.useEffect(() => {
-    if (expedition && selectedKarung && resiInputRef.current && !isProcessing && !isLoadingAllFlagNoExpedisiData) {
-      const timer = setTimeout(() => {
-        if (resiInputRef.current) {
-          // Trik untuk membantu mencegah keyboard virtual muncul di beberapa browser seluler
-          // Blur terlebih dahulu, lalu fokus kembali.
-          resiInputRef.current.blur(); 
-          resiInputRef.current.focus();
-        }
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [expedition, selectedKarung, isProcessing, isLoadingAllFlagNoExpedisiData]);
+  // Menghapus useEffect yang mengatur fokus programatis
+  // React.useEffect(() => {
+  //   if (expedition && selectedKarung && resiInputRef.current && !isProcessing && !isLoadingAllFlagNoExpedisiData) {
+  //     const timer = setTimeout(() => {
+  //       if (resiInputRef.current) {
+  //         resiInputRef.current.blur(); 
+  //         resiInputRef.current.focus();
+  //       }
+  //     }, 100);
+  //     return () => clearTimeout(timer);
+  //   }
+  // }, [expedition, selectedKarung, isProcessing, isLoadingAllFlagNoExpedisiData]);
 
   const isInputDisabled = !expedition || !selectedKarung || isProcessing || isLoadingAllExpedisiUnfiltered || isLoadingAllFlagNoExpedisiData;
 
@@ -186,13 +185,8 @@ const InputPage = () => {
                 id="scan-resi"
                 type="text"
                 placeholder="Scan nomor resi"
-                value={resiNumber}
-                onChange={(e) => setResiNumber(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    handleScanResi();
-                  }
-                }}
+                value={resiNumber} // Nilai dikontrol oleh state dari useResiScanner
+                // onChange dan onKeyDown dihapus karena ditangani secara global
                 ref={resiInputRef}
                 className={cn(
                   "w-full bg-white text-gray-800 h-16 text-2xl text-center pr-10",

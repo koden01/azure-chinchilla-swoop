@@ -44,6 +44,11 @@ export const useResiScanner = ({
   const today = new Date();
   const formattedToday = format(today, "yyyy-MM-dd");
 
+  // Buffer untuk input dari scanner
+  const scannerInputBuffer = React.useRef<string>('');
+  const lastKeyPressTime = React.useRef<number>(0);
+  const SCANNER_TIMEOUT_MS = 50; // Waktu maksimum antar karakter untuk dianggap sebagai bagian dari satu scan
+
   React.useEffect(() => {
     setOptimisticTotalExpeditionItems(initialTotalExpeditionItems || 0);
   }, [initialTotalExpeditionItems]);
@@ -92,14 +97,6 @@ export const useResiScanner = ({
     return processedSet;
   }, [allExpedisiDataUnfiltered]);
 
-  const keepFocus = () => {
-    setTimeout(() => {
-      if (resiInputRef.current) {
-        resiInputRef.current.focus();
-      }
-    }, 0);
-  };
-
   const playBeep = (audio: HTMLAudioElement) => {
     setTimeout(() => {
       try {
@@ -124,7 +121,7 @@ export const useResiScanner = ({
     return true;
   };
 
-  const handleScanResi = React.useCallback(async () => {
+  const processScannedResi = React.useCallback(async (scannedResi: string) => {
     playBeep(beepStart); 
     
     setIsProcessing(true); 
@@ -132,18 +129,16 @@ export const useResiScanner = ({
     if (isPending) { 
       console.warn("[useResiScanner] UI update pending. Ignoring rapid input.");
       setIsProcessing(false); 
-      keepFocus();
       return;
     }
 
     dismissToast();
-    const currentResi = resiNumber.trim();
+    const currentResi = scannedResi.trim();
     const normalizedCurrentResi = currentResi.toLowerCase().trim();
-    setResiNumber(""); 
+    setResiNumber(""); // Clear the displayed input immediately
 
     if (!validateInput(currentResi)) {
       setIsProcessing(false); 
-      keepFocus();
       return;
     }
 
@@ -285,7 +280,6 @@ export const useResiScanner = ({
           playBeep(beepDouble);
         }
         setIsProcessing(false);
-        keepFocus();
         return;
       }
 
@@ -398,14 +392,52 @@ export const useResiScanner = ({
       });
     } finally {
       setIsProcessing(false);
-      keepFocus();
     }
   }, [resiNumber, expedition, selectedKarung, formattedDate, allExpedisiDataUnfiltered, allFlagNoExpedisiData, allResiForExpedition, queryClient, debouncedTriggerSync, validateInput, derivedRecentProcessedResiNumbers, startTransition, isPending, initialTotalExpeditionItems, initialRemainingExpeditionItems, initialIdExpeditionScanCount]);
+
+  // Global keydown listener for scanner input
+  React.useEffect(() => {
+    const handleGlobalKeyDown = (event: KeyboardEvent) => {
+      // Abaikan jika sedang memproses atau jika input dinonaktifkan
+      if (isProcessing || !expedition || !selectedKarung) {
+        return;
+      }
+
+      const currentTime = Date.now();
+      // Jika ada jeda waktu yang signifikan antar penekanan tombol, reset buffer
+      if (currentTime - lastKeyPressTime.current > SCANNER_TIMEOUT_MS) {
+        scannerInputBuffer.current = '';
+      }
+      lastKeyPressTime.current = currentTime;
+
+      if (event.key === 'Enter') {
+        event.preventDefault(); // Mencegah perilaku default (misalnya submit form)
+        if (scannerInputBuffer.current.length > 0) {
+          setResiNumber(scannerInputBuffer.current); // Set the displayed value
+          processScannedResi(scannerInputBuffer.current);
+          scannerInputBuffer.current = ''; // Reset buffer setelah diproses
+        }
+      } else if (event.key.length === 1) { // Hanya tambahkan karakter tunggal (bukan Shift, Alt, Ctrl, dll.)
+        scannerInputBuffer.current += event.key;
+        setResiNumber(scannerInputBuffer.current); // Update displayed value as characters come in
+      } else if (event.key === 'Backspace') {
+        scannerInputBuffer.current = scannerInputBuffer.current.slice(0, -1);
+        setResiNumber(scannerInputBuffer.current);
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleGlobalKeyDown);
+    };
+  }, [isProcessing, expedition, selectedKarung, processScannedResi]);
+
 
   return {
     resiNumber,
     setResiNumber,
-    handleScanResi,
+    handleScanResi: processScannedResi, // Expose the new handler
     resiInputRef,
     isProcessing: isProcessing || isPending,
     isLoadingRecentScannedResiNumbers: false,

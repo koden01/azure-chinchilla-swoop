@@ -61,7 +61,7 @@ const InputPage = () => {
 
   const {
     resiNumber,
-    setResiNumber,
+    // setResiNumber, // Dihapus karena tidak lagi digunakan secara langsung di sini
     // handleScanResi, // Tidak lagi dipanggil langsung dari sini
     resiInputRef,
     isProcessing,

@@ -47,7 +47,7 @@ export const useResiScanner = ({
   // Buffer untuk input dari scanner
   const scannerInputBuffer = React.useRef<string>('');
   const lastKeyPressTime = React.useRef<number>(0);
-  const SCANNER_TIMEOUT_MS = 300; // Waktu maksimum antar karakter untuk dianggap sebagai bagian dari satu scan (ditingkatkan lagi)
+  const SCANNER_TIMEOUT_MS = 300; // Waktu maksimum antar karakter untuk dianggap sebagai bagian dari satu scan
 
   React.useEffect(() => {
     setOptimisticTotalExpeditionItems(initialTotalExpeditionItems || 0);
@@ -404,22 +404,25 @@ export const useResiScanner = ({
       }
 
       const currentTime = Date.now();
-      // Jika ada jeda waktu yang signifikan antar penekanan tombol, reset buffer
-      if (currentTime - lastKeyPressTime.current > SCANNER_TIMEOUT_MS) {
+      
+      // Jika ada jeda waktu yang signifikan antar penekanan tombol DAN buffer TIDAK KOSONG,
+      // berarti urutan scan sebelumnya telah berakhir, jadi reset buffer untuk scan baru.
+      // Jika buffer KOSONG, ini adalah karakter pertama dari scan baru, jadi jangan reset.
+      if (scannerInputBuffer.current.length > 0 && (currentTime - lastKeyPressTime.current > SCANNER_TIMEOUT_MS)) {
         scannerInputBuffer.current = '';
       }
-      lastKeyPressTime.current = currentTime;
+      lastKeyPressTime.current = currentTime; // Perbarui waktu penekanan tombol terakhir untuk karakter saat ini
 
       if (event.key === 'Enter') {
         event.preventDefault(); // Mencegah perilaku default (misalnya submit form)
         if (scannerInputBuffer.current.length > 0) {
-          setResiNumber(scannerInputBuffer.current); // Set the displayed value
+          setResiNumber(scannerInputBuffer.current); // Set nilai yang ditampilkan
           processScannedResi(scannerInputBuffer.current);
           scannerInputBuffer.current = ''; // Reset buffer setelah diproses
         }
       } else if (event.key.length === 1) { // Hanya tambahkan karakter tunggal (bukan Shift, Alt, Ctrl, dll.)
         scannerInputBuffer.current += event.key;
-        setResiNumber(scannerInputBuffer.current); // Update displayed value as characters come in
+        setResiNumber(scannerInputBuffer.current); // Perbarui nilai yang ditampilkan saat karakter masuk
       } else if (event.key === 'Backspace') {
         scannerInputBuffer.current = scannerInputBuffer.current.slice(0, -1);
         setResiNumber(scannerInputBuffer.current);

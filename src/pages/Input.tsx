@@ -109,6 +109,9 @@ const InputPage = () => {
     if (expedition && selectedKarung && resiInputRef.current && !isProcessing && !isLoadingAllFlagNoExpedisiData) {
       const timer = setTimeout(() => {
         if (resiInputRef.current) {
+          // Trik untuk membantu mencegah keyboard virtual muncul di beberapa browser seluler
+          // Blur terlebih dahulu, lalu fokus kembali.
+          resiInputRef.current.blur(); 
           resiInputRef.current.focus();
         }
       }, 100);
@@ -197,7 +200,6 @@ const InputPage = () => {
                 )}
                 disabled={isInputDisabled}
                 inputMode="none"
-                // readOnly // Properti ini dihapus
               />
               {isProcessing && (
                 <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-6 w-6 animate-spin text-gray-500" />

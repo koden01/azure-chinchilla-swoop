@@ -47,7 +47,7 @@ export const useResiScanner = ({
   // Buffer untuk input dari scanner
   const scannerInputBuffer = React.useRef<string>('');
   const lastKeyPressTime = React.useRef<number>(0);
-  const SCANNER_TIMEOUT_MS = 300; // Waktu maksimum antar karakter untuk dianggap sebagai bagian dari satu scan
+  const SCANNER_TIMEOUT_MS = 500; // Waktu maksimum antar karakter untuk dianggap sebagai bagian dari satu scan (ditingkatkan lagi)
 
   React.useEffect(() => {
     setOptimisticTotalExpeditionItems(initialTotalExpeditionItems || 0);
@@ -416,16 +416,16 @@ export const useResiScanner = ({
       if (event.key === 'Enter') {
         event.preventDefault(); // Mencegah perilaku default (misalnya submit form)
         if (scannerInputBuffer.current.length > 0) {
-          setResiNumber(scannerInputBuffer.current); // Set nilai yang ditampilkan
+          setResiNumber(scannerInputBuffer.current); // Set nilai yang ditampilkan (sekali saja saat Enter)
           processScannedResi(scannerInputBuffer.current);
           scannerInputBuffer.current = ''; // Reset buffer setelah diproses
         }
       } else if (event.key.length === 1) { // Hanya tambahkan karakter tunggal (bukan Shift, Alt, Ctrl, dll.)
         scannerInputBuffer.current += event.key;
-        setResiNumber(scannerInputBuffer.current); // Perbarui nilai yang ditampilkan saat karakter masuk
+        // Hapus baris ini: setResiNumber(scannerInputBuffer.current); // Tidak lagi memperbarui state di setiap karakter
       } else if (event.key === 'Backspace') {
         scannerInputBuffer.current = scannerInputBuffer.current.slice(0, -1);
-        setResiNumber(scannerInputBuffer.current);
+        setResiNumber(scannerInputBuffer.current); // Tetap perbarui untuk umpan balik backspace manual
       }
     };
 

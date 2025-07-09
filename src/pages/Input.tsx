@@ -105,18 +105,20 @@ const InputPage = () => {
     }
   }, [expedition, highestKarung]);
 
-  // Menghapus useEffect yang mengatur fokus programatis
-  // React.useEffect(() => {
-  //   if (expedition && selectedKarung && resiInputRef.current && !isProcessing && !isLoadingAllFlagNoExpedisiData) {
-  //     const timer = setTimeout(() => {
-  //       if (resiInputRef.current) {
-  //         resiInputRef.current.blur(); 
-  //         resiInputRef.current.focus();
-  //       }
-  //     }, 100);
-  //     return () => clearTimeout(timer);
-  //   }
-  // }, [expedition, selectedKarung, isProcessing, isLoadingAllFlagNoExpedisiData]);
+  // Effect untuk memusatkan kembali input resi
+  React.useEffect(() => {
+    // Hanya fokus jika ekspedisi dan karung sudah dipilih,
+    // dan tidak sedang dalam proses atau memuat data validasi
+    if (expedition && selectedKarung && resiInputRef.current && !isProcessing && !isLoadingAllExpedisiUnfiltered && !isLoadingAllFlagNoExpedisiData) {
+      const timer = setTimeout(() => {
+        if (resiInputRef.current) {
+          resiInputRef.current.focus();
+        }
+      }, 100); // Sedikit delay untuk memastikan elemen siap
+      return () => clearTimeout(timer);
+    }
+  }, [expedition, selectedKarung, isProcessing, isLoadingAllExpedisiUnfiltered, isLoadingAllFlagNoExpedisiData]);
+
 
   const isInputDisabled = !expedition || !selectedKarung || isProcessing || isLoadingAllExpedisiUnfiltered || isLoadingAllFlagNoExpedisiData;
 

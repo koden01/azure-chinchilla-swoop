@@ -5,8 +5,9 @@ import { ModalDataItem } from "@/types/data";
 import { normalizeExpeditionName } from "@/utils/expeditionUtils";
 import { addPendingOperation } from "@/integrations/indexeddb/pendingOperations";
 import { useBackgroundSync } from "@/hooks/useBackgroundSync";
-import { format } from "date-fns";
-import { useQueryClient } from "@tanstack/react-query"; // Import useQueryClient
+import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns"; // Import date-fns utilities
+import { useQueryClient, QueryKey } from "@tanstack/react-query"; // Import useQueryClient and QueryKey
+import { HistoryData } from "@/components/columns/historyColumns"; // Import HistoryData type
 
 interface UseDashboardModalsProps {
   date: Date | undefined;
@@ -210,7 +211,40 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       });
 
       showSuccess(`Resi ${resiNumber} berhasil dibatalkan.`);
-      queryClient.invalidateQueries({ queryKey: ["historyData"] }); // Invalidate historyData
+      
+      // Optimistically update historyData cache for any active history queries
+      queryClient.setQueriesData({
+        queryKey: ["historyData"],
+        exact: false,
+        updater: (oldData: HistoryData[] | undefined, queryKey: QueryKey) => {
+          if (!oldData) return undefined;
+
+          const [, queryStartDateStr, queryEndDateStr] = queryKey;
+          const queryStartDate = queryStartDateStr ? new Date(queryStartDateStr as string) : undefined;
+          const queryEndDate = queryEndDateStr ? new Date(queryEndDateStr as string) : undefined;
+
+          const affectedResiCreatedDate = itemToBatal?.created ? new Date(itemToBatal.created) : undefined;
+
+          const isAffectedDateIncluded = affectedResiCreatedDate && queryStartDate && queryEndDate &&
+                                         isWithinInterval(affectedResiCreatedDate, { start: startOfDay(queryStartDate), end: endOfDay(queryEndDate) });
+
+          if (isAffectedDateIncluded) {
+            return oldData.map(item => {
+              if (item.Resi === resiNumber) {
+                return {
+                  ...item,
+                  schedule: "batal",
+                  Keterangan: normalizeExpeditionName(originalCourierName),
+                };
+              }
+              return item;
+            });
+          }
+          return oldData;
+        },
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["historyData"] });
       debouncedTriggerSync(); // Use debouncedTriggerSync
 
     } catch (error: any) {
@@ -270,7 +304,40 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       });
 
       showSuccess(`Resi ${resiNumber} berhasil dikonfirmasi.`);
-      queryClient.invalidateQueries({ queryKey: ["historyData"] }); // Invalidate historyData
+      
+      // Optimistically update historyData cache for any active history queries
+      queryClient.setQueriesData({
+        queryKey: ["historyData"],
+        exact: false,
+        updater: (oldData: HistoryData[] | undefined, queryKey: QueryKey) => {
+          if (!oldData) return undefined;
+
+          const [, queryStartDateStr, queryEndDateStr] = queryKey;
+          const queryStartDate = queryStartDateStr ? new Date(queryStartDateStr as string) : undefined;
+          const queryEndDate = queryEndDateStr ? new Date(queryEndDateStr as string) : undefined;
+
+          const affectedResiCreatedDate = itemToConfirm?.created ? new Date(itemToConfirm.created) : undefined;
+
+          const isAffectedDateIncluded = affectedResiCreatedDate && queryStartDate && queryEndDate &&
+                                         isWithinInterval(affectedResiCreatedDate, { start: startOfDay(queryStartDate), end: endOfDay(queryEndDate) });
+
+          if (isAffectedDateIncluded) {
+            return oldData.map(item => {
+              if (item.Resi === resiNumber) {
+                return {
+                  ...item,
+                  schedule: "ontime",
+                  Keterangan: normalizeExpeditionName(courierNameFromExpedisi),
+                };
+              }
+              return item;
+            });
+          }
+          return oldData;
+        },
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["historyData"] });
       debouncedTriggerSync(); // Use debouncedTriggerSync
 
     } catch (error: any) {
@@ -325,7 +392,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       });
 
       showSuccess(`Status CEKFU resi ${resiNumber} berhasil diperbarui.`);
-      queryClient.invalidateQueries({ queryKey: ["historyData"] }); // Invalidate historyData
+      queryClient.invalidateQueries({ queryKey: ["historyData"] });
       debouncedTriggerSync(); // Use debouncedTriggerSync
     } catch (error: any) {
       setModalData(originalModalData);

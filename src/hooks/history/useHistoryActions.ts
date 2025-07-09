@@ -1,9 +1,9 @@
 import { useState, useCallback, useRef } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, QueryKey } from "@tanstack/react-query"; // Import QueryKey
 import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, showError } from "@/utils/toast";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
-import { format } from "date-fns"; 
+import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns"; // Import date-fns utilities
 import { flexRender } from "@tanstack/react-table"; // Corrected import for flexRender
 import { HistoryData } from "@/components/columns/historyColumns"; // Import HistoryData type
 import { Table as ReactTableType } from "@tanstack/react-table"; // Import Table type
@@ -56,32 +56,61 @@ export const useHistoryActions = ({ historyData, formattedStartDate, formattedEn
     const dateOfDeletedResi = itemToDelete ? new Date(itemToDelete.created) : undefined;
     const expeditionOfDeletedResi = itemToDelete?.Keterangan || undefined;
 
-    const { error } = await supabase
-      .from("tbl_resi")
-      .delete()
-      .eq("Resi", resiToDelete);
+    // Optimistically remove from historyData cache for any active history queries
+    queryClient.setQueriesData({
+      queryKey: ["historyData"],
+      exact: false,
+      updater: (oldData: HistoryData[] | undefined, queryKey: QueryKey) => {
+        if (!oldData) return undefined;
 
-    if (error) {
-      showError(`Gagal menghapus resi ${resiToDelete}: ${error.message}`);
-      console.error("Error deleting resi:", error);
-    } else {
-      showSuccess(`Resi ${resiToDelete} berhasil dihapus.`);
+        const [, queryStartDateStr, queryEndDateStr] = queryKey;
+        const queryStartDate = queryStartDateStr ? new Date(queryStartDateStr as string) : undefined;
+        const queryEndDate = queryEndDateStr ? new Date(queryEndDateStr as string) : undefined;
 
-      await queryClient.refetchQueries({ queryKey: ["historyData", formattedStartDate, formattedEndDate] });
+        const affectedResiCreatedDate = itemToDelete?.created ? new Date(itemToDelete.created) : undefined;
 
-      await queryClient.refetchQueries({
-        queryKey: ["allResiForExpedition"],
-        exact: false,
-      });
+        const isAffectedDateIncluded = affectedResiCreatedDate && queryStartDate && queryEndDate &&
+                                       isWithinInterval(affectedResiCreatedDate, { start: startOfDay(queryStartDate), end: endOfDay(queryEndDate) });
 
-      // Corrected query key from allResiDataComprehensive to allResiData
-      await queryClient.refetchQueries({ queryKey: ["allResiData"] }); 
+        if (isAffectedDateIncluded) {
+          return oldData.filter(item => item.Resi !== resiToDelete);
+        }
+        return oldData;
+      },
+    });
 
-      invalidateDashboardQueries(queryClient, dateOfDeletedResi, expeditionOfDeletedResi); 
+    try {
+      const { error } = await supabase
+        .from("tbl_resi")
+        .delete()
+        .eq("Resi", resiToDelete);
+
+      if (error) {
+        showError(`Gagal menghapus resi ${resiToDelete}: ${error.message}`);
+        console.error("Error deleting resi:", error);
+        // Revert optimistic update on error
+        queryClient.invalidateQueries({ queryKey: ["historyData"] });
+      } else {
+        showSuccess(`Resi ${resiToDelete} berhasil dihapus.`);
+
+        // Invalidate other relevant queries (dashboard, input page)
+        await queryClient.refetchQueries({
+          queryKey: ["allResiForExpedition"],
+          exact: false,
+        });
+        await queryClient.refetchQueries({ queryKey: ["allResiData"] }); 
+        invalidateDashboardQueries(queryClient, dateOfDeletedResi, expeditionOfDeletedResi); 
+      }
+    } catch (error: any) {
+      showError(`Gagal menghapus resi ${resiToDelete}: ${error.message || "Silakan coba lagi."}`);
+      console.error("Error deleting resi (outer catch):", error);
+      // Ensure optimistic update is reverted if an unexpected error occurs
+      queryClient.invalidateQueries({ queryKey: ["historyData"] });
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setResiToDelete(null);
     }
-    setIsDeleteDialogOpen(false);
-    setResiToDelete(null);
-  }, [resiToDelete, historyData, formattedStartDate, formattedEndDate, queryClient]);
+  }, [resiToDelete, historyData, queryClient]);
 
   const handleCopyTableData = useCallback(async () => {
     const rowsToCopy = table.getFilteredRowModel().rows;
@@ -91,13 +120,13 @@ export const useHistoryActions = ({ historyData, formattedStartDate, formattedEn
     }
 
     const headers = table.getHeaderGroups()[0].headers
-      .filter(header => header.column.id !== "rowNumber")
+      .filter(header => header.id !== "actions") // Exclude the "Aksi" column
       .map(header => flexRender(header.column.columnDef.header, header.getContext()));
     const headerRow = headers.join('\t');
 
     const dataRows = rowsToCopy.map(row => {
       const rowValues = row.getVisibleCells()
-        .filter(cell => cell.column.id !== "rowNumber")
+        .filter(cell => cell.column.id !== "actions") // Exclude the "Aksi" column
         .map(cell => {
           if (cell.column.id === "created") {
             const dateValue = cell.getValue() as string;

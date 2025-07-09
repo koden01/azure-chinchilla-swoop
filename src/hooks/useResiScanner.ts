@@ -2,13 +2,14 @@ import React, { useTransition } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, showError, dismissToast } from "@/utils/toast";
 import { beepSuccess, beepFailure, beepDouble, beepStart } from "@/utils/audio";
-import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { format, subDays } from "date-fns";
+import { useQueryClient, useQuery, QueryKey } from "@tanstack/react-query"; // Import QueryKey
+import { format, subDays, isWithinInterval, startOfDay, endOfDay } from "date-fns"; // Import date-fns utilities
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 import { normalizeExpeditionName } from "@/utils/expeditionUtils";
 import { addPendingOperation } from "@/integrations/indexeddb/pendingOperations";
 import { useBackgroundSync } from "@/hooks/useBackgroundSync";
 import { ResiExpedisiData } from "@/hooks/useResiInputData";
+import { HistoryData } from "@/components/columns/historyColumns"; // Import HistoryData type
 
 interface UseResiScannerProps {
   expedition: string;
@@ -262,7 +263,7 @@ export const useResiScanner = ({
         return;
       }
 
-      // Optimistic updates
+      // Optimistic updates for Input page display
       setOptimisticTotalExpeditionItems(prev => {
         // Increment total if it's a new 'ID_REKOMENDASI' entry (not found in expedisiRecord)
         const isTrulyNewIdEntry = (normalizeExpeditionName(expedition) === 'ID' && !expedisiRecord);
@@ -332,9 +333,48 @@ export const useResiScanner = ({
         timestamp: Date.now(),
       });
       
-      // Invalidate historyData query immediately after adding pending operation
-      queryClient.invalidateQueries({ queryKey: ["historyData"] });
+      // Optimistically update historyData cache for any active history queries
+      queryClient.setQueriesData({
+        queryKey: ["historyData"],
+        exact: false, // Match any historyData query regardless of date range
+        updater: (oldData: HistoryData[] | undefined, queryKey: QueryKey) => {
+          if (!oldData) return undefined;
 
+          const [, queryStartDateStr, queryEndDateStr] = queryKey;
+          const queryStartDate = queryStartDateStr ? new Date(queryStartDateStr as string) : undefined;
+          const queryEndDate = queryEndDateStr ? new Date(queryEndDateStr as string) : undefined;
+
+          const newResiEntry: HistoryData = {
+            Resi: currentResi,
+            nokarung: selectedKarung,
+            created: new Date().toISOString(), // Use current timestamp for optimistic entry
+            Keterangan: actualCourierNameForResiTable,
+            schedule: actualScheduleForResiTable,
+          };
+
+          // Check if the history query's date range includes today
+          const isTodayIncluded = queryStartDate && queryEndDate &&
+                                 isWithinInterval(today, { start: startOfDay(queryStartDate), end: endOfDay(queryEndDate) });
+
+          if (isTodayIncluded) {
+            // Add the new entry to the beginning (assuming history is sorted by created DESC)
+            // Ensure no duplicates are added if the item already exists (e.g., from a previous optimistic update)
+            const existingIndex = oldData.findIndex(item => item.Resi === newResiEntry.Resi);
+            if (existingIndex !== -1) {
+              // Update existing entry
+              const newData = [...oldData];
+              newData[existingIndex] = newResiEntry;
+              return newData;
+            } else {
+              // Add new entry
+              return [newResiEntry, ...oldData];
+            }
+          }
+          return oldData; // Return original data if date range doesn't match
+        },
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["historyData"] });
       debouncedTriggerSync();
 
     } catch (error: any) {
@@ -364,6 +404,8 @@ export const useResiScanner = ({
         queryClient.invalidateQueries({ queryKey: queryKeyForTotalExpeditionItems });
         queryClient.invalidateQueries({ queryKey: queryKeyForRemainingExpeditionItems });
         queryClient.invalidateQueries({ queryKey: queryKeyForIdExpeditionScanCount });
+        // Invalidate historyData on error to ensure it refetches correct state
+        queryClient.invalidateQueries({ queryKey: ["historyData"] });
       });
     } finally {
       setIsProcessing(false);

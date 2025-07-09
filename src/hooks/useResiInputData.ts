@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, startOfDay, endOfDay, subDays, isSameDay } from "date-fns"; // Import subDays dan isSameDay
+import { format, startOfDay, endOfDay, isSameDay } from "date-fns"; // Menghapus subDays
 import React from "react";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 import { normalizeExpeditionName, KNOWN_EXPEDITIONS } from "@/utils/expeditionUtils";
@@ -25,11 +25,11 @@ interface AllKarungSummaryItem {
 export const useResiInputData = (expedition: string, showAllExpeditionSummary: boolean) => {
   const today = new Date();
   const formattedToday = format(today, "yyyy-MM-dd");
-  const fiveDaysAgo = subDays(today, 4); // Ambil data dari 5 hari yang lalu (termasuk hari ini)
+  // const fiveDaysAgo = subDays(today, 4); // Dihapus karena tidak lagi diperlukan
 
   // Query to fetch all resi data for the current expedition and date range for local validation
   const { data: allResiForExpedition, isLoading: isLoadingAllResiForExpedition } = useQuery<ResiExpedisiData[]>({
-    queryKey: ["allResiForExpedition", expedition, formattedToday], 
+    queryKey: ["allResiForExpedition", expedition, formattedToday], // Hanya menggunakan formattedToday
     queryFn: async () => {
       if (!expedition) {
         return [];
@@ -38,8 +38,8 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       const data = await fetchAllDataPaginated(
         "tbl_resi",
         "created",
-        fiveDaysAgo, // Mulai dari 5 hari yang lalu
-        today,       // Sampai hari ini
+        today, // Hanya hari ini
+        today, // Hanya hari ini
         "Resi, nokarung, created, Keterangan, schedule",
         (baseQuery) => {
           if (expedition === 'ID') {

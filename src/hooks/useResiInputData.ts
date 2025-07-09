@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, startOfDay, endOfDay } from "date-fns";
+import { format, startOfDay, endOfDay, subDays, isSameDay } from "date-fns"; // Import subDays dan isSameDay
 import React from "react";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 import { normalizeExpeditionName, KNOWN_EXPEDITIONS } from "@/utils/expeditionUtils";
@@ -25,6 +25,7 @@ interface AllKarungSummaryItem {
 export const useResiInputData = (expedition: string, showAllExpeditionSummary: boolean) => {
   const today = new Date();
   const formattedToday = format(today, "yyyy-MM-dd");
+  const fiveDaysAgo = subDays(today, 4); // Ambil data dari 5 hari yang lalu (termasuk hari ini)
 
   // Query to fetch all resi data for the current expedition and date range for local validation
   const { data: allResiForExpedition, isLoading: isLoadingAllResiForExpedition } = useQuery<ResiExpedisiData[]>({
@@ -37,8 +38,8 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       const data = await fetchAllDataPaginated(
         "tbl_resi",
         "created",
-        today,
-        today,
+        fiveDaysAgo, // Mulai dari 5 hari yang lalu
+        today,       // Sampai hari ini
         "Resi, nokarung, created, Keterangan, schedule",
         (baseQuery) => {
           if (expedition === 'ID') {
@@ -187,22 +188,24 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     staleTime: 1000 * 30,
   });
 
-  // Derive currentCount from allResiForExpedition
+  // Derive currentCount from allResiForExpedition, filtered for TODAY only
   const currentCount = React.useCallback((selectedKarung: string) => {
     if (!allResiForExpedition || !selectedKarung) {
       return 0;
     }
     const count = allResiForExpedition.filter(item => 
+      isSameDay(new Date(item.created), today) && // Filter for today only
       item.nokarung === selectedKarung && 
       (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition)
     ).length;
     return count;
-  }, [allResiForExpedition, expedition]);
+  }, [allResiForExpedition, expedition, today]);
 
-  // Derive lastKarung from allResiForExpedition
+  // Derive lastKarung from allResiForExpedition, filtered for TODAY only
   const lastKarung = React.useMemo(() => {
     if (!allResiForExpedition || allResiForExpedition.length === 0) return "0";
     const filteredResi = allResiForExpedition.filter(item => 
+      isSameDay(new Date(item.created), today) && // Filter for today only
       item.nokarung !== null && 
       (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition)
     );
@@ -211,13 +214,14 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     const sortedResi = [...filteredResi].sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime());
     const last = sortedResi[0].nokarung || "0";
     return last;
-  }, [allResiForExpedition, expedition]);
+  }, [allResiForExpedition, expedition, today]);
 
-  // Derive highestKarung from allResiForExpedition
+  // Derive highestKarung from allResiForExpedition, filtered for TODAY only
   const highestKarung = React.useMemo(() => {
     if (!allResiForExpedition || allResiForExpedition.length === 0) return 0;
     const validKarungNumbers = allResiForExpedition
       .filter(item => 
+        isSameDay(new Date(item.created), today) && // Filter for today only
         item.nokarung !== null && 
         (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition)
       )
@@ -225,7 +229,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       .filter(num => !isNaN(num) && num > 0);
     const highest = validKarungNumbers.length > 0 ? Math.max(...validKarungNumbers) : 0;
     return highest;
-  }, [allResiForExpedition, expedition]);
+  }, [allResiForExpedition, expedition, today]);
 
   // Karung options based on highestKarung (still client-side generation)
   const karungOptions = React.useMemo(() => {

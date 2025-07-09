@@ -2,14 +2,14 @@ import React, { useTransition } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, showError, dismissToast } from "@/utils/toast";
 import { beepSuccess, beepFailure, beepDouble, beepStart } from "@/utils/audio";
-import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { format, isSameDay } from "date-fns";
-import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
+import { useQueryClient } from "@tanstack/react-query"; // Menghapus useQuery
+import { format } from "date-fns"; // Menghapus isSameDay
+import { fetchAllDataPaginated } from "@/utils/supabaseFetch"; // Menghapus fetchAllDataPaginated
 import { normalizeExpeditionName } from "@/utils/expeditionUtils";
 import { addPendingOperation } from "@/integrations/indexeddb/pendingOperations";
 import { useBackgroundSync } from "@/hooks/useBackgroundSync";
 import { ResiExpedisiData } from "@/hooks/useResiInputData";
-import { useAllFlagYesExpedisiResiNumbers } from "@/hooks/useAllFlagYesExpedisiResiNumbers"; // NEW: Import the new hook
+// import { useAllFlagYesExpedisiResiNumbers } from "@/hooks/useAllFlagYesExpedisiResiNumbers"; // Dihapus karena hook ini tidak dipanggil di sini
 
 interface UseResiScannerProps {
   expedition: string;
@@ -287,7 +287,7 @@ export const useResiScanner = ({
       });
 
       // NEW: Optimistically update allFlagYesExpedisiResiNumbers
-      queryClient.setQueryData(["allFlagYesExpedisiResiNumbers", formattedDate, format(today, "yyyy-MM-dd")], (oldSet: Set<string> | undefined) => {
+      queryClient.setQueryData(["allFlagYesExpedisiResiNumbers", format(today, "yyyy-MM-dd"), format(today, "yyyy-MM-dd")], (oldSet: Set<string> | undefined) => {
         const newSet = new Set(oldSet || []);
         newSet.add(normalizedCurrentResi);
         return newSet;

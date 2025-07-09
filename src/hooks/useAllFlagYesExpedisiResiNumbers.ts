@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { format, subDays, startOfDay, endOfDay } from "date-fns";
+// import { supabase } from "@/integrations/supabase/client"; // Dihapus karena tidak langsung digunakan
+import { format } from "date-fns"; // startOfDay dan endOfDay tidak langsung digunakan
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 
 /**
@@ -10,7 +10,7 @@ import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
  */
 export const useAllFlagYesExpedisiResiNumbers = () => {
   const today = new Date();
-  const fiveDaysAgo = subDays(today, 4); // Termasuk hari ini, jadi 5 hari total
+  const fiveDaysAgo = new Date(today.getTime() - 4 * 24 * 60 * 60 * 1000); // Termasuk hari ini, jadi 5 hari total
 
   const formattedStartDate = format(fiveDaysAgo, "yyyy-MM-dd");
   const formattedEndDate = format(today, "yyyy-MM-dd");

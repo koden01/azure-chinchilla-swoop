@@ -76,7 +76,7 @@ const InputPage = () => {
 
   const {
     allResiForExpedition,
-    isLoadingAllResiForExpedition,
+    // isLoadingAllResiForExpedition, // Dihapus karena tidak digunakan
     highestKarung,
     karungOptions,
     formattedDate: formattedDateFromHook, // Rename to avoid conflict

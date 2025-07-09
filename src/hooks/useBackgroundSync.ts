@@ -4,8 +4,8 @@ import { getPendingOperations, deletePendingOperation, updatePendingOperation } 
 import { supabase } from '@/integrations/supabase/client';
 import { showError } from '@/utils/toast';
 import { format } from 'date-fns';
-import { normalizeExpeditionName } from '@/utils/expeditionUtils'; // Import normalizeExpeditionName
-import { useDebouncedCallback } from './useDebouncedCallback'; // Import useDebouncedCallback
+import { normalizeExpeditionName } from '@/utils/expeditionUtils';
+import { useDebouncedCallback } from './useDebouncedCallback';
 
 const SYNC_INTERVAL_MS = 1000 * 60; // Sync every 1 minute
 const MAX_RETRIES = 5; // Max attempts before giving up on an operation
@@ -49,9 +49,8 @@ export const useBackgroundSync = () => {
     let operationsSynced = 0;
     let operationsFailed = 0;
     
-    // Use sets to collect unique affected dates and expeditions for efficient invalidation/refetching
-    const affectedDates = new Set<string>(); // Stores 'yyyy-MM-dd'
-    const affectedExpeditions = new Set<string>(); // Stores normalized expedition names
+    const affectedDates = new Set<string>();
+    const affectedExpeditions = new Set<string>();
 
     try {
       const pendingOperations = await getPendingOperations();
@@ -79,7 +78,7 @@ export const useBackgroundSync = () => {
               .eq("Resi", resiNumber)
               .maybeSingle();
 
-            if (fetchResiError && fetchResiError.code !== 'PGRST116') { // PGRST116 means "no rows found"
+            if (fetchResiError && fetchResiError.code !== 'PGRST116') {
               throw fetchResiError;
             }
 
@@ -207,20 +206,24 @@ export const useBackgroundSync = () => {
         console.log(`[BackgroundSync] ${operationsSynced} operations synced. Refetching queries.`);
         
         // Always refetch global/unfiltered data that might change
-        // Note: allExpedisiDataUnfiltered query key includes formattedToday, so it's date-specific
-        queryClient.refetchQueries({ queryKey: ["allExpedisiDataUnfiltered"] }); 
-        queryClient.refetchQueries({ queryKey: ["allFlagNoExpedisiData"] });
-        queryClient.refetchQueries({ queryKey: ["uniqueExpeditionNames"] });
-        queryClient.refetchQueries({ queryKey: ["historyData"] }); // History is always affected
+        const today = new Date();
+        const formattedToday = format(today, "yyyy-MM-dd");
+        const fiveDaysAgo = format(new Date(today.getTime() - 4 * 24 * 60 * 60 * 1000), "yyyy-MM-dd"); // For 5-day range
 
-        // Refetch dashboard summary counts (which are date-specific)
-        // and Input page specific counts (which are date and expedition specific)
+        // NEW: Refetch the new allFlagYesExpedisiResiNumbers cache
+        queryClient.refetchQueries({ queryKey: ["allFlagYesExpedisiResiNumbers", fiveDaysAgo, formattedToday] });
+        // Refetch allFlagNoExpedisiData (no date filter)
+        queryClient.refetchQueries({ queryKey: ["allFlagNoExpedisiData"] });
+
+        queryClient.refetchQueries({ queryKey: ["allExpedisiDataUnfiltered"] }); 
+        queryClient.refetchQueries({ queryKey: ["uniqueExpeditionNames"] });
+        queryClient.refetchQueries({ queryKey: ["historyData"] });
+
         affectedDates.forEach(dateStr => {
             const dateObj = new Date(dateStr);
             const dashboardFormattedDate = format(dateObj, "yyyy-MM-dd");
             const dashboardFormattedDateISO = dateObj.toISOString().split('T')[0];
 
-            // Dashboard summary queries
             queryClient.refetchQueries({ queryKey: ["transaksiHariIni", dashboardFormattedDate] });
             queryClient.refetchQueries({ queryKey: ["totalScan", dashboardFormattedDateISO] });
             queryClient.refetchQueries({ queryKey: ["idRekCount", dashboardFormattedDateISO] });
@@ -229,24 +232,19 @@ export const useBackgroundSync = () => {
             queryClient.refetchQueries({ queryKey: ["batalCount", dashboardFormattedDateISO] });
             queryClient.refetchQueries({ queryKey: ["followUpData", dashboardFormattedDate] });
             queryClient.refetchQueries({ queryKey: ["expedisiDataForSelectedDate", dashboardFormattedDate] });
-            // queryClient.refetchQueries({ queryKey: ["allResiData", dashboardFormattedDateISO] }); // REMOVED THIS LINE
             queryClient.refetchQueries({ queryKey: ["followUpFlagNoCount", dashboardFormattedDate] }); 
 
-            // Input page specific queries (date-specific, but also expedition-specific)
             affectedExpeditions.forEach(expName => {
                 const normalizedExpName = normalizeExpeditionName(expName);
                 if (normalizedExpName) {
-                    // queryClient.refetchQueries({ queryKey: ["allResiForExpedition", normalizedExpName, dashboardFormattedDate] }); // REMOVED THIS LINE
                     queryClient.refetchQueries({ queryKey: ["karungSummary", normalizedExpName, dashboardFormattedDate] });
                     queryClient.refetchQueries({ queryKey: ["totalExpeditionItems", normalizedExpName, dashboardFormattedDate] });
                     queryClient.refetchQueries({ queryKey: ["remainingExpeditionItems", normalizedExpName, dashboardFormattedDate] });
-                    // idExpeditionScanCount is already covered by the general dashboard refetch if expName is 'ID'
                     if (normalizedExpName === 'ID') {
                         queryClient.refetchQueries({ queryKey: ["idExpeditionScanCount", dashboardFormattedDate] });
                     }
                 }
             });
-            // Also refetch the "all karung summaries" for the dashboard, as it aggregates across all expeditions for a date
             queryClient.refetchQueries({ queryKey: ["allKarungSummaries", dashboardFormattedDate] });
         });
       }
@@ -262,14 +260,11 @@ export const useBackgroundSync = () => {
     }
   };
 
-  // Debounce the performSync function
   const debouncedPerformSync = useDebouncedCallback(performSync, SYNC_DEBOUNCE_MS);
 
   useEffect(() => {
     console.log(`[BackgroundSync] Initializing sync.`);
-    // Initial sync on mount
     debouncedPerformSync();
-    // Set up interval for periodic sync
     syncIntervalRef.current = window.setInterval(debouncedPerformSync, SYNC_INTERVAL_MS);
     return () => {
       if (syncIntervalRef.current) {

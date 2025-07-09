@@ -3,12 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, showError, dismissToast } from "@/utils/toast";
 import { beepSuccess, beepFailure, beepDouble, beepStart } from "@/utils/audio";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { format, isSameDay } from "date-fns"; // Import isSameDay
+import { format, isSameDay } from "date-fns";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 import { normalizeExpeditionName } from "@/utils/expeditionUtils";
 import { addPendingOperation } from "@/integrations/indexeddb/pendingOperations";
 import { useBackgroundSync } from "@/hooks/useBackgroundSync";
 import { ResiExpedisiData } from "@/hooks/useResiInputData";
+import { useAllFlagYesExpedisiResiNumbers } from "@/hooks/useAllFlagYesExpedisiResiNumbers"; // NEW: Import the new hook
 
 interface UseResiScannerProps {
   expedition: string;
@@ -19,6 +20,9 @@ interface UseResiScannerProps {
   initialTotalExpeditionItems: number | undefined;
   initialRemainingExpeditionItems: number | undefined;
   initialIdExpeditionScanCount: number | undefined;
+  // NEW: Add the new cached data types to the props interface
+  allFlagNoExpedisiData: Map<string, any> | undefined;
+  allFlagYesExpedisiResiNumbers: Set<string> | undefined;
 }
 
 export const useResiScanner = ({ 
@@ -30,6 +34,9 @@ export const useResiScanner = ({
   initialTotalExpeditionItems,
   initialRemainingExpeditionItems,
   initialIdExpeditionScanCount,
+  // NEW: Destructure the new cached data from props
+  allFlagNoExpedisiData,
+  allFlagYesExpedisiResiNumbers,
 }: UseResiScannerProps) => {
   const [resiNumber, setResiNumber] = React.useState<string>("");
   const [isProcessing, setIsProcessing] = React.useState<boolean>(false);
@@ -69,29 +76,31 @@ export const useResiScanner = ({
   }, [initialIdExpeditionScanCount]);
 
   // allFlagNoExpedisiData is still useful for displaying the count of 'belum kirim' items
-  const { data: allFlagNoExpedisiData, isLoading: isLoadingAllFlagNoExpedisiData } = useQuery<Map<string, any>>({
-    queryKey: ["allFlagNoExpedisiData"],
-    queryFn: async () => {
-      const data = await fetchAllDataPaginated(
-        "tbl_expedisi",
-        undefined,
-        undefined,
-        undefined,
-        "resino, couriername, created, flag, cekfu",
-        (query) => query.eq("flag", "NO")
-      );
-      const expedisiMap = new Map<string, any>();
-      data.forEach(item => {
-        if (item.resino) {
-          expedisiMap.set(item.resino.toLowerCase(), item);
-        }
-      });
-      return expedisiMap;
-    },
-    staleTime: 1000 * 60 * 5,
-    gcTime: 1000 * 60 * 60 * 24,
-    enabled: true,
-  });
+  // This query is now managed by the parent component (Input.tsx) and passed as a prop.
+  // So, we remove the useQuery call here.
+  // const { data: allFlagNoExpedisiData, isLoading: isLoadingAllFlagNoExpedisiData } = useQuery<Map<string, any>>({
+  //   queryKey: ["allFlagNoExpedisiData"],
+  //   queryFn: async () => {
+  //     const data = await fetchAllDataPaginated(
+  //       "tbl_expedisi",
+  //       undefined,
+  //       undefined,
+  //       undefined,
+  //       "resino, couriername, created, flag, cekfu", // Select all necessary columns
+  //       (query) => query.eq("flag", "NO")
+  //     );
+  //     const expedisiMap = new Map<string, any>();
+  //     data.forEach(item => {
+  //       if (item.resino) {
+  //         expedisiMap.set(item.resino.toLowerCase(), item);
+  //       }
+  //     });
+  //     return expedisiMap;
+  //   },
+  //   staleTime: 1000 * 60 * 5,
+  //   gcTime: 1000 * 60 * 60 * 24,
+  //   enabled: true,
+  // });
 
   const playBeep = (audio: HTMLAudioElement) => {
     setTimeout(() => {
@@ -140,86 +149,78 @@ export const useResiScanner = ({
 
     let validationStatus: "OK" | "DUPLICATE_PROCESSED" | "MISMATCH_EXPEDISI" | "NOT_FOUND_IN_EXPEDISI" = "OK";
     let validationMessage: string | null = null;
-    let actualCourierNameForResiTable: string | null = null; // New variable for Keterangan in tbl_resi
-    let actualScheduleForResiTable: string | null = null; // New variable for schedule in tbl_resi
-    let expedisiRecord: any = null;
+    let actualCourierNameForResiTable: string | null = null;
+    let actualScheduleForResiTable: string | null = null;
+    let expedisiRecordFromCache: any = null; // Use this for records found in local cache
     let wasFlagNo = false;
 
     try {
-      // NEW LOGIC: Perform a direct database check for the resi in tbl_expedisi
-      const { data: fetchedExpedisiRecord, error: fetchExpedisiError } = await supabase
-        .from("tbl_expedisi")
-        .select("resino, couriername, created, flag, cekfu")
-        .eq("resino", currentResi) // Use original resiNumber for DB query
-        .maybeSingle(); // Use maybeSingle to handle no rows found gracefully
+      // 2. Pengecekan Duplikasi Cepat (menggunakan cache allFlagYesExpedisiResiNumbers)
+      if (allFlagYesExpedisiResiNumbers?.has(normalizedCurrentResi)) {
+        validationStatus = 'DUPLICATE_PROCESSED';
+        // Fetch details for the duplicate message from tbl_resi (direct DB query)
+        const { data: resiDetails, error: resiDetailsError } = await supabase
+            .from("tbl_resi")
+            .select("created, Keterangan, nokarung, schedule")
+            .eq("Resi", currentResi)
+            .maybeSingle();
 
-      if (fetchExpedisiError && fetchExpedisiError.code !== 'PGRST116') { // PGRST116 means "no rows found"
-        throw fetchExpedisiError;
-      }
+        let processedDate = "Tidak Diketahui";
+        let keterangan = "Tidak Diketahui";
+        let nokarung = "Tidak Diketahui";
 
-      expedisiRecord = fetchedExpedisiRecord;
-
-      // 2. Pencarian Data Ekspedisi & Cek Duplikasi (Combined)
-      if (!expedisiRecord) {
-        // Resi not found in tbl_expedisi at all
-        // Special case: If selected expedition is 'ID', it might be a new 'ID_REKOMENDASI' entry
+        if (resiDetails && !resiDetailsError) {
+            processedDate = resiDetails.created ? format(new Date(resiDetails.created), "dd/MM/yyyy HH:mm") : processedDate;
+            keterangan = resiDetails.Keterangan || keterangan;
+            nokarung = resiDetails.nokarung || nokarung;
+            if (resiDetails.schedule === "batal") {
+              validationMessage = `BATAL! Resi ini sudah dibatalkan pada ${processedDate}.`;
+            } else {
+              validationMessage = `DOUBLE! Resi ini ${keterangan} sudah diproses pada ${processedDate} di karung ${nokarung}.`;
+            }
+        } else {
+            // Fallback if tbl_resi details not found, try to get from tbl_expedisi (if available in allExpedisiDataUnfiltered)
+            const expedisiFromTodayCache = allExpedisiDataUnfiltered?.get(normalizedCurrentResi);
+            if (expedisiFromTodayCache) {
+              processedDate = expedisiFromTodayCache.created ? format(new Date(expedisiFromTodayCache.created), "dd/MM/yyyy HH:mm") : processedDate;
+              keterangan = expedisiFromTodayCache.couriername || keterangan;
+            }
+            validationMessage = `DOUBLE! Resi ini sudah diproses pada ${processedDate}.`;
+        }
+      } else if (allFlagNoExpedisiData?.has(normalizedCurrentResi)) {
+        // Resi ditemukan di cache 'NO' flag, berarti bisa discan
+        expedisiRecordFromCache = allFlagNoExpedisiData.get(normalizedCurrentResi);
+        wasFlagNo = true;
+        actualCourierNameForResiTable = normalizeExpeditionName(expedisiRecordFromCache.couriername);
+        actualScheduleForResiTable = "ontime"; // Default schedule for existing resi
+      } else {
+        // Resi tidak ditemukan di cache 'YES' maupun 'NO'
+        // Ini bisa jadi resi baru atau resi yang tidak valid
         if (normalizeExpeditionName(expedition) === 'ID') {
-          // This is considered 'OK' for ID, as it will be inserted as ID_REKOMENDASI
+          // Untuk ekspedisi 'ID', resi baru dianggap 'ID_REKOMENDASI'
           actualCourierNameForResiTable = "ID_REKOMENDASI";
-          actualScheduleForResiTable = "idrek"; // Set schedule to 'idrek' for new ID_REKOMENDASI
+          actualScheduleForResiTable = "idrek";
         } else {
           validationStatus = 'NOT_FOUND_IN_EXPEDISI';
           validationMessage = `Data resi ${currentResi} tidak ditemukan di database.`;
         }
-      } else {
-        // Resi found in tbl_expedisi
-        if (expedisiRecord.flag === 'YES') {
-          validationStatus = 'DUPLICATE_PROCESSED';
-          const { data: resiDetails, error: resiDetailsError } = await supabase
-              .from("tbl_resi")
-              .select("created, Keterangan, nokarung, schedule")
-              .eq("Resi", currentResi)
-              .maybeSingle();
-
-          let processedDate = expedisiRecord.created ? format(new Date(expedisiRecord.created), "dd/MM/yyyy HH:mm") : "Tidak Diketahui";
-          let keterangan = expedisiRecord.couriername || "Tidak Diketahui";
-          let nokarung = "Tidak Diketahui"; // Default if not found in tbl_resi
-
-          if (resiDetails && !resiDetailsError) {
-              processedDate = resiDetails.created ? format(new Date(resiDetails.created), "dd/MM/yyyy HH:mm") : processedDate;
-              keterangan = resiDetails.Keterangan || keterangan;
-              nokarung = resiDetails.nokarung || nokarung;
-              if (resiDetails.schedule === "batal") {
-                validationMessage = `BATAL! Resi ini sudah dibatalkan pada ${processedDate}.`;
-              } else {
-                validationMessage = `DOUBLE! Resi ini ${keterangan} sudah diproses pada ${processedDate} di karung ${nokarung}.`;
-              }
-          } else {
-              validationMessage = `DOUBLE! Resi ini sudah diproses pada ${processedDate}.`;
-          }
-        } else { // expedisiRecord.flag === 'NO'
-          wasFlagNo = true; // Mark that it was a 'NO' flag, so remaining count should decrease
-          actualCourierNameForResiTable = normalizeExpeditionName(expedisiRecord.couriername);
-          actualScheduleForResiTable = "ontime"; // Default schedule for existing resi
-        }
       }
 
-      // 3. Cek Kesesuaian Ekspedisi (only if not already a duplicate or not found)
-      if (validationStatus === 'OK' && expedisiRecord) {
-        const normalizedExpedisiCourierName = normalizeExpeditionName(expedisiRecord.couriername);
+      // 3. Cek Kesesuaian Ekspedisi (hanya jika status masih OK dan ada record expedisi dari cache)
+      if (validationStatus === 'OK' && expedisiRecordFromCache) {
+        const normalizedExpedisiCourierName = normalizeExpeditionName(expedisiRecordFromCache.couriername);
         const normalizedSelectedExpedition = normalizeExpeditionName(expedition);
 
-        // Special handling for 'ID' which can match 'ID' or 'ID_REKOMENDASI'
         const isIdMatch = (normalizedSelectedExpedition === 'ID' && (normalizedExpedisiCourierName === 'ID' || normalizedExpedisiCourierName === 'ID_REKOMENDASI'));
         const isDirectMatch = (normalizedSelectedExpedition === normalizedExpedisiCourierName);
 
         if (!isIdMatch && !isDirectMatch) {
           validationStatus = 'MISMATCH_EXPEDISI';
-          validationMessage = `Resi ini terdaftar untuk ekspedisi ${expedisiRecord.couriername}, bukan ${expedition}.`;
+          validationMessage = `Resi ini terdaftar untuk ekspedisi ${expedisiRecordFromCache.couriername}, bukan ${expedition}.`;
         }
       }
 
-      // Now, handle validation results
+      // Handle validation results
       if (validationStatus !== 'OK') {
         showError(validationMessage || "Validasi gagal.");
         if (validationStatus === 'MISMATCH_EXPEDISI' || validationStatus === 'NOT_FOUND_IN_EXPEDISI') {
@@ -233,8 +234,7 @@ export const useResiScanner = ({
 
       // Optimistic updates
       setOptimisticTotalExpeditionItems(prev => {
-        // Increment total if it's a new 'ID_REKOMENDASI' entry (not found in expedisiRecord)
-        const isTrulyNewIdEntry = (normalizeExpeditionName(expedition) === 'ID' && !expedisiRecord);
+        const isTrulyNewIdEntry = (normalizeExpeditionName(expedition) === 'ID' && !expedisiRecordFromCache);
         return prev + (isTrulyNewIdEntry ? 1 : 0);
       });
       setOptimisticRemainingExpeditionItems(prev => {
@@ -256,8 +256,8 @@ export const useResiScanner = ({
           Resi: currentResi,
           nokarung: selectedKarung,
           created: new Date().toISOString(),
-          Keterangan: actualCourierNameForResiTable, // Use the new variable
-          schedule: actualScheduleForResiTable, // Use the new variable
+          Keterangan: actualCourierNameForResiTable,
+          schedule: actualScheduleForResiTable,
         };
 
         if (existingResiIndex !== -1) {
@@ -275,7 +275,7 @@ export const useResiScanner = ({
           ...(existingExpedisi || { resino: currentResi, created: new Date().toISOString() }),
           flag: "YES",
           cekfu: false,
-          couriername: actualCourierNameForResiTable, // Use the new variable
+          couriername: actualCourierNameForResiTable,
         });
         return newMap;
       });
@@ -284,6 +284,13 @@ export const useResiScanner = ({
         const newMap = new Map(oldMap || []);
         newMap.delete(normalizedCurrentResi);
         return newMap;
+      });
+
+      // NEW: Optimistically update allFlagYesExpedisiResiNumbers
+      queryClient.setQueryData(["allFlagYesExpedisiResiNumbers", formattedDate, format(today, "yyyy-MM-dd")], (oldSet: Set<string> | undefined) => {
+        const newSet = new Set(oldSet || []);
+        newSet.add(normalizedCurrentResi);
+        return newSet;
       });
       
       showSuccess(`Resi ${currentResi} Berhasil`);
@@ -295,7 +302,7 @@ export const useResiScanner = ({
         payload: {
           resiNumber: currentResi,
           selectedKarung: selectedKarung,
-          courierNameFromExpedisi: actualCourierNameForResiTable, // Use the new variable
+          courierNameFromExpedisi: actualCourierNameForResiTable,
         },
         timestamp: Date.now(),
       });
@@ -329,11 +336,12 @@ export const useResiScanner = ({
         queryClient.invalidateQueries({ queryKey: queryKeyForTotalExpeditionItems });
         queryClient.invalidateQueries({ queryKey: queryKeyForRemainingExpeditionItems });
         queryClient.invalidateQueries({ queryKey: queryKeyForIdExpeditionScanCount });
+        queryClient.invalidateQueries({ queryKey: ["allFlagYesExpedisiResiNumbers"] }); // Invalidate the new cache
       });
     } finally {
       setIsProcessing(false);
     }
-  }, [expedition, selectedKarung, formattedDate, allExpedisiDataUnfiltered, allFlagNoExpedisiData, allResiForExpedition, queryClient, debouncedTriggerSync, validateInput, startTransition, isPending, initialTotalExpeditionItems, initialRemainingExpeditionItems, initialIdExpeditionScanCount, queryKeyForInputPageDisplay, queryKeyForKarungSummary, queryKeyForTotalExpeditionItems, queryKeyForRemainingExpeditionItems, queryKeyForIdExpeditionScanCount]);
+  }, [expedition, selectedKarung, formattedDate, allExpedisiDataUnfiltered, allFlagNoExpedisiData, allResiForExpedition, queryClient, debouncedTriggerSync, validateInput, startTransition, isPending, initialTotalExpeditionItems, initialRemainingExpeditionItems, initialIdExpeditionScanCount, queryKeyForInputPageDisplay, queryKeyForKarungSummary, queryKeyForTotalExpeditionItems, queryKeyForRemainingExpeditionItems, queryKeyForIdExpeditionScanCount, allFlagYesExpedisiResiNumbers]);
 
   // Global keydown listener for scanner input
   React.useEffect(() => {
@@ -379,11 +387,14 @@ export const useResiScanner = ({
   return {
     resiNumber,
     setResiNumber,
-    handleScanResi: processScannedResi, // Expose the new handler
+    handleScanResi: processScannedResi,
     resiInputRef,
     isProcessing: isProcessing || isPending,
-    isLoadingRecentScannedResiNumbers: false, // This is no longer directly used for duplicate check
-    isLoadingAllFlagNoExpedisiData,
+    isLoadingRecentScannedResiNumbers: false,
+    // isLoadingAllFlagNoExpedisiData is now passed as a prop, so we don't need to derive it here.
+    // We can remove it from the return if it's not used directly by the consumer of this hook.
+    // For now, let's keep it for compatibility if it's used elsewhere.
+    isLoadingAllFlagNoExpedisiData: false, // This is now managed by the parent component
     optimisticTotalExpeditionItems,
     optimisticRemainingExpeditionItems,
     optimisticIdExpeditionScanCount,

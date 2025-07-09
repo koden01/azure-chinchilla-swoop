@@ -16,6 +16,7 @@ import KarungSummaryModal from "@/components/KarungSummaryModal";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
+import { useAllFlagYesExpedisiResiNumbers } from "@/hooks/useAllFlagYesExpedisiResiNumbers"; // NEW: Import the new hook
 
 const InputPage = () => {
   const { expedition, setExpedition } = useExpedition();
@@ -23,69 +24,95 @@ const InputPage = () => {
 
   const [isKarungSummaryModalOpen, setIsKarungSummaryModal] = React.useState(false);
 
-  // Calculate date range for today only
   const today = new Date();
-  const formattedToday = format(today, "yyyy-MM-dd"); // Hanya hari ini
+  const formattedToday = format(today, "yyyy-MM-dd");
 
   // NEW: Query to fetch tbl_expedisi data for today for local validation
   const { data: allExpedisiDataUnfiltered, isLoading: isLoadingAllExpedisiUnfiltered } = useQuery<Map<string, any>>({
-    queryKey: ["allExpedisiDataUnfiltered", formattedToday], // Query key hanya untuk hari ini
+    queryKey: ["allExpedisiDataUnfiltered", formattedToday],
     queryFn: async () => {
-      const data = await fetchAllDataPaginated("tbl_expedisi", "created", today, today); // Hanya ambil data untuk hari ini
+      const data = await fetchAllDataPaginated("tbl_expedisi", "created", today, today);
       const expedisiMap = new Map<string, any>();
-      data.forEach((item: { resino: string | null }) => { // Tipe 'item' ditambahkan di sini
+      data.forEach((item: { resino: string | null }) => {
         if (item.resino) {
           expedisiMap.set(item.resino.toLowerCase(), item);
         }
       });
       return expedisiMap;
     },
-    enabled: true, // Always enabled for local validation
-    staleTime: 1000 * 60 * 5, // Keep this data fresh for 5 minutes
-    gcTime: 1000 * 60 * 60 * 24, // Garbage collect after 24 hours
+    enabled: true,
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 60 * 24,
   });
 
+  // NEW: Fetch allFlagNoExpedisiData (Map)
+  const { data: allFlagNoExpedisiData, isLoading: isLoadingAllFlagNoExpedisiData } = useQuery<Map<string, any>>({
+    queryKey: ["allFlagNoExpedisiData"],
+    queryFn: async () => {
+      const data = await fetchAllDataPaginated(
+        "tbl_expedisi",
+        undefined,
+        undefined,
+        undefined,
+        "resino, couriername, created, flag, cekfu",
+        (query) => query.eq("flag", "NO")
+      );
+      const expedisiMap = new Map<string, any>();
+      data.forEach(item => {
+        if (item.resino) {
+          expedisiMap.set(item.resino.toLowerCase(), item);
+        }
+      });
+      return expedisiMap;
+    },
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 60 * 24,
+    enabled: true,
+  });
+
+  // NEW: Fetch allFlagYesExpedisiResiNumbers (Set)
+  const { data: allFlagYesExpedisiResiNumbers, isLoading: isLoadingAllFlagYesExpedisiResiNumbers } = useAllFlagYesExpedisiResiNumbers();
+
+
   const {
-    allResiForExpedition, // NEW: Get this data from useResiInputData
+    allResiForExpedition,
     isLoadingAllResiForExpedition,
     highestKarung,
     karungOptions,
-    formattedDate,
+    formattedDate: formattedDateFromHook, // Rename to avoid conflict
     karungSummary,
     expeditionOptions,
-    totalExpeditionItems, // NEW
-    remainingExpeditionItems, // NEW
-    idExpeditionScanCount, // NEW: Get ID scan count
-    currentCount: getResiCountForKarung, // Rename to avoid conflict
+    totalExpeditionItems,
+    remainingExpeditionItems,
+    idExpeditionScanCount,
+    currentCount: getResiCountForKarung,
   } = useResiInputData(expedition, false);
 
   const {
     resiNumber,
-    // setResiNumber, // Dihapus karena tidak lagi digunakan secara langsung di sini
-    // handleScanResi, // Tidak lagi dipanggil langsung dari sini
     resiInputRef,
     isProcessing,
-    isLoadingAllFlagNoExpedisiData,
-    optimisticTotalExpeditionItems, // NEW
-    optimisticRemainingExpeditionItems, // NEW
-    optimisticIdExpeditionScanCount, // NEW: Get optimistic ID scan count
+    optimisticTotalExpeditionItems,
+    optimisticRemainingExpeditionItems,
+    optimisticIdExpeditionScanCount,
   } = useResiScanner({ 
     expedition, 
     selectedKarung, 
-    formattedDate,
+    formattedDate: formattedDateFromHook,
     allExpedisiDataUnfiltered,
-    allResiForExpedition, // NEW: Pass the data here
-    initialTotalExpeditionItems: totalExpeditionItems, // NEW: Pass initial values
-    initialRemainingExpeditionItems: remainingExpeditionItems, // NEW: Pass initial values
-    initialIdExpeditionScanCount: idExpeditionScanCount, // NEW: Pass initial ID scan count
+    allResiForExpedition,
+    initialTotalExpeditionItems: totalExpeditionItems,
+    initialRemainingExpeditionItems: remainingExpeditionItems,
+    initialIdExpeditionScanCount: idExpeditionScanCount,
+    // NEW: Pass the new cached data
+    allFlagNoExpedisiData,
+    allFlagYesExpedisiResiNumbers,
   });
 
-  // Calculate the current count for the selected karung
   const currentCountForDisplay = React.useMemo(() => {
     return getResiCountForKarung(selectedKarung);
   }, [getResiCountForKarung, selectedKarung]);
 
-  // Determine the correct scan count to display
   const scanCountToDisplay = React.useMemo(() => {
     if (expedition === 'ID') {
       return optimisticIdExpeditionScanCount;
@@ -105,21 +132,7 @@ const InputPage = () => {
     }
   }, [expedition, highestKarung]);
 
-  // Effect untuk memusatkan kembali input resi
-  // Dihapus karena menyebabkan keyboard virtual muncul kembali
-  // React.useEffect(() => {
-  //   if (expedition && selectedKarung && resiInputRef.current && !isProcessing && !isLoadingAllExpedisiUnfiltered && !isLoadingAllFlagNoExpedisiData) {
-  //     const timer = setTimeout(() => {
-  //       if (resiInputRef.current) {
-  //         resiInputRef.current.focus();
-  //       }
-  //     }, 100);
-  //     return () => clearTimeout(timer);
-  //   }
-  // }, [expedition, selectedKarung, isProcessing, isLoadingAllExpedisiUnfiltered, isLoadingAllFlagNoExpedisiData]);
-
-
-  const isInputDisabled = !expedition || !selectedKarung || isProcessing || isLoadingAllExpedisiUnfiltered || isLoadingAllFlagNoExpedisiData;
+  const isInputDisabled = !expedition || !selectedKarung || isProcessing || isLoadingAllExpedisiUnfiltered || isLoadingAllFlagNoExpedisiData || isLoadingAllFlagYesExpedisiResiNumbers;
 
   return (
     <React.Fragment>
@@ -127,9 +140,7 @@ const InputPage = () => {
         <div className="w-full bg-gradient-to-r from-blue-500 to-purple-600 p-6 md:p-8 rounded-lg shadow-md text-white text-center space-y-4">
           <h2 className="text-2xl font-semibold">Input Data Resi</h2>
           <div className="text-6xl font-bold">
-            {!expedition
-              ? "Pilih Expedisi"
-              : isLoadingAllResiForExpedition || isLoadingAllExpedisiUnfiltered || isLoadingAllFlagNoExpedisiData
+            {isInputDisabled
               ? "..."
               : currentCountForDisplay}
           </div>
@@ -144,7 +155,7 @@ const InputPage = () => {
             {expedition ? `${expedition} - Karung ${selectedKarung || '?'}` : "Pilih Expedisi"}
           </div>
           <p className="text-sm opacity-80">
-            Total: {isLoadingAllResiForExpedition || isLoadingAllExpedisiUnfiltered || isLoadingAllFlagNoExpedisiData ? "..." : optimisticTotalExpeditionItems} - Scan: {isLoadingAllResiForExpedition || isLoadingAllExpedisiUnfiltered || isLoadingAllFlagNoExpedisiData ? "..." : scanCountToDisplay} - Sisa: {isLoadingAllResiForExpedition || isLoadingAllExpedisiUnfiltered || isLoadingAllFlagNoExpedisiData ? "..." : optimisticRemainingExpeditionItems}
+            Total: {isInputDisabled ? "..." : optimisticTotalExpeditionItems} - Scan: {isInputDisabled ? "..." : scanCountToDisplay} - Sisa: {isInputDisabled ? "..." : optimisticRemainingExpeditionItems}
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
@@ -152,7 +163,7 @@ const InputPage = () => {
               <label htmlFor="expedition-select" className="block text-left text-sm font-medium mb-2">
                 Expedisi
               </label>
-              <Select onValueChange={setExpedition} value={expedition} disabled={isProcessing || isLoadingAllFlagNoExpedisiData}>
+              <Select onValueChange={setExpedition} value={expedition} disabled={isProcessing || isLoadingAllFlagNoExpedisiData || isLoadingAllFlagYesExpedisiResiNumbers}>
                 <SelectTrigger id="expedition-select" className="w-full bg-white text-gray-800 h-12 text-center justify-center">
                   <SelectValue placeholder="Pilih Expedisi" />
                 </SelectTrigger>
@@ -167,7 +178,7 @@ const InputPage = () => {
               <label htmlFor="no-karung-select" className="block text-left text-sm font-medium mb-2">
                 No Karung
               </label>
-              <Select onValueChange={setSelectedKarung} value={selectedKarung} disabled={!expedition || isProcessing || isLoadingAllFlagNoExpedisiData}>
+              <Select onValueChange={setSelectedKarung} value={selectedKarung} disabled={!expedition || isProcessing || isLoadingAllFlagNoExpedisiData || isLoadingAllFlagYesExpedisiResiNumbers}>
                 <SelectTrigger id="no-karung-select" className="w-full bg-white text-gray-800 h-12 text-center justify-center">
                   <SelectValue placeholder="Pilih No Karung" />
                 </SelectTrigger>
@@ -186,8 +197,7 @@ const InputPage = () => {
                 id="scan-resi"
                 type="text"
                 placeholder="Scan nomor resi"
-                value={resiNumber} // Nilai dikontrol oleh state dari useResiScanner
-                // onChange dan onKeyDown dihapus karena ditangani secara global
+                value={resiNumber}
                 ref={resiInputRef}
                 className={cn(
                   "w-full bg-white text-gray-800 h-16 text-2xl text-center pr-10",
@@ -199,7 +209,7 @@ const InputPage = () => {
               {isProcessing && (
                 <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-6 w-6 animate-spin text-gray-500" />
               )}
-              {isLoadingAllFlagNoExpedisiData && !isProcessing && (
+              {(isLoadingAllExpedisiUnfiltered || isLoadingAllFlagNoExpedisiData || isLoadingAllFlagYesExpedisiResiNumbers) && !isProcessing && (
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center text-gray-500">
                   <Loader2 className="h-6 w-6 animate-spin mr-2" />
                   <span className="text-sm">Memuat validasi...</span>
@@ -214,7 +224,7 @@ const InputPage = () => {
         isOpen={isKarungSummaryModalOpen}
         onClose={() => setIsKarungSummaryModal(false)}
         expedition={expedition}
-        date={formattedDate}
+        date={formattedDateFromHook}
         summaryData={karungSummary}
       />
     </React.Fragment>

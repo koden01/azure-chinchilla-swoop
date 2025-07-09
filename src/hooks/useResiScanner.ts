@@ -44,6 +44,13 @@ export const useResiScanner = ({
   const today = new Date();
   const formattedToday = format(today, "yyyy-MM-dd");
 
+  // Define query keys for invalidation and optimistic updates
+  const queryKeyForInputPageDisplay = ["allResiForExpedition", expedition, formattedToday];
+  const queryKeyForKarungSummary = ["karungSummary", expedition, formattedToday];
+  const queryKeyForTotalExpeditionItems = ["totalExpeditionItems", expedition, formattedToday];
+  const queryKeyForRemainingExpeditionItems = ["remainingExpeditionItems", expedition, formattedToday];
+  const queryKeyForIdExpeditionScanCount = ["idExpeditionScanCount", formattedToday];
+
   // Buffer untuk input dari scanner
   const scannerInputBuffer = React.useRef<string>('');
   const lastKeyPressTime = React.useRef<number>(0);
@@ -89,7 +96,7 @@ export const useResiScanner = ({
     const processedSet = new Set<string>();
     if (allExpedisiDataUnfiltered) {
       for (const [resi, data] of allExpedisiDataUnfiltered.entries()) {
-        if (data.flag === 'YES') {
+        if (data.flag === 'YES') { // Only consider 'YES' flags as processed
           processedSet.add(resi);
         }
       }
@@ -137,16 +144,10 @@ export const useResiScanner = ({
     const normalizedCurrentResi = currentResi.toLowerCase().trim();
     setResiNumber(""); // Clear the displayed input immediately
 
-    if (!validateInput(currentResi)) {
+    if (!validateInput(currentResi)) { // 1. Validasi Awal
       setIsProcessing(false); 
       return;
     }
-
-    const queryKeyForInputPageDisplay = ["allResiForExpedition", expedition, formattedDate];
-    const queryKeyForKarungSummary = ["karungSummary", expedition, formattedDate];
-    const queryKeyForTotalExpeditionItems = ["totalExpeditionItems", expedition, formattedDate];
-    const queryKeyForRemainingExpeditionItems = ["remainingExpeditionItems", expedition, formattedDate];
-    const queryKeyForIdExpeditionScanCount = ["idExpeditionScanCount", formattedDate];
 
     let validationStatus: "OK" | "DUPLICATE_PROCESSED" | "MISMATCH_EXPEDISI" | "NOT_FOUND_IN_EXPEDISI" = "OK";
     let validationMessage: string | null = null;
@@ -156,60 +157,23 @@ export const useResiScanner = ({
     let wasFlagNo = false;
 
     try {
-      // 1. Check for duplicate processed resi (flag 'YES' in tbl_expedisi or already in tbl_resi)
-      if (derivedRecentProcessedResiNumbers.has(normalizedCurrentResi)) {
-        validationStatus = 'DUPLICATE_PROCESSED';
-        const { data: resiDetails, error: resiDetailsError } = await supabase
-            .from("tbl_resi")
-            .select("created, Keterangan, nokarung, schedule")
-            .eq("Resi", currentResi)
-            .maybeSingle();
+      // NEW ORDER:
+      // 2. Pencarian Data Ekspedisi
+      expedisiRecord = allExpedisiDataUnfiltered?.get(normalizedCurrentResi);
+      if (!expedisiRecord) {
+        expedisiRecord = allFlagNoExpedisiData?.get(normalizedCurrentResi);
+      }
 
-        let keterangan = "Tidak Diketahui";
-        let processedDate = "Tidak Diketahui";
-        let nokarung = "Tidak Diketahui";
-        
-        if (resiDetails && !resiDetailsError) {
-            processedDate = resiDetails.created ? format(new Date(resiDetails.created), "dd/MM/yyyy HH:mm") : "Tidak Diketahui";
-            if (resiDetails.schedule === "batal") {
-              validationMessage = `BATAL ${processedDate}`;
-            } else {
-              keterangan = resiDetails.Keterangan || "Tidak Diketahui";
-              nokarung = resiDetails.nokarung || "Tidak Diketahui";
-              validationMessage = `DOUBLE! Resi ini ${keterangan} sudah diproses pada ${processedDate} di karung ${nokarung}.`;
-            }
-        } else {
-            const processedExpedisiRecord = allExpedisiDataUnfiltered?.get(normalizedCurrentResi);
-            if (processedExpedisiRecord) {
-                keterangan = processedExpedisiRecord.couriername || "Tidak Diketahui";
-                processedDate = processedExpedisiRecord.created ? format(new Date(processedExpedisiRecord.created), "dd/MM/yyyy HH:mm") : "Tidak Diketahui";
-                validationMessage = `DOUBLE! Resi ini ${processedExpedisiRecord.couriername} sudah diproses pada ${processedDate}.`;
-            } else {
-                validationMessage = `DOUBLE! Resi ini sudah diproses.`;
-            }
+      if (!expedisiRecord) {
+        validationStatus = 'NOT_FOUND_IN_EXPEDISI';
+        validationMessage = `Data resi ${currentResi} tidak ditemukan di database.`;
+      } else {
+        if (expedisiRecord.flag === 'NO') {
+          wasFlagNo = true;
         }
       }
 
-      // 2. If not a duplicate, try to find expedisi record in local caches
-      if (validationStatus === 'OK') {
-        expedisiRecord = allExpedisiDataUnfiltered?.get(normalizedCurrentResi);
-
-        if (!expedisiRecord) {
-          expedisiRecord = allFlagNoExpedisiData?.get(normalizedCurrentResi);
-        }
-
-        if (!expedisiRecord) {
-          // Resi not found in local caches at all
-          validationStatus = 'NOT_FOUND_IN_EXPEDISI';
-          validationMessage = `Data resi ${currentResi} tidak ditemukan di database.`;
-        } else {
-          if (expedisiRecord.flag === 'NO') {
-            wasFlagNo = true;
-          }
-        }
-      }
-
-      // 3. Check for expedition mismatch if expedisiRecord was found
+      // 3. Cek Kesesuaian Ekspedisi (only if expedisiRecord was found and no prior error)
       if (validationStatus === 'OK' && expedisiRecord) {
         const normalizedExpedisiCourierName = normalizeExpeditionName(expedisiRecord.couriername);
         const normalizedSelectedExpedition = normalizeExpeditionName(expedition);
@@ -221,6 +185,39 @@ export const useResiScanner = ({
         if (!isIdMatch && !isDirectMatch) {
           validationStatus = 'MISMATCH_EXPEDISI';
           validationMessage = `Resi ini terdaftar untuk ekspedisi ${expedisiRecord.couriername}, bukan ${expedition}.`;
+        }
+      }
+
+      // 4. Cek Duplikasi (only if all previous checks passed)
+      if (validationStatus === 'OK') {
+        if (derivedRecentProcessedResiNumbers.has(normalizedCurrentResi)) {
+          validationStatus = 'DUPLICATE_PROCESSED';
+          const { data: resiDetails, error: resiDetailsError } = await supabase
+              .from("tbl_resi")
+              .select("created, Keterangan, nokarung, schedule")
+              .eq("Resi", currentResi)
+              .maybeSingle();
+
+          let keterangan = "Tidak Diketahui";
+          let processedDate = "Tidak Diketahui";
+          let nokarung = "Tidak Diketahui";
+          
+          if (resiDetails && !resiDetailsError) {
+              processedDate = resiDetails.created ? format(new Date(resiDetails.created), "dd/MM/yyyy HH:mm") : "Tidak Diketahui";
+              if (resiDetails.schedule === "batal") {
+                validationMessage = `BATAL ${processedDate}`;
+              } else {
+                keterangan = resiDetails.Keterangan || "Tidak Diketahui";
+                nokarung = resiDetails.nokarung || "Tidak Diketahui";
+                validationMessage = `DOUBLE! Resi ini ${keterangan} sudah diproses pada ${processedDate} di karung ${nokarung}.`;
+              }
+          } else if (expedisiRecord) { // Use the expedisiRecord found earlier if resiDetails not found
+              keterangan = expedisiRecord.couriername || "Tidak Diketahui";
+              processedDate = expedisiRecord.created ? format(new Date(expedisiRecord.created), "dd/MM/yyyy HH:mm") : "Tidak Diketahui";
+              validationMessage = `DOUBLE! Resi ini ${expedisiRecord.couriername} sudah diproses pada ${processedDate}.`;
+          } else {
+              validationMessage = `DOUBLE! Resi ini sudah diproses.`;
+          }
         }
       }
 
@@ -355,7 +352,7 @@ export const useResiScanner = ({
     } finally {
       setIsProcessing(false);
     }
-  }, [resiNumber, expedition, selectedKarung, formattedDate, allExpedisiDataUnfiltered, allFlagNoExpedisiData, allResiForExpedition, queryClient, debouncedTriggerSync, validateInput, derivedRecentProcessedResiNumbers, startTransition, isPending, initialTotalExpeditionItems, initialRemainingExpeditionItems, initialIdExpeditionScanCount]);
+  }, [resiNumber, expedition, selectedKarung, formattedDate, allExpedisiDataUnfiltered, allFlagNoExpedisiData, allResiForExpedition, queryClient, debouncedTriggerSync, validateInput, derivedRecentProcessedResiNumbers, startTransition, isPending, initialTotalExpeditionItems, initialRemainingExpeditionItems, initialIdExpeditionScanCount, queryKeyForInputPageDisplay, queryKeyForKarungSummary, queryKeyForTotalExpeditionItems, queryKeyForRemainingExpeditionItems, queryKeyForIdExpeditionScanCount]);
 
   // Global keydown listener for scanner input
   React.useEffect(() => {

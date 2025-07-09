@@ -105,18 +105,18 @@ const InputPage = () => {
     }
   }, [expedition, highestKarung]);
 
-  // Menghapus useEffect yang mengatur fokus programatis
-  // React.useEffect(() => {
-  //   if (expedition && selectedKarung && resiInputRef.current && !isProcessing && !isLoadingAllFlagNoExpedisiData) {
-  //     const timer = setTimeout(() => {
-  //       if (resiInputRef.current) {
-  //         resiInputRef.current.blur(); 
-  //         resiInputRef.current.focus();
-  //       }
-  //     }, 100);
-  //     return () => clearTimeout(timer);
-  //   }
-  // }, [expedition, selectedKarung, isProcessing, isLoadingAllFlagNoExpedisiData]);
+  // Mengaktifkan kembali useEffect untuk mengatur fokus programatis
+  React.useEffect(() => {
+    if (expedition && selectedKarung && resiInputRef.current && !isProcessing && !isLoadingAllFlagNoExpedisiData) {
+      const timer = setTimeout(() => {
+        if (resiInputRef.current) {
+          resiInputRef.current.focus();
+        }
+      }, 100); // Sedikit tunda untuk memastikan DOM siap
+      return () => clearTimeout(timer);
+    }
+  }, [expedition, selectedKarung, isProcessing, isLoadingAllFlagNoExpedisiData, resiInputRef]);
+
 
   const isInputDisabled = !expedition || !selectedKarung || isProcessing || isLoadingAllExpedisiUnfiltered || isLoadingAllFlagNoExpedisiData;
 
@@ -193,7 +193,7 @@ const InputPage = () => {
                   isInputDisabled && "opacity-70 cursor-not-allowed"
                 )}
                 disabled={isInputDisabled}
-                inputMode="none"
+                inputMode="none" // Ini sudah ada untuk menonaktifkan keyboard virtual
               />
               {isProcessing && (
                 <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-6 w-6 animate-spin text-gray-500" />

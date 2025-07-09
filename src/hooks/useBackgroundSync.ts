@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { getPendingOperations, deletePendingOperation, updatePendingOperation } from '@/integrations/indexeddb/pendingOperations';
 import { supabase } from '@/integrations/supabase/client';
 import { showError } from '@/utils/toast';
-import { format, subDays } from 'date-fns'; // Import subDays
+import { format } from 'date-fns'; // Removed subDays
 import { normalizeExpeditionName } from '@/utils/expeditionUtils'; // Import normalizeExpeditionName
 import { useDebouncedCallback } from './useDebouncedCallback'; // Import useDebouncedCallback
 

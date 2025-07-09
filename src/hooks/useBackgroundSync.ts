@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { getPendingOperations, deletePendingOperation, updatePendingOperation } from '@/integrations/indexeddb/pendingOperations';
 import { supabase } from '@/integrations/supabase/client';
 import { showError } from '@/utils/toast';
-import { format, subDays } from 'date-fns'; // Import subDays
+import { format } from 'date-fns';
 import { normalizeExpeditionName } from '@/utils/expeditionUtils'; // Import normalizeExpeditionName
 import { useDebouncedCallback } from './useDebouncedCallback'; // Import useDebouncedCallback
 
@@ -213,9 +213,6 @@ export const useBackgroundSync = () => {
         queryClient.refetchQueries({ queryKey: ["uniqueExpeditionNames"] });
         queryClient.refetchQueries({ queryKey: ["historyData"] }); // History is always affected
 
-        // Invalidate allResiForExpedition to ensure Input page gets fresh 5-day data
-        queryClient.invalidateQueries({ queryKey: ["allResiForExpedition"], exact: false });
-
         // Refetch dashboard summary counts (which are date-specific)
         // and Input page specific counts (which are date and expedition specific)
         affectedDates.forEach(dateStr => {
@@ -232,12 +229,14 @@ export const useBackgroundSync = () => {
             queryClient.refetchQueries({ queryKey: ["batalCount", dashboardFormattedDateISO] });
             queryClient.refetchQueries({ queryKey: ["followUpData", dashboardFormattedDate] });
             queryClient.refetchQueries({ queryKey: ["expedisiDataForSelectedDate", dashboardFormattedDate] });
+            // queryClient.refetchQueries({ queryKey: ["allResiData", dashboardFormattedDateISO] }); // REMOVED THIS LINE
             queryClient.refetchQueries({ queryKey: ["followUpFlagNoCount", dashboardFormattedDate] }); 
 
             // Input page specific queries (date-specific, but also expedition-specific)
             affectedExpeditions.forEach(expName => {
                 const normalizedExpName = normalizeExpeditionName(expName);
                 if (normalizedExpName) {
+                    // queryClient.refetchQueries({ queryKey: ["allResiForExpedition", normalizedExpName, dashboardFormattedDate] }); // REMOVED THIS LINE
                     queryClient.refetchQueries({ queryKey: ["karungSummary", normalizedExpName, dashboardFormattedDate] });
                     queryClient.refetchQueries({ queryKey: ["totalExpeditionItems", normalizedExpName, dashboardFormattedDate] });
                     queryClient.refetchQueries({ queryKey: ["remainingExpeditionItems", normalizedExpName, dashboardFormattedDate] });

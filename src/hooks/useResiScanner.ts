@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, showError, dismissToast } from "@/utils/toast";
 import { beepSuccess, beepFailure, beepDouble, beepStart } from "@/utils/audio";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { format, subDays } from "date-fns"; // Import subDays
+import { format } from "date-fns";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 import { normalizeExpeditionName } from "@/utils/expeditionUtils";
 import { addPendingOperation } from "@/integrations/indexeddb/pendingOperations";
@@ -43,8 +43,6 @@ export const useResiScanner = ({
 
   const today = new Date();
   const formattedToday = format(today, "yyyy-MM-dd");
-  const fiveDaysAgo = subDays(today, 4);
-  const formattedFiveDaysAgo = format(fiveDaysAgo, "yyyy-MM-dd");
 
   // Buffer untuk input dari scanner
   const scannerInputBuffer = React.useRef<string>('');
@@ -144,11 +142,11 @@ export const useResiScanner = ({
       return;
     }
 
-    const queryKeyForInputPageDisplay = ["allResiForExpedition", expedition, formattedFiveDaysAgo, formattedToday];
-    const queryKeyForKarungSummary = ["karungSummary", expedition, formattedToday];
-    const queryKeyForTotalExpeditionItems = ["totalExpeditionItems", expedition, formattedToday];
-    const queryKeyForRemainingExpeditionItems = ["remainingExpeditionItems", expedition, formattedToday];
-    const queryKeyForIdExpeditionScanCount = ["idExpeditionScanCount", formattedToday];
+    const queryKeyForInputPageDisplay = ["allResiForExpedition", expedition, formattedDate];
+    const queryKeyForKarungSummary = ["karungSummary", expedition, formattedDate];
+    const queryKeyForTotalExpeditionItems = ["totalExpeditionItems", expedition, formattedDate];
+    const queryKeyForRemainingExpeditionItems = ["remainingExpeditionItems", expedition, formattedDate];
+    const queryKeyForIdExpeditionScanCount = ["idExpeditionScanCount", formattedDate];
 
     let validationStatus: "OK" | "DUPLICATE_PROCESSED" | "MISMATCH_EXPEDISI" | "NOT_FOUND_IN_EXPEDISI" = "OK";
     let validationMessage: string | null = null;
@@ -357,7 +355,7 @@ export const useResiScanner = ({
     } finally {
       setIsProcessing(false);
     }
-  }, [resiNumber, expedition, selectedKarung, formattedDate, allExpedisiDataUnfiltered, allFlagNoExpedisiData, allResiForExpedition, queryClient, debouncedTriggerSync, validateInput, derivedRecentProcessedResiNumbers, startTransition, isPending, initialTotalExpeditionItems, initialRemainingExpeditionItems, initialIdExpeditionScanCount, formattedFiveDaysAgo, formattedToday]);
+  }, [resiNumber, expedition, selectedKarung, formattedDate, allExpedisiDataUnfiltered, allFlagNoExpedisiData, allResiForExpedition, queryClient, debouncedTriggerSync, validateInput, derivedRecentProcessedResiNumbers, startTransition, isPending, initialTotalExpeditionItems, initialRemainingExpeditionItems, initialIdExpeditionScanCount]);
 
   // Global keydown listener for scanner input
   React.useEffect(() => {

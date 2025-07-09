@@ -27,8 +27,8 @@ const Navbar = () => {
 
     // Prefetch Transaksi Hari Ini
     queryClient.prefetchQuery(
-      ["transaksiHariIni", formattedDate],
       {
+        queryKey: ["transaksiHariIni", formattedDate],
         queryFn: async () => {
           const { data: countData, error } = await supabase.rpc("get_transaksi_hari_ini_count", {
             p_selected_date: formattedDate,
@@ -41,8 +41,8 @@ const Navbar = () => {
 
     // Prefetch Total Scan
     queryClient.prefetchQuery(
-      ["totalScan", formattedDateISO], // Use formattedDateISO
       {
+        queryKey: ["totalScan", formattedDateISO], // Use formattedDateISO
         queryFn: async () => {
           const { count, error } = await supabase
             .from("tbl_resi")
@@ -58,8 +58,8 @@ const Navbar = () => {
 
     // Prefetch ID Rekomendasi
     queryClient.prefetchQuery(
-      ["idRekCount", formattedDateISO], // Use formattedDateISO
       {
+        queryKey: ["idRekCount", formattedDateISO], // Use formattedDateISO
         queryFn: async () => {
           const { count, error } = await supabase
             .from("tbl_resi")
@@ -75,8 +75,8 @@ const Navbar = () => {
 
     // Prefetch Belum Kirim
     queryClient.prefetchQuery(
-      ["belumKirim", formattedDate],
       {
+        queryKey: ["belumKirim", formattedDate],
         queryFn: async () => {
           const { data: countData, error } = await supabase.rpc("get_belum_kirim_count", {
             p_selected_date: formattedDate,
@@ -90,8 +90,8 @@ const Navbar = () => {
     // Prefetch Follow Up (Belum Kirim) - uses actual current date
     const actualCurrentFormattedDate = format(new Date(), 'yyyy-MM-dd');
     queryClient.prefetchQuery(
-      ["followUpFlagNoCount", actualCurrentFormattedDate],
       {
+        queryKey: ["followUpFlagNoCount", actualCurrentFormattedDate],
         queryFn: async () => {
           const { data: countData, error } = await supabase.rpc("get_flag_no_except_today_count", {
             p_selected_date: actualCurrentFormattedDate,
@@ -104,8 +104,8 @@ const Navbar = () => {
 
     // Prefetch Scan Followup (Late)
     queryClient.prefetchQuery(
-      ["scanFollowupLateCount", formattedDateISO], // Use formattedDateISO
       {
+        queryKey: ["scanFollowupLateCount", formattedDateISO], // Use formattedDateISO
         queryFn: async () => {
           const { count, error } = await supabase
             .from("tbl_resi")
@@ -121,8 +121,8 @@ const Navbar = () => {
 
     // Prefetch Batal
     queryClient.prefetchQuery(
-      ["batalCount", formattedDateISO], // Use formattedDateISO
       {
+        queryKey: ["batalCount", formattedDateISO], // Use formattedDateISO
         queryFn: async () => {
           const { count, error } = await supabase
             .from("tbl_resi")
@@ -138,8 +138,8 @@ const Navbar = () => {
 
     // Prefetch Expedisi Data for Selected Date (RPC)
     queryClient.prefetchQuery(
-      ["expedisiDataForSelectedDate", formattedDate],
       {
+        queryKey: ["expedisiDataForSelectedDate", formattedDate],
         queryFn: async () => {
           const { data, error } = await supabase.rpc("get_transaksi_hari_ini_records", {
             p_selected_date: formattedDate,
@@ -152,8 +152,8 @@ const Navbar = () => {
 
     // Prefetch All Resi Data for Selected Date (paginated)
     queryClient.prefetchQuery(
-      ["allResiData", formattedDateISO], // Use formattedDateISO
       {
+        queryKey: ["allResiData", formattedDateISO], // Use formattedDateISO
         queryFn: async () => {
           let allRecords: any[] = [];
           let offset = 0;
@@ -191,8 +191,8 @@ const Navbar = () => {
     const endOfTodayFormatted = format(today, "yyyy-MM-dd");
 
     queryClient.prefetchQuery(
-      ["allExpedisiDataUnfiltered", endOfTodayFormatted], // Changed to only today's date
       {
+        queryKey: ["allExpedisiDataUnfiltered", endOfTodayFormatted], // Changed to only today's date
         queryFn: async () => {
           let allRecords: any[] = [];
           let offset = 0;

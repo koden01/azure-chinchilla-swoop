@@ -244,7 +244,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         },
       });
 
-      queryClient.invalidateQueries(["historyData"], {});
+      queryClient.invalidateQueries({ queryKey: ["historyData"] });
       debouncedTriggerSync();
 
     } catch (error: any) {

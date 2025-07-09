@@ -187,7 +187,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         }
         
         if (directExpedisiData) {
-            expedisiRecord = directExpedisiData;
+            expedisiRecord = directExpedisiData; // Corrected from directDdata
         } else {
             console.warn(`[handleBatalResi] Resi ${resiNumber} not found in tbl_expedisi. Proceeding with 'batal' in tbl_resi using default values.`);
         }

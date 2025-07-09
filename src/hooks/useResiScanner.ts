@@ -2,14 +2,14 @@ import React, { useTransition } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, showError, dismissToast } from "@/utils/toast";
 import { beepSuccess, beepFailure, beepDouble, beepStart } from "@/utils/audio";
-import { useQueryClient, useQuery, QueryKey } from "@tanstack/react-query"; // Import QueryKey
-import { format, subDays, isWithinInterval, startOfDay, endOfDay } from "date-fns"; // Import date-fns utilities
+import { useQueryClient, useQuery, QueryKey } from "@tanstack/react-query";
+import { format, subDays, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 import { normalizeExpeditionName } from "@/utils/expeditionUtils";
 import { addPendingOperation } from "@/integrations/indexeddb/pendingOperations";
 import { useBackgroundSync } from "@/hooks/useBackgroundSync";
 import { ResiExpedisiData } from "@/hooks/useResiInputData";
-import { HistoryData } from "@/components/columns/historyColumns"; // Import HistoryData type
+import { HistoryData } from "@/components/columns/historyColumns";
 
 interface UseResiScannerProps {
   expedition: string;
@@ -374,7 +374,7 @@ export const useResiScanner = ({
         },
       });
 
-      queryClient.invalidateQueries({ queryKey: ["historyData"] });
+      queryClient.invalidateQueries(["historyData"], {});
       debouncedTriggerSync();
 
     } catch (error: any) {
@@ -405,7 +405,7 @@ export const useResiScanner = ({
         queryClient.invalidateQueries({ queryKey: queryKeyForRemainingExpeditionItems });
         queryClient.invalidateQueries({ queryKey: queryKeyForIdExpeditionScanCount });
         // Invalidate historyData on error to ensure it refetches correct state
-        queryClient.invalidateQueries({ queryKey: ["historyData"] });
+        queryClient.invalidateQueries(["historyData"], {});
       });
     } finally {
       setIsProcessing(false);

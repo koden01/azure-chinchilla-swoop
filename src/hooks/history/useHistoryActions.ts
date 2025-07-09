@@ -1,12 +1,12 @@
 import { useState, useCallback, useRef } from "react";
-import { useQueryClient, QueryKey } from "@tanstack/react-query"; // Import QueryKey
+import { useQueryClient, QueryKey } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, showError } from "@/utils/toast";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
-import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns"; // Import date-fns utilities
-import { flexRender } from "@tanstack/react-table"; // Corrected import for flexRender
-import { HistoryData } from "@/components/columns/historyColumns"; // Import HistoryData type
-import { Table as ReactTableType } from "@tanstack/react-table"; // Import Table type
+import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
+import { flexRender } from "@tanstack/react-table";
+import { HistoryData } from "@/components/columns/historyColumns";
+import { Table as ReactTableType } from "@tanstack/react-table";
 
 interface UseHistoryActionsProps {
   historyData: HistoryData[] | undefined;
@@ -89,7 +89,7 @@ export const useHistoryActions = ({ historyData, formattedStartDate, formattedEn
         showError(`Gagal menghapus resi ${resiToDelete}: ${error.message}`);
         console.error("Error deleting resi:", error);
         // Revert optimistic update on error
-        queryClient.invalidateQueries({ queryKey: ["historyData"] });
+        queryClient.invalidateQueries(["historyData"], {});
       } else {
         showSuccess(`Resi ${resiToDelete} berhasil dihapus.`);
 
@@ -105,7 +105,7 @@ export const useHistoryActions = ({ historyData, formattedStartDate, formattedEn
       showError(`Gagal menghapus resi ${resiToDelete}: ${error.message || "Silakan coba lagi."}`);
       console.error("Error deleting resi (outer catch):", error);
       // Ensure optimistic update is reverted if an unexpected error occurs
-      queryClient.invalidateQueries({ queryKey: ["historyData"] });
+      queryClient.invalidateQueries(["historyData"], {});
     } finally {
       setIsDeleteDialogOpen(false);
       setResiToDelete(null);

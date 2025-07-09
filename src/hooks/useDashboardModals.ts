@@ -5,9 +5,9 @@ import { ModalDataItem } from "@/types/data";
 import { normalizeExpeditionName } from "@/utils/expeditionUtils";
 import { addPendingOperation } from "@/integrations/indexeddb/pendingOperations";
 import { useBackgroundSync } from "@/hooks/useBackgroundSync";
-import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns"; // Import date-fns utilities
-import { useQueryClient, QueryKey } from "@tanstack/react-query"; // Import useQueryClient and QueryKey
-import { HistoryData } from "@/components/columns/historyColumns"; // Import HistoryData type
+import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
+import { useQueryClient, QueryKey } from "@tanstack/react-query";
+import { HistoryData } from "@/components/columns/historyColumns";
 
 interface UseDashboardModalsProps {
   date: Date | undefined;
@@ -42,8 +42,8 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
   >(null);
   const [selectedCourier, setSelectedCourier] = React.useState<string | null>(null);
 
-  const { triggerSync: debouncedTriggerSync } = useBackgroundSync(); // Use debouncedTriggerSync
-  const queryClient = useQueryClient(); // Initialize useQueryClient
+  const { triggerSync: debouncedTriggerSync } = useBackgroundSync();
+  const queryClient = useQueryClient();
 
   const openResiModal = (
     title: string,
@@ -244,8 +244,8 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         },
       });
 
-      queryClient.invalidateQueries({ queryKey: ["historyData"] });
-      debouncedTriggerSync(); // Use debouncedTriggerSync
+      queryClient.invalidateQueries(["historyData"], {});
+      debouncedTriggerSync();
 
     } catch (error: any) {
       if (itemToBatal) {
@@ -273,7 +273,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       if (!expedisiRecord) {
         const { data: directExpedisiData, error: directExpedisiError } = await supabase
             .from("tbl_expedisi")
-            .select("created, couriername") // Hanya pilih kolom yang diperlukan
+            .select("created, couriername")
             .eq("resino", resiNumber)
             .single();
 
@@ -300,7 +300,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
           expedisiCreatedTimestamp,
           keteranganValue: courierNameFromExpedisi,
         },
-        timestamp: Date.now(), // Corrected from Date.24()
+        timestamp: Date.now(),
       });
 
       showSuccess(`Resi ${resiNumber} berhasil dikonfirmasi.`);
@@ -337,8 +337,8 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         },
       });
 
-      queryClient.invalidateQueries({ queryKey: ["historyData"] });
-      debouncedTriggerSync(); // Use debouncedTriggerSync
+      queryClient.invalidateQueries(["historyData"], {});
+      debouncedTriggerSync();
 
     } catch (error: any) {
       if (itemToConfirm) {
@@ -366,7 +366,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       if (!expedisiRecord) {
         const { data: directExpedisiData, error: directExpedisiError } = await supabase
             .from("tbl_expedisi")
-            .select("created, couriername") // Hanya pilih kolom yang diperlukan
+            .select("created, couriername")
             .eq("resino", resiNumber)
             .single();
 
@@ -392,8 +392,8 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       });
 
       showSuccess(`Status CEKFU resi ${resiNumber} berhasil diperbarui.`);
-      queryClient.invalidateQueries({ queryKey: ["historyData"] });
-      debouncedTriggerSync(); // Use debouncedTriggerSync
+      queryClient.invalidateQueries(["historyData"], {});
+      debouncedTriggerSync();
     } catch (error: any) {
       setModalData(originalModalData);
       showError(`Gagal memperbarui status CEKFU resi ${resiNumber}. ${error.message || "Silakan coba lagi."}`);

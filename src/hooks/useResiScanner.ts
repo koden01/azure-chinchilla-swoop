@@ -87,8 +87,6 @@ export const useResiScanner = ({
     enabled: true,
   });
 
-  // `derivedRecentProcessedResiNumbers` is still useful for general UI updates,
-  // but for immediate duplicate checks, we'll directly query the cache.
   const derivedRecentProcessedResiNumbers = React.useMemo(() => {
     const processedSet = new Set<string>();
     if (allExpedisiDataUnfiltered) {
@@ -160,21 +158,7 @@ export const useResiScanner = ({
     let wasFlagNo = false;
 
     try {
-      // --- IMMEDIATE OPTIMISTIC DUPLICATE CHECK ---
-      // Check the current state of allExpedisiDataUnfiltered in cache
-      const currentExpedisiDataInCache = queryClient.getQueryData(["allExpedisiDataUnfiltered", formattedToday]) as Map<string, any> | undefined;
-      if (currentExpedisiDataInCache?.has(normalizedCurrentResi) && currentExpedisiDataInCache.get(normalizedCurrentResi)?.flag === 'YES') {
-        const processedExpedisiRecord = currentExpedisiDataInCache.get(normalizedCurrentResi);
-        let processedDate = processedExpedisiRecord?.created ? format(new Date(processedExpedisiRecord.created), "dd/MM/yyyy HH:mm") : "Tidak Diketahui";
-        let keterangan = processedExpedisiRecord?.couriername || "Tidak Diketahui";
-        showError(`DOUBLE! Resi ini ${keterangan} sudah diproses pada ${processedDate}.`);
-        playBeep(beepDouble);
-        setIsProcessing(false);
-        return; // Stop processing immediately
-      }
-
       // 1. Check for duplicate processed resi (flag 'YES' in tbl_expedisi or already in tbl_resi)
-      // This check is now secondary to the immediate cache check above, but still useful for initial load state.
       if (derivedRecentProcessedResiNumbers.has(normalizedCurrentResi)) {
         validationStatus = 'DUPLICATE_PROCESSED';
         const { data: resiDetails, error: resiDetailsError } = await supabase
@@ -299,15 +283,14 @@ export const useResiScanner = ({
         return newData;
       });
 
-      // --- APPLY OPTIMISTIC UPDATES TO CACHE IMMEDIATELY FOR allExpedisiDataUnfiltered ---
       queryClient.setQueryData(["allExpedisiDataUnfiltered", formattedToday], (oldMap: Map<string, any> | undefined) => {
         const newMap = new Map(oldMap || []);
         const existingExpedisi = newMap.get(normalizedCurrentResi);
         newMap.set(normalizedCurrentResi, {
           ...(existingExpedisi || { resino: currentResi, created: new Date().toISOString() }),
-          flag: "YES", // Set flag to YES optimistically
-          cekfu: false, // Reset cekfu on scan
-          couriername: actualCourierNameForResiTable, // Ensure couriername is set
+          flag: "YES",
+          cekfu: false,
+          couriername: actualCourierNameForResiTable, // Use the new variable
         });
         return newMap;
       });
@@ -332,9 +315,6 @@ export const useResiScanner = ({
         timestamp: Date.now(),
       });
       
-      // Invalidate historyData query immediately after adding pending operation
-      queryClient.invalidateQueries({ queryKey: ["historyData"] });
-
       debouncedTriggerSync();
 
     } catch (error: any) {
@@ -397,7 +377,7 @@ export const useResiScanner = ({
         }
       } else if (event.key.length === 1) { // Hanya tambahkan karakter tunggal (bukan Shift, Alt, Ctrl, dll.)
         scannerInputBuffer.current += event.key;
-        setResiNumber(scannerInputBuffer.current); // <-- Re-enabled this line
+        // Hapus baris ini: setResiNumber(scannerInputBuffer.current); // Tidak lagi memperbarui state di setiap karakter
       } else if (event.key === 'Backspace') {
         scannerInputBuffer.current = scannerInputBuffer.current.slice(0, -1);
         setResiNumber(scannerInputBuffer.current); // Tetap perbarui untuk umpan balik backspace manual
@@ -414,7 +394,8 @@ export const useResiScanner = ({
 
   return {
     resiNumber,
-    setResiNumber, // <-- Exposed setResiNumber here
+    setResiNumber,
+    handleScanResi: processScannedResi, // Expose the new handler
     resiInputRef,
     isProcessing: isProcessing || isPending,
     isLoadingRecentScannedResiNumbers: false,

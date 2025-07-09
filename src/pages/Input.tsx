@@ -1,226 +1,222 @@
 import React from "react";
-import { useQuery } from "@tanstack/react-query";
-import { format, subDays } from "date-fns";
-import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useResiInputData } from "@/hooks/useResiInputData";
+import { useExpedition } from "@/context/ExpeditionContext";
 import { useResiScanner } from "@/hooks/useResiScanner";
-import { useResiInputData, UseResiInputDataReturn } from "@/hooks/useResiInputData"; // Import UseResiInputDataReturn
-import { normalizeExpeditionName } from "@/utils/expeditionUtils";
-import { showSuccess, showError } from "@/utils/toast";
-import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
+import { Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import KarungSummaryModal from "@/components/KarungSummaryModal";
+import { useQuery } from "@tanstack/react-query";
+import { format } from "date-fns";
+import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 
 const InputPage = () => {
-  const today = new Date();
-  const formattedDate = format(today, "yyyy-MM-dd");
-  const fiveDaysAgo = subDays(today, 4);
-  const formattedFiveDaysAgo = format(fiveDaysAgo, "yyyy-MM-dd");
+  const { expedition, setExpedition } = useExpedition();
+  const [selectedKarung, setSelectedKarung] = React.useState<string>("1"); // Default to "1"
 
-  // Destructure all properties from useResiInputData
+  const [isKarungSummaryModalOpen, setIsKarungSummaryModal] = React.useState(false);
+
+  // Calculate date range for today only
+  const today = new Date();
+  const formattedToday = format(today, "yyyy-MM-dd"); // Hanya hari ini
+
+  // NEW: Query to fetch tbl_expedisi data for today for local validation
+  const { data: allExpedisiDataUnfiltered, isLoading: isLoadingAllExpedisiUnfiltered } = useQuery<Map<string, any>>({
+    queryKey: ["allExpedisiDataUnfiltered", formattedToday], // Query key hanya untuk hari ini
+    queryFn: async () => {
+      const data = await fetchAllDataPaginated("tbl_expedisi", "created", today, today); // Hanya ambil data untuk hari ini
+      const expedisiMap = new Map<string, any>();
+      data.forEach((item: { resino: string | null }) => { // Tipe 'item' ditambahkan di sini
+        if (item.resino) {
+          expedisiMap.set(item.resino.toLowerCase(), item);
+        }
+      });
+      return expedisiMap;
+    },
+    enabled: true, // Always enabled for local validation
+    staleTime: 1000 * 60 * 5, // Keep this data fresh for 5 minutes
+    gcTime: 1000 * 60 * 60 * 24, // Garbage collect after 24 hours
+  });
+
   const {
-    expedition,
-    setExpedition,
-    selectedKarung,
-    setSelectedKarung,
-    uniqueExpeditionNames,
-    karungSummary,
-    allResiForExpedition,
-    allExpedisiDataUnfiltered,
-    totalExpeditionItems,
-    remainingExpeditionItems,
-    idExpeditionScanCount,
-    isLoadingExpeditionData,
-    isLoadingKarungSummary,
+    allResiForExpedition, // NEW: Get this data from useResiInputData
     isLoadingAllResiForExpedition,
-    isLoadingAllExpedisiDataUnfiltered,
-    isLoadingTotalExpeditionItems,
-    isLoadingRemainingExpeditionItems,
-    isLoadingIdExpeditionScanCount,
-  }: UseResiInputDataReturn = useResiInputData({ formattedDate, formattedFiveDaysAgo });
+    highestKarung,
+    karungOptions,
+    formattedDate,
+    karungSummary,
+    expeditionOptions,
+    totalExpeditionItems, // NEW
+    remainingExpeditionItems, // NEW
+    idExpeditionScanCount, // NEW: Get ID scan count
+    currentCount: getResiCountForKarung, // Rename to avoid conflict
+  } = useResiInputData(expedition, false);
 
   const {
     resiNumber,
-    setResiNumber,
+    // setResiNumber, // Dihapus karena tidak lagi digunakan secara langsung di sini
+    // handleScanResi, // Tidak lagi dipanggil langsung dari sini
     resiInputRef,
     isProcessing,
-    isLoadingAllFlagNoExpedisiData, // <-- Get this loading state from useResiScanner
-    optimisticTotalExpeditionItems,
-    optimisticRemainingExpeditionItems,
-    optimisticIdExpeditionScanCount,
-  } = useResiScanner({
-    expedition,
-    selectedKarung,
+    isLoadingAllFlagNoExpedisiData,
+    optimisticTotalExpeditionItems, // NEW
+    optimisticRemainingExpeditionItems, // NEW
+    optimisticIdExpeditionScanCount, // NEW: Get optimistic ID scan count
+  } = useResiScanner({ 
+    expedition, 
+    selectedKarung, 
     formattedDate,
     allExpedisiDataUnfiltered,
-    allResiForExpedition,
-    initialTotalExpeditionItems: totalExpeditionItems,
-    initialRemainingExpeditionItems: remainingExpeditionItems,
-    initialIdExpeditionScanCount: idExpeditionScanCount,
+    allResiForExpedition, // NEW: Pass the data here
+    initialTotalExpeditionItems: totalExpeditionItems, // NEW: Pass initial values
+    initialRemainingExpeditionItems: remainingExpeditionItems, // NEW: Pass initial values
+    initialIdExpeditionScanCount: idExpeditionScanCount, // NEW: Pass initial ID scan count
   });
 
-  // Combine all relevant loading states
-  const isLoadingAnyData = isLoadingExpeditionData || isLoadingKarungSummary || isLoadingAllResiForExpedition || isLoadingAllExpedisiDataUnfiltered || isLoadingTotalExpeditionItems || isLoadingRemainingExpeditionItems || isLoadingIdExpeditionScanCount || isLoadingAllFlagNoExpedisiData;
+  // Calculate the current count for the selected karung
+  const currentCountForDisplay = React.useMemo(() => {
+    return getResiCountForKarung(selectedKarung);
+  }, [getResiCountForKarung, selectedKarung]);
 
-  const debouncedSetResiNumber = useDebouncedCallback((value: string) => {
-    setResiNumber(value);
-  }, 100); // Debounce for 100ms to prevent excessive re-renders during manual typing
+  // Determine the correct scan count to display
+  const scanCountToDisplay = React.useMemo(() => {
+    if (expedition === 'ID') {
+      return optimisticIdExpeditionScanCount;
+    }
+    return optimisticTotalExpeditionItems - optimisticRemainingExpeditionItems;
+  }, [expedition, optimisticIdExpeditionScanCount, optimisticTotalExpeditionItems, optimisticRemainingExpeditionItems]);
 
   React.useEffect(() => {
-    if (expedition && selectedKarung && resiInputRef.current && !isProcessing && !isLoadingAnyData) {
-      const timer = setTimeout(() => {
-        if (resiInputRef.current) {
-          resiInputRef.current.focus();
-        }
-      }, 100); // Sedikit tunda untuk memastikan DOM siap
-      return () => clearTimeout(timer);
+    if (expedition) {
+      if (highestKarung > 0) {
+        setSelectedKarung(highestKarung.toString());
+      } else {
+        setSelectedKarung("1");
+      }
+    } else {
+      setSelectedKarung("");
     }
-  }, [expedition, selectedKarung, isProcessing, isLoadingAnyData, resiInputRef]);
+  }, [expedition, highestKarung]);
 
+  // Menghapus useEffect yang mengatur fokus programatis
+  // React.useEffect(() => {
+  //   if (expedition && selectedKarung && resiInputRef.current && !isProcessing && !isLoadingAllFlagNoExpedisiData) {
+  //     const timer = setTimeout(() => {
+  //       if (resiInputRef.current) {
+  //         resiInputRef.current.blur(); 
+  //         resiInputRef.current.focus();
+  //       }
+  //     }, 100);
+  //     return () => clearTimeout(timer);
+  //   }
+  // }, [expedition, selectedKarung, isProcessing, isLoadingAllFlagNoExpedisiData]);
 
-  const handleExpeditionChange = (value: string) => {
-    setExpedition(value);
-    setSelectedKarung(""); // Reset karung when expedition changes
-  };
-
-  const handleKarungChange = (value: string) => {
-    setSelectedKarung(value);
-  };
-
-  const filteredResiForDisplay = React.useMemo(() => {
-    if (!allResiForExpedition) return [];
-    return allResiForExpedition
-      .filter(item => item.nokarung === selectedKarung)
-      .sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime());
-  }, [allResiForExpedition, selectedKarung]);
-
-  const totalScannedInSelectedKarung = filteredResiForDisplay.length;
+  const isInputDisabled = !expedition || !selectedKarung || isProcessing || isLoadingAllExpedisiUnfiltered || isLoadingAllFlagNoExpedisiData;
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-3xl font-bold mb-6 text-center">Input Resi</h1>
+    <React.Fragment>
+      <div className="flex flex-col items-center justify-center p-4 md:p-6 bg-gray-50">
+        <div className="w-full bg-gradient-to-r from-blue-500 to-purple-600 p-6 md:p-8 rounded-lg shadow-md text-white text-center space-y-4">
+          <h2 className="text-2xl font-semibold">Input Data Resi</h2>
+          <div className="text-6xl font-bold">
+            {!expedition
+              ? "Pilih Expedisi"
+              : isLoadingAllResiForExpedition || isLoadingAllExpedisiUnfiltered || isLoadingAllFlagNoExpedisiData
+              ? "..."
+              : currentCountForDisplay}
+          </div>
+          <div
+            className="text-xl cursor-pointer hover:underline"
+            onClick={() => {
+              if (expedition) {
+                setIsKarungSummaryModal(true);
+              }
+            }}
+          >
+            {expedition ? `${expedition} - Karung ${selectedKarung || '?'}` : "Pilih Expedisi"}
+          </div>
+          <p className="text-sm opacity-80">
+            Total: {isLoadingAllResiForExpedition || isLoadingAllExpedisiUnfiltered || isLoadingAllFlagNoExpedisiData ? "..." : optimisticTotalExpeditionItems} - Scan: {isLoadingAllResiForExpedition || isLoadingAllExpedisiUnfiltered || isLoadingAllFlagNoExpedisiData ? "..." : scanCountToDisplay} - Sisa: {isLoadingAllResiForExpedition || isLoadingAllExpedisiUnfiltered || isLoadingAllFlagNoExpedisiData ? "..." : optimisticRemainingExpeditionItems}
+          </p>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Pilih Expedisi</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Select onValueChange={handleExpeditionChange} value={expedition} disabled={isLoadingExpeditionData}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Pilih Expedisi" />
-              </SelectTrigger>
-              <SelectContent>
-                {uniqueExpeditionNames.map((name) => (
-                  <SelectItem key={name} value={name}>
-                    {name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Pilih No Karung</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Select onValueChange={handleKarungChange} value={selectedKarung} disabled={!expedition || isLoadingKarungSummary}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Pilih No Karung" />
-              </SelectTrigger>
-              <SelectContent>
-                {karungSummary.map((item) => (
-                  <SelectItem key={item.karungNumber} value={item.karungNumber}>
-                    {item.karungNumber} ({item.quantity})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Status Hari Ini ({format(today, "dd MMMM yyyy")})</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <p>Total Resi Expedisi: {isLoadingAnyData ? "Memuat..." : optimisticTotalExpeditionItems}</p>
-            <p>Sisa Belum Kirim: {isLoadingAnyData ? "Memuat..." : optimisticRemainingExpeditionItems}</p>
-            {expedition === 'ID' && (
-              <p>Total Scan ID Rekomendasi: {isLoadingAnyData ? "Memuat..." : optimisticIdExpeditionScanCount}</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Scan Resi</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid w-full items-center gap-4">
-            <div className="flex flex-col space-y-1.5">
-              <Label htmlFor="scan-resi">Nomor Resi</Label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
+            <div>
+              <label htmlFor="expedition-select" className="block text-left text-sm font-medium mb-2">
+                Expedisi
+              </label>
+              <Select onValueChange={setExpedition} value={expedition} disabled={isProcessing || isLoadingAllFlagNoExpedisiData}>
+                <SelectTrigger id="expedition-select" className="w-full bg-white text-gray-800 h-12 text-center justify-center">
+                  <SelectValue placeholder="Pilih Expedisi" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[200px] overflow-y-auto">
+                  {expeditionOptions.map((expName) => (
+                    <SelectItem key={expName} value={expName}>{expName}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label htmlFor="no-karung-select" className="block text-left text-sm font-medium mb-2">
+                No Karung
+              </label>
+              <Select onValueChange={setSelectedKarung} value={selectedKarung} disabled={!expedition || isProcessing || isLoadingAllFlagNoExpedisiData}>
+                <SelectTrigger id="no-karung-select" className="w-full bg-white text-gray-800 h-12 text-center justify-center">
+                  <SelectValue placeholder="Pilih No Karung" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[200px] overflow-y-auto">
+                  {karungOptions.map((num) => (
+                    <SelectItem key={num} value={num}>{num}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="md:col-span-2 relative">
+              <label htmlFor="scan-resi" className="block text-left text-sm font-medium mb-2">
+                Scan Resi
+              </label>
               <Input
                 id="scan-resi"
                 type="text"
                 placeholder="Scan nomor resi"
-                value={resiNumber}
-                onChange={(e) => debouncedSetResiNumber(e.target.value)}
+                value={resiNumber} // Nilai dikontrol oleh state dari useResiScanner
+                // onChange dan onKeyDown dihapus karena ditangani secara global
                 ref={resiInputRef}
-                disabled={isProcessing || !expedition || !selectedKarung || isLoadingAnyData}
+                className={cn(
+                  "w-full bg-white text-gray-800 h-16 text-2xl text-center pr-10",
+                  isInputDisabled && "opacity-70 cursor-not-allowed"
+                )}
+                disabled={isInputDisabled}
+                inputMode="none"
               />
+              {isProcessing && (
+                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-6 w-6 animate-spin text-gray-500" />
+              )}
+              {isLoadingAllFlagNoExpedisiData && !isProcessing && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center text-gray-500">
+                  <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                  <span className="text-sm">Memuat validasi...</span>
+                </div>
+              )}
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Resi Terakhir di Karung {selectedKarung || '-'}</CardTitle>
-          <p className="text-sm text-gray-500">Total: {totalScannedInSelectedKarung}</p>
-        </CardHeader>
-        <CardContent>
-          {isLoadingAllResiForExpedition ? (
-            <p>Memuat data resi...</p>
-          ) : filteredResiForDisplay.length === 0 ? (
-            <p>Belum ada resi yang di-scan untuk karung ini.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>No.</TableHead>
-                    <TableHead>Resi</TableHead>
-                    <TableHead>No. Karung</TableHead>
-                    <TableHead>Waktu Scan</TableHead>
-                    <TableHead>Expedisi</TableHead>
-                    <TableHead>Schedule</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredResiForDisplay.map((item, index) => (
-                    <TableRow key={item.Resi}>
-                      <TableCell>{index + 1}</TableCell>
-                      <TableCell className="font-medium">{item.Resi}</TableCell>
-                      <TableCell>{item.nokarung}</TableCell>
-                      <TableCell>{item.created ? format(new Date(item.created), "HH:mm:ss") : "-"}</TableCell>
-                      <TableCell>{item.Keterangan || "-"}</TableCell>
-                      <TableCell>{item.schedule || "-"}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+      <KarungSummaryModal
+        isOpen={isKarungSummaryModalOpen}
+        onClose={() => setIsKarungSummaryModal(false)}
+        expedition={expedition}
+        date={formattedDate}
+        summaryData={karungSummary}
+      />
+    </React.Fragment>
   );
 };
 

@@ -6,7 +6,6 @@ import { normalizeExpeditionName } from "@/utils/expeditionUtils";
 import { addPendingOperation } from "@/integrations/indexeddb/pendingOperations";
 import { useBackgroundSync } from "@/hooks/useBackgroundSync";
 import { format } from "date-fns";
-import { useQueryClient } from "@tanstack/react-query"; // Import useQueryClient
 
 interface UseDashboardModalsProps {
   date: Date | undefined;
@@ -42,7 +41,6 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
   const [selectedCourier, setSelectedCourier] = React.useState<string | null>(null);
 
   const { triggerSync: debouncedTriggerSync } = useBackgroundSync(); // Use debouncedTriggerSync
-  const queryClient = useQueryClient(); // Initialize useQueryClient
 
   const openResiModal = (
     title: string,
@@ -210,7 +208,6 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       });
 
       showSuccess(`Resi ${resiNumber} berhasil dibatalkan.`);
-      queryClient.invalidateQueries({ queryKey: ["historyData"] }); // Invalidate historyData
       debouncedTriggerSync(); // Use debouncedTriggerSync
 
     } catch (error: any) {
@@ -270,7 +267,6 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       });
 
       showSuccess(`Resi ${resiNumber} berhasil dikonfirmasi.`);
-      queryClient.invalidateQueries({ queryKey: ["historyData"] }); // Invalidate historyData
       debouncedTriggerSync(); // Use debouncedTriggerSync
 
     } catch (error: any) {
@@ -325,7 +321,6 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       });
 
       showSuccess(`Status CEKFU resi ${resiNumber} berhasil diperbarui.`);
-      queryClient.invalidateQueries({ queryKey: ["historyData"] }); // Invalidate historyData
       debouncedTriggerSync(); // Use debouncedTriggerSync
     } catch (error: any) {
       setModalData(originalModalData);

@@ -374,7 +374,7 @@ export const useResiScanner = ({
         },
       });
 
-      queryClient.invalidateQueries({ queryKey: ["historyData"] });
+      queryClient.invalidateQueries(["historyData"], {});
       debouncedTriggerSync();
 
     } catch (error: any) {
@@ -397,15 +397,15 @@ export const useResiScanner = ({
       setOptimisticIdExpeditionScanCount(initialIdExpeditionScanCount || 0);
 
       startTransition(() => {
-        queryClient.invalidateQueries({ queryKey: queryKeyForInputPageDisplay });
-        queryClient.invalidateQueries({ queryKey: queryKeyForKarungSummary });
-        queryClient.invalidateQueries({ queryKey: ["allExpedisiDataUnfiltered", formattedToday] });
-        queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] });
-        queryClient.invalidateQueries({ queryKey: queryKeyForTotalExpeditionItems });
-        queryClient.invalidateQueries({ queryKey: queryKeyForRemainingExpeditionItems });
-        queryClient.invalidateQueries({ queryKey: queryKeyForIdExpeditionScanCount });
+        queryClient.invalidateQueries(["allResiForExpedition"]);
+        queryClient.invalidateQueries(["karungSummary"]);
+        queryClient.invalidateQueries(["allExpedisiDataUnfiltered", formattedToday]);
+        queryClient.invalidateQueries(["allFlagNoExpedisiData"]);
+        queryClient.invalidateQueries(["totalExpeditionItems"]);
+        queryClient.invalidateQueries(["remainingExpeditionItems"]);
+        queryClient.invalidateQueries(["idExpeditionScanCount"]);
         // Invalidate historyData on error to ensure it refetches correct state
-        queryClient.invalidateQueries({ queryKey: ["historyData"] });
+        queryClient.invalidateQueries(["historyData"], {});
       });
     } finally {
       setIsProcessing(false);

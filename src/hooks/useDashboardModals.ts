@@ -244,7 +244,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         },
       });
 
-      queryClient.invalidateQueries({ queryKey: ["historyData"] });
+      queryClient.invalidateQueries(["historyData"], {});
       debouncedTriggerSync();
 
     } catch (error: any) {
@@ -375,7 +375,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         }
         
         if (directExpedisiData) {
-            expedisiRecord = directExpedisiData; // Corrected: directCekfuData to directExpedisiData
+            expedisiRecord = directExpedisiData; 
         } else {
             throw new Error(`Gagal memperbarui status CEKFU resi ${resiNumber}: Data ekspedisi tidak ditemukan di database.`);
         }

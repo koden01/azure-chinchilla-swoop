@@ -208,13 +208,13 @@ export const useBackgroundSync = () => {
         
         // Always refetch global/unfiltered data that might change
         // Note: allExpedisiDataUnfiltered query key includes formattedToday, so it's date-specific
-        queryClient.refetchQueries({ queryKey: ["allExpedisiDataUnfiltered"] }); 
-        queryClient.refetchQueries({ queryKey: ["allFlagNoExpedisiData"] });
-        queryClient.refetchQueries({ queryKey: ["uniqueExpeditionNames"] });
-        queryClient.refetchQueries({ queryKey: ["historyData"] }); // History is always affected
+        queryClient.refetchQueries(["allExpedisiDataUnfiltered"], {}); 
+        queryClient.refetchQueries(["allFlagNoExpedisiData"], {});
+        queryClient.refetchQueries(["uniqueExpeditionNames"], {});
+        queryClient.refetchQueries(["historyData"], {}); // History is always affected
 
         // Invalidate allResiForExpedition to ensure Input page gets fresh 5-day data
-        queryClient.invalidateQueries({ queryKey: ["allResiForExpedition"], exact: false });
+        queryClient.invalidateQueries(["allResiForExpedition"], { exact: false });
 
         // Refetch dashboard summary counts (which are date-specific)
         // and Input page specific counts (which are date and expedition specific)
@@ -224,31 +224,31 @@ export const useBackgroundSync = () => {
             const dashboardFormattedDateISO = dateObj.toISOString().split('T')[0];
 
             // Dashboard summary queries
-            queryClient.refetchQueries({ queryKey: ["transaksiHariIni", dashboardFormattedDate] });
-            queryClient.refetchQueries({ queryKey: ["totalScan", dashboardFormattedDateISO] });
-            queryClient.refetchQueries({ queryKey: ["idRekCount", dashboardFormattedDateISO] });
-            queryClient.refetchQueries({ queryKey: ["belumKirim", dashboardFormattedDate] });
-            queryClient.refetchQueries({ queryKey: ["scanFollowupLateCount", dashboardFormattedDateISO] });
-            queryClient.refetchQueries({ queryKey: ["batalCount", dashboardFormattedDateISO] });
-            queryClient.refetchQueries({ queryKey: ["followUpData", dashboardFormattedDate] });
-            queryClient.refetchQueries({ queryKey: ["expedisiDataForSelectedDate", dashboardFormattedDate] });
-            queryClient.refetchQueries({ queryKey: ["followUpFlagNoCount", dashboardFormattedDate] }); 
+            queryClient.refetchQueries(["transaksiHariIni", dashboardFormattedDate], {});
+            queryClient.refetchQueries(["totalScan", dashboardFormattedDateISO], {});
+            queryClient.refetchQueries(["idRekCount", dashboardFormattedDateISO], {});
+            queryClient.refetchQueries(["belumKirim", dashboardFormattedDate], {});
+            queryClient.refetchQueries(["scanFollowupLateCount", dashboardFormattedDateISO], {});
+            queryClient.refetchQueries(["batalCount", dashboardFormattedDateISO], {});
+            queryClient.refetchQueries(["followUpData", dashboardFormattedDate], {});
+            queryClient.refetchQueries(["expedisiDataForSelectedDate", dashboardFormattedDate], {});
+            queryClient.refetchQueries(["followUpFlagNoCount", dashboardFormattedDate], {}); 
 
             // Input page specific queries (date-specific, but also expedition-specific)
             affectedExpeditions.forEach(expName => {
                 const normalizedExpName = normalizeExpeditionName(expName);
                 if (normalizedExpName) {
-                    queryClient.refetchQueries({ queryKey: ["karungSummary", normalizedExpName, dashboardFormattedDate] });
-                    queryClient.refetchQueries({ queryKey: ["totalExpeditionItems", normalizedExpName, dashboardFormattedDate] });
-                    queryClient.refetchQueries({ queryKey: ["remainingExpeditionItems", normalizedExpName, dashboardFormattedDate] });
+                    queryClient.refetchQueries(["karungSummary", normalizedExpName, dashboardFormattedDate], {});
+                    queryClient.refetchQueries(["totalExpeditionItems", normalizedExpName, dashboardFormattedDate], {});
+                    queryClient.refetchQueries(["remainingExpeditionItems", normalizedExpName, dashboardFormattedDate], {});
                     // idExpeditionScanCount is already covered by the general dashboard refetch if expName is 'ID'
                     if (normalizedExpName === 'ID') {
-                        queryClient.refetchQueries({ queryKey: ["idExpeditionScanCount", dashboardFormattedDate] });
+                        queryClient.refetchQueries(["idExpeditionScanCount", dashboardFormattedDate], {});
                     }
                 }
             });
             // Also refetch the "all karung summaries" for the dashboard, as it aggregates across all expeditions for a date
-            queryClient.refetchQueries({ queryKey: ["allKarungSummaries", dashboardFormattedDate] });
+            queryClient.refetchQueries(["allKarungSummaries", dashboardFormattedDate], {});
         });
       }
       if (operationsFailed > 0) {

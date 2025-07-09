@@ -94,8 +94,8 @@ export const useHistoryActions = ({ historyData, formattedStartDate, formattedEn
         showSuccess(`Resi ${resiToDelete} berhasil dihapus.`);
 
         // Invalidate other relevant queries (dashboard, input page)
-        await queryClient.refetchQueries({ queryKey: ["allResiForExpedition"], exact: false });
-        await queryClient.refetchQueries({ queryKey: ["allResiData"] }); 
+        await queryClient.refetchQueries(["allResiForExpedition"], { exact: false });
+        await queryClient.refetchQueries(["allResiData"], {}); 
         invalidateDashboardQueries(queryClient, dateOfDeletedResi, expeditionOfDeletedResi); 
       }
     } catch (error: any) {

@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, startOfDay, endOfDay, subDays } from "date-fns"; // Import subDays
+import { format, startOfDay, endOfDay, subDays } from "date-fns";
 import React from "react";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
-import { normalizeExpeditionName, KNOWN_EXPEDITIONS } from "@/utils/expeditionUtils";
+import { normalizeExpeditionName, KNOWN_EXPEDITIONS } from "@/utils/expeditionUtils"; // Added KNOWN_EXPEDITIONS import
 
 // Define the type for ResiExpedisiData to match useResiInputData
 export interface ResiExpedisiData {
@@ -189,17 +189,19 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     staleTime: 1000 * 30,
   });
 
-  // Derive currentCount from allResiForExpedition
+  // Derive currentCount from allResiForExpedition, now filtered for TODAY
   const currentCount = React.useCallback((selectedKarung: string) => {
     if (!allResiForExpedition || !selectedKarung) {
       return 0;
     }
-    const count = allResiForExpedition.filter(item => 
-      item.nokarung === selectedKarung && 
-      (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition)
-    ).length;
+    const count = allResiForExpedition.filter(item => {
+      const itemCreatedDate = new Date(item.created);
+      return item.nokarung === selectedKarung && 
+             (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition) &&
+             startOfDay(itemCreatedDate).getTime() === startOfDay(today).getTime(); // Filter for today
+    }).length;
     return count;
-  }, [allResiForExpedition, expedition]);
+  }, [allResiForExpedition, expedition, today]);
 
   // Derive lastKarung from allResiForExpedition
   const lastKarung = React.useMemo(() => {

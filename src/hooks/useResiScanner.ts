@@ -47,7 +47,7 @@ export const useResiScanner = ({
   // Buffer untuk input dari scanner
   const scannerInputBuffer = React.useRef<string>('');
   const lastKeyPressTime = React.useRef<number>(0);
-  const SCANNER_TIMEOUT_MS = 500; // Waktu maksimum antar karakter untuk dianggap sebagai bagian dari satu scan (ditingkatkan lagi)
+  const SCANNER_TIMEOUT_MS = 300; // Waktu maksimum antar karakter untuk dianggap sebagai bagian dari satu scan
 
   React.useEffect(() => {
     setOptimisticTotalExpeditionItems(initialTotalExpeditionItems || 0);
@@ -153,6 +153,7 @@ export const useResiScanner = ({
     let actualCourierNameForResiTable: string | null = null; // New variable for Keterangan in tbl_resi
     let actualScheduleForResiTable: string | null = null; // New variable for schedule in tbl_resi
     let expedisiRecord: any = null;
+    let isNewExpedisiEntry = false;
     let wasFlagNo = false;
 
     try {
@@ -190,7 +191,7 @@ export const useResiScanner = ({
         }
       }
 
-      // 2. If not a duplicate, try to find expedisi record in local caches
+      // 2. If not a duplicate, try to find expedisi record
       if (validationStatus === 'OK') {
         expedisiRecord = allExpedisiDataUnfiltered?.get(normalizedCurrentResi);
 
@@ -199,9 +200,40 @@ export const useResiScanner = ({
         }
 
         if (!expedisiRecord) {
-          // Resi not found in local caches at all
-          validationStatus = 'NOT_FOUND_IN_EXPEDISI';
-          validationMessage = `Data resi ${currentResi} tidak ditemukan di database.`;
+            // Try RPC if not found in local caches
+            const { data: directExpedisiDataArray, error: directExpedisiError } = await supabase.rpc("get_expedisi_by_resino_case_insensitive", {
+              p_resino: currentResi,
+            });
+
+            if (directExpedisiError) {
+                throw directExpedisiError;
+            }
+            
+            if (directExpedisiDataArray && directExpedisiDataArray.length > 0) {
+                expedisiRecord = directExpedisiDataArray[0];
+                isNewExpedisiEntry = false;
+                // Update local caches optimistically
+                queryClient.setQueryData(["allExpedisiDataUnfiltered", formattedToday], (oldMap: Map<string, any> | undefined) => {
+                  const newMap = new Map(oldMap || []);
+                  newMap.set(normalizedCurrentResi, expedisiRecord);
+                  return newMap;
+                });
+                queryClient.setQueryData(["allFlagNoExpedisiData"], (oldMap: Map<string, any> | undefined) => {
+                  const newMap = new Map(oldMap || []);
+                  if (expedisiRecord.flag === 'NO') {
+                    newMap.set(normalizedCurrentResi, expedisiRecord);
+                  }
+                  return newMap;
+                });
+            } else {
+              // Resi not found in tbl_expedisi at all
+              isNewExpedisiEntry = true; 
+              const normalizedSelectedExpedition = normalizeExpeditionName(expedition);
+              if (normalizedSelectedExpedition !== 'ID') {
+                validationStatus = 'NOT_FOUND_IN_EXPEDISI';
+                validationMessage = `Resi ${currentResi} tidak ditemukan di database untuk ekspedisi ${expedition}.`;
+              }
+            }
         } else {
           if (expedisiRecord.flag === 'NO') {
             wasFlagNo = true;
@@ -209,8 +241,8 @@ export const useResiScanner = ({
         }
       }
 
-      // 3. Check for expedition mismatch if expedisiRecord was found
-      if (validationStatus === 'OK' && expedisiRecord) {
+      // 3. Check for expedition mismatch if expedisiRecord was found and it's not a new entry
+      if (validationStatus === 'OK' && expedisiRecord && !isNewExpedisiEntry) {
         const normalizedExpedisiCourierName = normalizeExpeditionName(expedisiRecord.couriername);
         const normalizedSelectedExpedition = normalizeExpeditionName(expedition);
 
@@ -226,18 +258,16 @@ export const useResiScanner = ({
 
       // Determine actualCourierNameForResiTable and actualScheduleForResiTable based on validation outcome
       if (validationStatus === 'OK') {
-        // If selected expedition is 'ID' AND resi was NOT found in tbl_expedisi (meaning it's a truly new ID entry)
-        if (normalizeExpeditionName(expedition) === 'ID' && !expedisiRecord) { 
+        if (expedition === 'ID' && isNewExpedisiEntry) {
+          // For new 'ID' entries not found in tbl_expedisi
           actualCourierNameForResiTable = "ID_REKOMENDASI";
           actualScheduleForResiTable = "idrek";
-        } else if (expedisiRecord) { // If resi was found in tbl_expedisi (either initially or from allFlagNoExpedisiData)
+        } else if (expedisiRecord) { // Resi found in tbl_expedisi
           actualCourierNameForResiTable = normalizeExpeditionName(expedisiRecord.couriername);
           actualScheduleForResiTable = "ontime"; // Default schedule for existing resi
-        } else { // This 'else' block should ideally not be reached if validationStatus is 'OK'
-                 // and the above conditions cover all valid 'OK' paths.
-                 // If it is reached, it implies a logic error or an unexpected state.
-          actualCourierNameForResiTable = normalizeExpeditionName(expedition); // Fallback
-          actualScheduleForResiTable = "ontime"; // Fallback
+        } else { // Should not happen if validationStatus is 'OK' and not a new ID entry
+          actualCourierNameForResiTable = normalizeExpeditionName(expedition);
+          actualScheduleForResiTable = "ontime";
         }
       }
 
@@ -253,11 +283,9 @@ export const useResiScanner = ({
         return;
       }
 
-      // Optimistic updates
       setOptimisticTotalExpeditionItems(prev => {
-        // Increment total if it's a new 'ID_REKOMENDASI' entry (not found in expedisiRecord)
-        const isTrulyNewIdEntry = (normalizeExpeditionName(expedition) === 'ID' && !expedisiRecord);
-        return prev + (isTrulyNewIdEntry ? 1 : 0);
+        const newTotal = prev + (isNewExpedisiEntry ? 1 : 0);
+        return newTotal;
       });
       setOptimisticRemainingExpeditionItems(prev => {
         const newRemaining = prev - (wasFlagNo ? 1 : 0);
@@ -338,10 +366,20 @@ export const useResiScanner = ({
       showError(errorMessage);
       playBeep(beepFailure);
 
-      // Revert optimistic updates on error
-      setOptimisticTotalExpeditionItems(initialTotalExpeditionItems || 0);
-      setOptimisticRemainingExpeditionItems(initialRemainingExpeditionItems || 0);
-      setOptimisticIdExpeditionScanCount(initialIdExpeditionScanCount || 0);
+      setOptimisticTotalExpeditionItems(prev => {
+        const revertedTotal = prev - (isNewExpedisiEntry ? 1 : 0);
+        return revertedTotal;
+      });
+      setOptimisticRemainingExpeditionItems(prev => {
+        const revertedRemaining = prev + (wasFlagNo ? 1 : 0);
+        return revertedRemaining;
+      });
+      if (expedition === 'ID') {
+        setOptimisticIdExpeditionScanCount(prev => {
+          const revertedIdScanCount = prev - 1;
+          return revertedIdScanCount;
+        });
+      }
 
       startTransition(() => {
         queryClient.invalidateQueries({ queryKey: queryKeyForInputPageDisplay });
@@ -378,16 +416,16 @@ export const useResiScanner = ({
       if (event.key === 'Enter') {
         event.preventDefault(); // Mencegah perilaku default (misalnya submit form)
         if (scannerInputBuffer.current.length > 0) {
-          setResiNumber(scannerInputBuffer.current); // Set nilai yang ditampilkan (sekali saja saat Enter)
+          setResiNumber(scannerInputBuffer.current); // Set nilai yang ditampilkan
           processScannedResi(scannerInputBuffer.current);
           scannerInputBuffer.current = ''; // Reset buffer setelah diproses
         }
       } else if (event.key.length === 1) { // Hanya tambahkan karakter tunggal (bukan Shift, Alt, Ctrl, dll.)
         scannerInputBuffer.current += event.key;
-        // Hapus baris ini: setResiNumber(scannerInputBuffer.current); // Tidak lagi memperbarui state di setiap karakter
+        setResiNumber(scannerInputBuffer.current); // Perbarui nilai yang ditampilkan saat karakter masuk
       } else if (event.key === 'Backspace') {
         scannerInputBuffer.current = scannerInputBuffer.current.slice(0, -1);
-        setResiNumber(scannerInputBuffer.current); // Tetap perbarui untuk umpan balik backspace manual
+        setResiNumber(scannerInputBuffer.current);
       }
     };
 

@@ -4,11 +4,14 @@ import { Plus, History, LayoutDashboard } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
-import { useDebouncedCallback } from "@/hooks/useDebouncedCallback"; // Import useDebouncedCallback
+import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
+import { usePendingOperations } from "@/hooks/usePendingOperations"; // Import usePendingOperations
+import { Badge } from "@/components/ui/badge"; // Import Badge component
 
 const Navbar = () => {
   const location = useLocation();
   const queryClient = useQueryClient();
+  const { pendingOperations } = usePendingOperations(); // Get pending operations
 
   const navItems = [
     { name: "Input", path: "/", icon: Plus },
@@ -230,6 +233,11 @@ const Navbar = () => {
           >
             <item.icon className="mr-2 h-4 w-4" />
             {item.name}
+            {item.name === "Input" && pendingOperations.length > 0 && (
+              <Badge variant="destructive" className="ml-2 px-2 py-0.5 text-xs rounded-full">
+                {pendingOperations.length} Pending
+              </Badge>
+            )}
           </Link>
         ))}
       </div>

@@ -375,7 +375,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         }
         
         if (directExpedisiData) {
-            expedisiRecord = directExpedisiData;
+            expedisiRecord = directExpedisiData; // Corrected: directCekfuData to directExpedisiData
         } else {
             throw new Error(`Gagal memperbarui status CEKFU resi ${resiNumber}: Data ekspedisi tidak ditemukan di database.`);
         }

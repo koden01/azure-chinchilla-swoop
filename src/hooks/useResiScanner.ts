@@ -393,7 +393,7 @@ export const useResiScanner = ({
 
       // Revert optimistic updates on error
       setOptimisticTotalExpeditionItems(initialTotalExpeditionItems || 0);
-      setOptimisticRemainingExpeditionItems(initialRemainingExpeditionItems || 0);
+      setOptimisticRemainingExpeditionItems(initialTotalExpeditionItems || 0); // Revert to initial
       setOptimisticIdExpeditionScanCount(initialIdExpeditionScanCount || 0);
 
       startTransition(() => {

@@ -45,4 +45,7 @@ export const invalidateDashboardQueries = (queryClient: QueryClient, date: Date 
 
   // Also invalidate the followUpFlagNoCount which is global (except today)
   queryClient.invalidateQueries({ queryKey: ["followUpFlagNoCount", actualCurrentFormattedDate] });
+
+  // NEW: Invalidate allFlagYesExpedisiResiNumbers to ensure duplicate check is accurate after deletion
+  queryClient.invalidateQueries({ queryKey: ["allFlagYesExpedisiResiNumbers"] });
 };

@@ -196,10 +196,12 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     }
     const count = allResiForExpedition.filter(item => 
       item.nokarung === selectedKarung && 
-      (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition)
+      (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition) &&
+      // Filter by today's date
+      item.created && new Date(item.created).toDateString() === today.toDateString()
     ).length;
     return count;
-  }, [allResiForExpedition, expedition]);
+  }, [allResiForExpedition, expedition, today]); // Add 'today' to dependencies
 
   // Derive lastKarung from allResiForExpedition
   const lastKarung = React.useMemo(() => {

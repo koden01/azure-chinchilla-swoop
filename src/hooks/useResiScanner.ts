@@ -2,25 +2,23 @@ import React, { useTransition } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, showError, dismissToast } from "@/utils/toast";
 import { beepSuccess, beepFailure, beepDouble, beepStart } from "@/utils/audio";
-import { useQueryClient } from "@tanstack/react-query"; // Menghapus useQuery
-import { format } from "date-fns"; // Menghapus isSameDay
-import { fetchAllDataPaginated } from "@/utils/supabaseFetch"; // Menghapus fetchAllDataPaginated
+import { useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
+// import { fetchAllDataPaginated } from "@/utils/supabaseFetch"; // Menghapus fetchAllDataPaginated
 import { normalizeExpeditionName } from "@/utils/expeditionUtils";
 import { addPendingOperation } from "@/integrations/indexeddb/pendingOperations";
 import { useBackgroundSync } from "@/hooks/useBackgroundSync";
 import { ResiExpedisiData } from "@/hooks/useResiInputData";
-// import { useAllFlagYesExpedisiResiNumbers } from "@/hooks/useAllFlagYesExpedisiResiNumbers"; // Dihapus karena hook ini tidak dipanggil di sini
 
 interface UseResiScannerProps {
   expedition: string;
   selectedKarung: string;
   formattedDate: string;
-  allExpedisiDataUnfiltered: Map<string, any> | undefined; // Still useful for optimistic updates and other dashboard counts
+  allExpedisiDataUnfiltered: Map<string, any> | undefined;
   allResiForExpedition: any[] | undefined;
   initialTotalExpeditionItems: number | undefined;
   initialRemainingExpeditionItems: number | undefined;
   initialIdExpeditionScanCount: number | undefined;
-  // NEW: Add the new cached data types to the props interface
   allFlagNoExpedisiData: Map<string, any> | undefined;
   allFlagYesExpedisiResiNumbers: Set<string> | undefined;
 }
@@ -34,7 +32,6 @@ export const useResiScanner = ({
   initialTotalExpeditionItems,
   initialRemainingExpeditionItems,
   initialIdExpeditionScanCount,
-  // NEW: Destructure the new cached data from props
   allFlagNoExpedisiData,
   allFlagYesExpedisiResiNumbers,
 }: UseResiScannerProps) => {
@@ -51,17 +48,15 @@ export const useResiScanner = ({
   const today = new Date();
   const formattedToday = format(today, "yyyy-MM-dd");
 
-  // Define query keys for invalidation and optimistic updates
   const queryKeyForInputPageDisplay = ["allResiForExpedition", expedition, formattedToday];
   const queryKeyForKarungSummary = ["karungSummary", expedition, formattedToday];
   const queryKeyForTotalExpeditionItems = ["totalExpeditionItems", expedition, formattedToday];
   const queryKeyForRemainingExpeditionItems = ["remainingExpeditionItems", expedition, formattedToday];
   const queryKeyForIdExpeditionScanCount = ["idExpeditionScanCount", formattedToday];
 
-  // Buffer untuk input dari scanner
   const scannerInputBuffer = React.useRef<string>('');
   const lastKeyPressTime = React.useRef<number>(0);
-  const SCANNER_TIMEOUT_MS = 500; // Waktu maksimum antar karakter untuk dianggap sebagai bagian dari satu scan
+  const SCANNER_TIMEOUT_MS = 500;
 
   React.useEffect(() => {
     setOptimisticTotalExpeditionItems(initialTotalExpeditionItems || 0);
@@ -74,33 +69,6 @@ export const useResiScanner = ({
   React.useEffect(() => {
     setOptimisticIdExpeditionScanCount(initialIdExpeditionScanCount || 0);
   }, [initialIdExpeditionScanCount]);
-
-  // allFlagNoExpedisiData is still useful for displaying the count of 'belum kirim' items
-  // This query is now managed by the parent component (Input.tsx) and passed as a prop.
-  // So, we remove the useQuery call here.
-  // const { data: allFlagNoExpedisiData, isLoading: isLoadingAllFlagNoExpedisiData } = useQuery<Map<string, any>>({
-  //   queryKey: ["allFlagNoExpedisiData"],
-  //   queryFn: async () => {
-  //     const data = await fetchAllDataPaginated(
-  //       "tbl_expedisi",
-  //       undefined,
-  //       undefined,
-  //       undefined,
-  //       "resino, couriername, created, flag, cekfu", // Select all necessary columns
-  //       (query) => query.eq("flag", "NO")
-  //     );
-  //     const expedisiMap = new Map<string, any>();
-  //     data.forEach(item => {
-  //       if (item.resino) {
-  //         expedisiMap.set(item.resino.toLowerCase(), item);
-  //       }
-  //     });
-  //     return expedisiMap;
-  //   },
-  //   staleTime: 1000 * 60 * 5,
-  //   gcTime: 1000 * 60 * 60 * 24,
-  //   enabled: true,
-  // });
 
   const playBeep = (audio: HTMLAudioElement) => {
     setTimeout(() => {
@@ -140,9 +108,9 @@ export const useResiScanner = ({
     dismissToast();
     const currentResi = scannedResi.trim();
     const normalizedCurrentResi = currentResi.toLowerCase().trim();
-    setResiNumber(""); // Clear the displayed input immediately
+    setResiNumber("");
 
-    if (!validateInput(currentResi)) { // 1. Validasi Awal
+    if (!validateInput(currentResi)) {
       setIsProcessing(false); 
       return;
     }
@@ -151,14 +119,12 @@ export const useResiScanner = ({
     let validationMessage: string | null = null;
     let actualCourierNameForResiTable: string | null = null;
     let actualScheduleForResiTable: string | null = null;
-    let expedisiRecordFromCache: any = null; // Use this for records found in local cache
+    let expedisiRecordFromCache: any = null;
     let wasFlagNo = false;
 
     try {
-      // 2. Pengecekan Duplikasi Cepat (menggunakan cache allFlagYesExpedisiResiNumbers)
       if (allFlagYesExpedisiResiNumbers?.has(normalizedCurrentResi)) {
         validationStatus = 'DUPLICATE_PROCESSED';
-        // Fetch details for the duplicate message from tbl_resi (direct DB query)
         const { data: resiDetails, error: resiDetailsError } = await supabase
             .from("tbl_resi")
             .select("created, Keterangan, nokarung, schedule")
@@ -179,7 +145,6 @@ export const useResiScanner = ({
               validationMessage = `DOUBLE! Resi ini ${keterangan} sudah diproses pada ${processedDate} di karung ${nokarung}.`;
             }
         } else {
-            // Fallback if tbl_resi details not found, try to get from tbl_expedisi (if available in allExpedisiDataUnfiltered)
             const expedisiFromTodayCache = allExpedisiDataUnfiltered?.get(normalizedCurrentResi);
             if (expedisiFromTodayCache) {
               processedDate = expedisiFromTodayCache.created ? format(new Date(expedisiFromTodayCache.created), "dd/MM/yyyy HH:mm") : processedDate;
@@ -188,16 +153,12 @@ export const useResiScanner = ({
             validationMessage = `DOUBLE! Resi ini sudah diproses pada ${processedDate}.`;
         }
       } else if (allFlagNoExpedisiData?.has(normalizedCurrentResi)) {
-        // Resi ditemukan di cache 'NO' flag, berarti bisa discan
         expedisiRecordFromCache = allFlagNoExpedisiData.get(normalizedCurrentResi);
         wasFlagNo = true;
         actualCourierNameForResiTable = normalizeExpeditionName(expedisiRecordFromCache.couriername);
-        actualScheduleForResiTable = "ontime"; // Default schedule for existing resi
+        actualScheduleForResiTable = "ontime";
       } else {
-        // Resi tidak ditemukan di cache 'YES' maupun 'NO'
-        // Ini bisa jadi resi baru atau resi yang tidak valid
         if (normalizeExpeditionName(expedition) === 'ID') {
-          // Untuk ekspedisi 'ID', resi baru dianggap 'ID_REKOMENDASI'
           actualCourierNameForResiTable = "ID_REKOMENDASI";
           actualScheduleForResiTable = "idrek";
         } else {
@@ -206,7 +167,6 @@ export const useResiScanner = ({
         }
       }
 
-      // 3. Cek Kesesuaian Ekspedisi (hanya jika status masih OK dan ada record expedisi dari cache)
       if (validationStatus === 'OK' && expedisiRecordFromCache) {
         const normalizedExpedisiCourierName = normalizeExpeditionName(expedisiRecordFromCache.couriername);
         const normalizedSelectedExpedition = normalizeExpeditionName(expedition);
@@ -220,19 +180,17 @@ export const useResiScanner = ({
         }
       }
 
-      // Handle validation results
       if (validationStatus !== 'OK') {
         showError(validationMessage || "Validasi gagal.");
         if (validationStatus === 'MISMATCH_EXPEDISI' || validationStatus === 'NOT_FOUND_IN_EXPEDISI') {
           playBeep(beepFailure);
-        } else { // DUPLICATE_PROCESSED
+        } else {
           playBeep(beepDouble);
         }
         setIsProcessing(false);
         return;
       }
 
-      // Optimistic updates
       setOptimisticTotalExpeditionItems(prev => {
         const isTrulyNewIdEntry = (normalizeExpeditionName(expedition) === 'ID' && !expedisiRecordFromCache);
         return prev + (isTrulyNewIdEntry ? 1 : 0);
@@ -286,7 +244,6 @@ export const useResiScanner = ({
         return newMap;
       });
 
-      // NEW: Optimistically update allFlagYesExpedisiResiNumbers
       queryClient.setQueryData(["allFlagYesExpedisiResiNumbers", format(today, "yyyy-MM-dd"), format(today, "yyyy-MM-dd")], (oldSet: Set<string> | undefined) => {
         const newSet = new Set(oldSet || []);
         newSet.add(normalizedCurrentResi);
@@ -323,7 +280,6 @@ export const useResiScanner = ({
       showError(errorMessage);
       playBeep(beepFailure);
 
-      // Revert optimistic updates on error
       setOptimisticTotalExpeditionItems(initialTotalExpeditionItems || 0);
       setOptimisticRemainingExpeditionItems(initialRemainingExpeditionItems || 0);
       setOptimisticIdExpeditionScanCount(initialIdExpeditionScanCount || 0);
@@ -336,43 +292,39 @@ export const useResiScanner = ({
         queryClient.invalidateQueries({ queryKey: queryKeyForTotalExpeditionItems });
         queryClient.invalidateQueries({ queryKey: queryKeyForRemainingExpeditionItems });
         queryClient.invalidateQueries({ queryKey: queryKeyForIdExpeditionScanCount });
-        queryClient.invalidateQueries({ queryKey: ["allFlagYesExpedisiResiNumbers"] }); // Invalidate the new cache
+        queryClient.invalidateQueries({ queryKey: ["allFlagYesExpedisiResiNumbers"] });
       });
     } finally {
       setIsProcessing(false);
     }
   }, [expedition, selectedKarung, formattedDate, allExpedisiDataUnfiltered, allFlagNoExpedisiData, allResiForExpedition, queryClient, debouncedTriggerSync, validateInput, startTransition, isPending, initialTotalExpeditionItems, initialRemainingExpeditionItems, initialIdExpeditionScanCount, queryKeyForInputPageDisplay, queryKeyForKarungSummary, queryKeyForTotalExpeditionItems, queryKeyForRemainingExpeditionItems, queryKeyForIdExpeditionScanCount, allFlagYesExpedisiResiNumbers]);
 
-  // Global keydown listener for scanner input
   React.useEffect(() => {
     const handleGlobalKeyDown = (event: KeyboardEvent) => {
-      // Abaikan jika sedang memproses atau jika input dinonaktifkan
       if (isProcessing || !expedition || !selectedKarung) {
         return;
       }
 
       const currentTime = Date.now();
       
-      // Jika ada jeda waktu yang signifikan antar penekanan tombol,
-      // berarti urutan scan sebelumnya telah berakhir, jadi reset buffer untuk scan baru.
       if (currentTime - lastKeyPressTime.current > SCANNER_TIMEOUT_MS) {
         scannerInputBuffer.current = '';
       }
-      lastKeyPressTime.current = currentTime; // Perbarui waktu penekanan tombol terakhir untuk karakter saat ini
+      lastKeyPressTime.current = currentTime;
 
       if (event.key === 'Enter') {
-        event.preventDefault(); // Mencegah perilaku default (misalnya submit form)
+        event.preventDefault();
         if (scannerInputBuffer.current.length > 0) {
-          setResiNumber(scannerInputBuffer.current); // Set nilai yang ditampilkan (sekali saja saat Enter)
+          setResiNumber(scannerInputBuffer.current);
           processScannedResi(scannerInputBuffer.current);
-          scannerInputBuffer.current = ''; // Reset buffer setelah diproses
+          scannerInputBuffer.current = '';
         }
-      } else if (event.key.length === 1) { // Hanya tambahkan karakter tunggal (bukan Shift, Alt, Ctrl, dll.)
+      } else if (event.key.length === 1) {
         scannerInputBuffer.current += event.key;
-        setResiNumber(scannerInputBuffer.current); // Perbarui nilai yang ditampilkan saat karakter masuk
+        setResiNumber(scannerInputBuffer.current);
       } else if (event.key === 'Backspace') {
         scannerInputBuffer.current = scannerInputBuffer.current.slice(0, -1);
-        setResiNumber(scannerInputBuffer.current); // Tetap perbarui untuk umpan balik backspace manual
+        setResiNumber(scannerInputBuffer.current);
       }
     };
 
@@ -391,10 +343,7 @@ export const useResiScanner = ({
     resiInputRef,
     isProcessing: isProcessing || isPending,
     isLoadingRecentScannedResiNumbers: false,
-    // isLoadingAllFlagNoExpedisiData is now passed as a prop, so we don't need to derive it here.
-    // We can remove it from the return if it's not used directly by the consumer of this hook.
-    // For now, let's keep it for compatibility if it's used elsewhere.
-    isLoadingAllFlagNoExpedisiData: false, // This is now managed by the parent component
+    isLoadingAllFlagNoExpedisiData: false,
     optimisticTotalExpeditionItems,
     optimisticRemainingExpeditionItems,
     optimisticIdExpeditionScanCount,

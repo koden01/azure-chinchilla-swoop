@@ -89,20 +89,20 @@ export const useHistoryActions = ({ historyData, formattedStartDate, formattedEn
         showError(`Gagal menghapus resi ${resiToDelete}: ${error.message}`);
         console.error("Error deleting resi:", error);
         // Revert optimistic update on error
-        queryClient.invalidateQueries(["historyData"], {});
+        queryClient.invalidateQueries({ queryKey: ["historyData"] });
       } else {
         showSuccess(`Resi ${resiToDelete} berhasil dihapus.`);
 
         // Invalidate other relevant queries (dashboard, input page)
-        await queryClient.refetchQueries(["allResiForExpedition"], { exact: false });
-        await queryClient.refetchQueries(["allResiData"]); 
+        await queryClient.refetchQueries({ queryKey: ["allResiForExpedition"], exact: false });
+        await queryClient.refetchQueries({ queryKey: ["allResiData"] }); 
         invalidateDashboardQueries(queryClient, dateOfDeletedResi, expeditionOfDeletedResi); 
       }
     } catch (error: any) {
       showError(`Gagal menghapus resi ${resiToDelete}: ${error.message || "Silakan coba lagi."}`);
       console.error("Error deleting resi (outer catch):", error);
       // Ensure optimistic update is reverted if an unexpected error occurs
-      queryClient.invalidateQueries(["historyData"], {});
+      queryClient.invalidateQueries({ queryKey: ["historyData"] });
     } finally {
       setIsDeleteDialogOpen(false);
       setResiToDelete(null);

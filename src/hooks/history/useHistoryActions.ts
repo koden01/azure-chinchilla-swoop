@@ -1,21 +1,21 @@
 import { useState, useCallback, useRef } from "react";
-import { useQueryClient, QueryKey } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, showError } from "@/utils/toast";
 import { invalidateDashboardQueries } from "@/utils/dashboardQueryInvalidation";
-import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
-import { flexRender } from "@tanstack/react-table";
-import { HistoryData } from "@/components/columns/historyColumns";
-import { Table as ReactTableType } from "@tanstack/react-table";
+import { format } from "date-fns"; 
+import { flexRender } from "@tanstack/react-table"; // Corrected import for flexRender
+import { HistoryData } from "@/components/columns/historyColumns"; // Import HistoryData type
+import { Table as ReactTableType } from "@tanstack/react-table"; // Import Table type
 
 interface UseHistoryActionsProps {
   historyData: HistoryData[] | undefined;
-  // formattedStartDate: string; // Dihapus karena tidak digunakan
-  // formattedEndDate: string;   // Dihapus karena tidak digunakan
+  formattedStartDate: string;
+  formattedEndDate: string;
   table: ReactTableType<HistoryData>;
 }
 
-export const useHistoryActions = ({ historyData, table }: UseHistoryActionsProps) => {
+export const useHistoryActions = ({ historyData, formattedStartDate, formattedEndDate, table }: UseHistoryActionsProps) => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [resiToDelete, setResiToDelete] = useState<string | null>(null);
   const [lastClickInfo, setLastClickInfo] = useState<{ resi: string | null; timestamp: number | null } | null>(null);
@@ -56,58 +56,32 @@ export const useHistoryActions = ({ historyData, table }: UseHistoryActionsProps
     const dateOfDeletedResi = itemToDelete ? new Date(itemToDelete.created) : undefined;
     const expeditionOfDeletedResi = itemToDelete?.Keterangan || undefined;
 
-    // Optimistically remove from historyData cache for any active history queries
-    queryClient.setQueriesData({
-      queryKey: ["historyData"],
-      exact: false,
-      updater: (oldData: HistoryData[] | undefined, queryKey: QueryKey) => {
-        if (!oldData) return undefined;
+    const { error } = await supabase
+      .from("tbl_resi")
+      .delete()
+      .eq("Resi", resiToDelete);
 
-        const [, queryStartDateStr, queryEndDateStr] = queryKey;
-        const queryStartDate = queryStartDateStr ? new Date(queryStartDateStr as string) : undefined;
-        const queryEndDate = queryEndDateStr ? new Date(queryEndDateStr as string) : undefined;
+    if (error) {
+      showError(`Gagal menghapus resi ${resiToDelete}: ${error.message}`);
+      console.error("Error deleting resi:", error);
+    } else {
+      showSuccess(`Resi ${resiToDelete} berhasil dihapus.`);
 
-        const affectedResiCreatedDate = itemToDelete?.created ? new Date(itemToDelete.created) : undefined;
+      await queryClient.refetchQueries({ queryKey: ["historyData", formattedStartDate, formattedEndDate] });
 
-        const isAffectedDateIncluded = affectedResiCreatedDate && queryStartDate && queryEndDate &&
-                                       isWithinInterval(affectedResiCreatedDate, { start: startOfDay(queryStartDate), end: endOfDay(queryEndDate) });
+      await queryClient.refetchQueries({
+        queryKey: ["allResiForExpedition"],
+        exact: false,
+      });
 
-        if (isAffectedDateIncluded) {
-          return oldData.filter(item => item.Resi !== resiToDelete);
-        }
-        return oldData;
-      },
-    });
+      // Corrected query key from allResiDataComprehensive to allResiData
+      await queryClient.refetchQueries({ queryKey: ["allResiData"] }); 
 
-    try {
-      const { error } = await supabase
-        .from("tbl_resi")
-        .delete()
-        .eq("Resi", resiToDelete);
-
-      if (error) {
-        showError(`Gagal menghapus resi ${resiToDelete}: ${error.message}`);
-        console.error("Error deleting resi:", error);
-        // Revert optimistic update on error
-        queryClient.invalidateQueries({ queryKey: ["historyData"] }, {});
-      } else {
-        showSuccess(`Resi ${resiToDelete} berhasil dihapus.`);
-
-        // Invalidate other relevant queries (dashboard, input page)
-        await queryClient.refetchQueries({ queryKey: ["allResiForExpedition"], exact: false });
-        await queryClient.refetchQueries({ queryKey: ["allResiData"] }); 
-        invalidateDashboardQueries(queryClient, dateOfDeletedResi, expeditionOfDeletedResi); 
-      }
-    } catch (error: any) {
-      showError(`Gagal menghapus resi ${resiToDelete}: ${error.message || "Silakan coba lagi."}`);
-      console.error("Error deleting resi (outer catch):", error);
-      // Ensure optimistic update is reverted if an unexpected error occurs
-      queryClient.invalidateQueries({ queryKey: ["historyData"] }, {});
-    } finally {
-      setIsDeleteDialogOpen(false);
-      setResiToDelete(null);
+      invalidateDashboardQueries(queryClient, dateOfDeletedResi, expeditionOfDeletedResi); 
     }
-  }, [resiToDelete, historyData, queryClient]);
+    setIsDeleteDialogOpen(false);
+    setResiToDelete(null);
+  }, [resiToDelete, historyData, formattedStartDate, formattedEndDate, queryClient]);
 
   const handleCopyTableData = useCallback(async () => {
     const rowsToCopy = table.getFilteredRowModel().rows;
@@ -117,13 +91,13 @@ export const useHistoryActions = ({ historyData, table }: UseHistoryActionsProps
     }
 
     const headers = table.getHeaderGroups()[0].headers
-      .filter(header => header.id !== "actions") // Exclude the "Aksi" column
+      .filter(header => header.column.id !== "rowNumber")
       .map(header => flexRender(header.column.columnDef.header, header.getContext()));
     const headerRow = headers.join('\t');
 
     const dataRows = rowsToCopy.map(row => {
       const rowValues = row.getVisibleCells()
-        .filter(cell => cell.column.id !== "actions") // Exclude the "Aksi" column
+        .filter(cell => cell.column.id !== "rowNumber")
         .map(cell => {
           if (cell.column.id === "created") {
             const dateValue = cell.getValue() as string;

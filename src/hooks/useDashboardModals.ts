@@ -5,9 +5,8 @@ import { ModalDataItem } from "@/types/data";
 import { normalizeExpeditionName } from "@/utils/expeditionUtils";
 import { addPendingOperation } from "@/integrations/indexeddb/pendingOperations";
 import { useBackgroundSync } from "@/hooks/useBackgroundSync";
-import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
-import { useQueryClient, QueryKey } from "@tanstack/react-query";
-import { HistoryData } from "@/components/columns/historyColumns";
+import { format } from "date-fns";
+import { useQueryClient } from "@tanstack/react-query"; // Import useQueryClient
 
 interface UseDashboardModalsProps {
   date: Date | undefined;
@@ -42,8 +41,8 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
   >(null);
   const [selectedCourier, setSelectedCourier] = React.useState<string | null>(null);
 
-  const { triggerSync: debouncedTriggerSync } = useBackgroundSync();
-  const queryClient = useQueryClient();
+  const { triggerSync: debouncedTriggerSync } = useBackgroundSync(); // Use debouncedTriggerSync
+  const queryClient = useQueryClient(); // Initialize useQueryClient
 
   const openResiModal = (
     title: string,
@@ -187,7 +186,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         }
         
         if (directExpedisiData) {
-            expedisiRecord = directExpedisiData; // Corrected from directDdata
+            expedisiRecord = directExpedisiData;
         } else {
             console.warn(`[handleBatalResi] Resi ${resiNumber} not found in tbl_expedisi. Proceeding with 'batal' in tbl_resi using default values.`);
         }
@@ -211,41 +210,8 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       });
 
       showSuccess(`Resi ${resiNumber} berhasil dibatalkan.`);
-      
-      // Optimistically update historyData cache for any active history queries
-      queryClient.setQueriesData({
-        queryKey: ["historyData"],
-        exact: false,
-        updater: (oldData: HistoryData[] | undefined, queryKey: QueryKey) => {
-          if (!oldData) return undefined;
-
-          const [, queryStartDateStr, queryEndDateStr] = queryKey;
-          const queryStartDate = queryStartDateStr ? new Date(queryStartDateStr as string) : undefined;
-          const queryEndDate = queryEndDateStr ? new Date(queryEndDateStr as string) : undefined;
-
-          const affectedResiCreatedDate = itemToBatal?.created ? new Date(itemToBatal.created) : undefined;
-
-          const isAffectedDateIncluded = affectedResiCreatedDate && queryStartDate && queryEndDate &&
-                                         isWithinInterval(affectedResiCreatedDate, { start: startOfDay(queryStartDate), end: endOfDay(queryEndDate) });
-
-          if (isAffectedDateIncluded) {
-            return oldData.map(item => {
-              if (item.Resi === resiNumber) {
-                return {
-                  ...item,
-                  schedule: "batal",
-                  Keterangan: normalizeExpeditionName(originalCourierName),
-                };
-              }
-              return item;
-            });
-          }
-          return oldData;
-        },
-      });
-
-      queryClient.invalidateQueries({ queryKey: ["historyData"] }, {});
-      debouncedTriggerSync();
+      queryClient.invalidateQueries({ queryKey: ["historyData"] }); // Invalidate historyData
+      debouncedTriggerSync(); // Use debouncedTriggerSync
 
     } catch (error: any) {
       if (itemToBatal) {
@@ -273,7 +239,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       if (!expedisiRecord) {
         const { data: directExpedisiData, error: directExpedisiError } = await supabase
             .from("tbl_expedisi")
-            .select("created, couriername")
+            .select("created, couriername") // Hanya pilih kolom yang diperlukan
             .eq("resino", resiNumber)
             .single();
 
@@ -300,45 +266,12 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
           expedisiCreatedTimestamp,
           keteranganValue: courierNameFromExpedisi,
         },
-        timestamp: Date.now(),
+        timestamp: Date.now(), // Corrected from Date.24()
       });
 
       showSuccess(`Resi ${resiNumber} berhasil dikonfirmasi.`);
-      
-      // Optimistically update historyData cache for any active history queries
-      queryClient.setQueriesData({
-        queryKey: ["historyData"],
-        exact: false,
-        updater: (oldData: HistoryData[] | undefined, queryKey: QueryKey) => {
-          if (!oldData) return undefined;
-
-          const [, queryStartDateStr, queryEndDateStr] = queryKey;
-          const queryStartDate = queryStartDateStr ? new Date(queryStartDateStr as string) : undefined;
-          const queryEndDate = queryEndDateStr ? new Date(queryEndDateStr as string) : undefined;
-
-          const affectedResiCreatedDate = itemToConfirm?.created ? new Date(itemToConfirm.created) : undefined;
-
-          const isAffectedDateIncluded = affectedResiCreatedDate && queryStartDate && queryEndDate &&
-                                         isWithinInterval(affectedResiCreatedDate, { start: startOfDay(queryStartDate), end: endOfDay(queryEndDate) });
-
-          if (isAffectedDateIncluded) {
-            return oldData.map(item => {
-              if (item.Resi === resiNumber) {
-                return {
-                  ...item,
-                  schedule: "ontime",
-                  Keterangan: normalizeExpeditionName(courierNameFromExpedisi),
-                };
-              }
-              return item;
-            });
-          }
-          return oldData;
-        },
-      });
-
-      queryClient.invalidateQueries({ queryKey: ["historyData"] }, {});
-      debouncedTriggerSync();
+      queryClient.invalidateQueries({ queryKey: ["historyData"] }); // Invalidate historyData
+      debouncedTriggerSync(); // Use debouncedTriggerSync
 
     } catch (error: any) {
       if (itemToConfirm) {
@@ -366,7 +299,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       if (!expedisiRecord) {
         const { data: directExpedisiData, error: directExpedisiError } = await supabase
             .from("tbl_expedisi")
-            .select("created, couriername")
+            .select("created, couriername") // Hanya pilih kolom yang diperlukan
             .eq("resino", resiNumber)
             .single();
 
@@ -375,7 +308,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         }
         
         if (directExpedisiData) {
-            expedisiRecord = directExpedisiData; 
+            expedisiRecord = directExpedisiData;
         } else {
             throw new Error(`Gagal memperbarui status CEKFU resi ${resiNumber}: Data ekspedisi tidak ditemukan di database.`);
         }
@@ -392,8 +325,8 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       });
 
       showSuccess(`Status CEKFU resi ${resiNumber} berhasil diperbarui.`);
-      queryClient.invalidateQueries({ queryKey: ["historyData"] }, {});
-      debouncedTriggerSync();
+      queryClient.invalidateQueries({ queryKey: ["historyData"] }); // Invalidate historyData
+      debouncedTriggerSync(); // Use debouncedTriggerSync
     } catch (error: any) {
       setModalData(originalModalData);
       showError(`Gagal memperbarui status CEKFU resi ${resiNumber}. ${error.message || "Silakan coba lagi."}`);

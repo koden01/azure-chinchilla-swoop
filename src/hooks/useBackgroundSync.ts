@@ -3,9 +3,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import { getPendingOperations, deletePendingOperation, updatePendingOperation } from '@/integrations/indexeddb/pendingOperations';
 import { supabase } from '@/integrations/supabase/client';
 import { showError } from '@/utils/toast';
-import { format } from 'date-fns';
-import { normalizeExpeditionName } from "@/utils/expeditionUtils";
-import { useDebouncedCallback } from './useDebouncedCallback';
+import { format, subDays } from 'date-fns'; // Import subDays
+import { normalizeExpeditionName } from '@/utils/expeditionUtils'; // Import normalizeExpeditionName
+import { useDebouncedCallback } from './useDebouncedCallback'; // Import useDebouncedCallback
 
 const SYNC_INTERVAL_MS = 1000 * 60; // Sync every 1 minute
 const MAX_RETRIES = 5; // Max attempts before giving up on an operation

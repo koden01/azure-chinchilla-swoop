@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, startOfDay, endOfDay } from "date-fns";
+import { format, startOfDay, endOfDay, subDays } from "date-fns"; // Import subDays
 import React from "react";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 import { normalizeExpeditionName, KNOWN_EXPEDITIONS } from "@/utils/expeditionUtils";
@@ -25,10 +25,12 @@ interface AllKarungSummaryItem {
 export const useResiInputData = (expedition: string, showAllExpeditionSummary: boolean) => {
   const today = new Date();
   const formattedToday = format(today, "yyyy-MM-dd");
+  const fiveDaysAgo = subDays(today, 4); // Calculate date 4 days ago for a 5-day range
+  const formattedFiveDaysAgo = format(fiveDaysAgo, "yyyy-MM-dd");
 
   // Query to fetch all resi data for the current expedition and date range for local validation
   const { data: allResiForExpedition, isLoading: isLoadingAllResiForExpedition } = useQuery<ResiExpedisiData[]>({
-    queryKey: ["allResiForExpedition", expedition, formattedToday], 
+    queryKey: ["allResiForExpedition", expedition, formattedFiveDaysAgo, formattedToday], 
     queryFn: async () => {
       if (!expedition) {
         return [];
@@ -37,8 +39,8 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       const data = await fetchAllDataPaginated(
         "tbl_resi",
         "created",
-        today,
-        today,
+        fiveDaysAgo, // Use the new start date
+        today,      // Use today as the end date
         "Resi, nokarung, created, Keterangan, schedule",
         (baseQuery) => {
           if (expedition === 'ID') {
@@ -51,7 +53,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       return data || [];
     },
     enabled: !!expedition,
-    staleTime: 1000 * 30,
+    staleTime: 1000 * 60 * 5, // Increased staleTime to 5 minutes for 5-day data
   });
 
   // NEW: Query to fetch karung summary for the selected expedition and today's date

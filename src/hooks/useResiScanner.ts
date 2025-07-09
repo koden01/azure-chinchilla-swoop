@@ -332,6 +332,9 @@ export const useResiScanner = ({
         timestamp: Date.now(),
       });
       
+      // Invalidate historyData query immediately after adding pending operation
+      queryClient.invalidateQueries({ queryKey: ["historyData"] });
+
       debouncedTriggerSync();
 
     } catch (error: any) {

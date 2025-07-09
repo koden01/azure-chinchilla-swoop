@@ -244,7 +244,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         },
       });
 
-      queryClient.invalidateQueries(["historyData"], {});
+      queryClient.invalidateQueries({ queryKey: ["historyData"] });
       debouncedTriggerSync();
 
     } catch (error: any) {
@@ -337,7 +337,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         },
       });
 
-      queryClient.invalidateQueries(["historyData"], {});
+      queryClient.invalidateQueries({ queryKey: ["historyData"] });
       debouncedTriggerSync();
 
     } catch (error: any) {
@@ -392,7 +392,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       });
 
       showSuccess(`Status CEKFU resi ${resiNumber} berhasil diperbarui.`);
-      queryClient.invalidateQueries(["historyData"], {});
+      queryClient.invalidateQueries({ queryKey: ["historyData"] });
       debouncedTriggerSync();
     } catch (error: any) {
       setModalData(originalModalData);

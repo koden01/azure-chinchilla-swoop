@@ -10,12 +10,12 @@ import { Table as ReactTableType } from "@tanstack/react-table";
 
 interface UseHistoryActionsProps {
   historyData: HistoryData[] | undefined;
-  formattedStartDate: string;
-  formattedEndDate: string;
+  // formattedStartDate: string; // Dihapus karena tidak digunakan
+  // formattedEndDate: string;   // Dihapus karena tidak digunakan
   table: ReactTableType<HistoryData>;
 }
 
-export const useHistoryActions = ({ historyData, formattedStartDate, formattedEndDate, table }: UseHistoryActionsProps) => {
+export const useHistoryActions = ({ historyData, table }: UseHistoryActionsProps) => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [resiToDelete, setResiToDelete] = useState<string | null>(null);
   const [lastClickInfo, setLastClickInfo] = useState<{ resi: string | null; timestamp: number | null } | null>(null);

@@ -150,7 +150,7 @@ export const useResiScanner = ({
     const queryKeyForInputPageDisplay = ["allResiForExpedition", expedition, formattedFiveDaysAgo, formattedToday];
     const queryKeyForKarungSummary = ["karungSummary", expedition, formattedToday];
     const queryKeyForTotalExpeditionItems = ["totalExpeditionItems", expedition, formattedToday];
-    const queryKeyForRemainingExpeditionItems = ["remainingExpeditionItems", expedition, formattedToday];
+    // const queryKeyForRemainingExpeditionItems = ["remainingExpeditionItems", expedition, formattedToday]; // Dihapus karena tidak digunakan
     const queryKeyForIdExpeditionScanCount = ["idExpeditionScanCount", formattedToday];
 
     let validationStatus: "OK" | "DUPLICATE_PROCESSED" | "MISMATCH_EXPEDISI" | "NOT_FOUND_IN_EXPEDISI" = "OK";

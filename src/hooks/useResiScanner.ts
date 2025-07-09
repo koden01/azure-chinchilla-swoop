@@ -397,7 +397,7 @@ export const useResiScanner = ({
         }
       } else if (event.key.length === 1) { // Hanya tambahkan karakter tunggal (bukan Shift, Alt, Ctrl, dll.)
         scannerInputBuffer.current += event.key;
-        // Hapus baris ini: setResiNumber(scannerInputBuffer.current); // Tidak lagi memperbarui state di setiap karakter
+        setResiNumber(scannerInputBuffer.current); // <-- Re-enabled this line
       } else if (event.key === 'Backspace') {
         scannerInputBuffer.current = scannerInputBuffer.current.slice(0, -1);
         setResiNumber(scannerInputBuffer.current); // Tetap perbarui untuk umpan balik backspace manual
@@ -414,8 +414,7 @@ export const useResiScanner = ({
 
   return {
     resiNumber,
-    // setResiNumber, // Dihapus karena tidak lagi digunakan secara langsung di sini
-    // handleScanResi, // Tidak lagi dipanggil langsung dari sini
+    setResiNumber, // <-- Exposed setResiNumber
     resiInputRef,
     isProcessing: isProcessing || isPending,
     isLoadingRecentScannedResiNumbers: false,

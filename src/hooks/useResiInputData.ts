@@ -196,42 +196,38 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     }
     const count = allResiForExpedition.filter(item => 
       item.nokarung === selectedKarung && 
-      (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition) &&
-      // Filter by today's date
-      item.created && new Date(item.created).toDateString() === today.toDateString()
+      (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition)
     ).length;
     return count;
-  }, [allResiForExpedition, expedition, today]); // Add 'today' to dependencies
+  }, [allResiForExpedition, expedition]);
 
-  // Derive lastKarung from allResiForExpedition, filtered for today's data
+  // Derive lastKarung from allResiForExpedition
   const lastKarung = React.useMemo(() => {
     if (!allResiForExpedition || allResiForExpedition.length === 0) return "0";
     const filteredResi = allResiForExpedition.filter(item => 
       item.nokarung !== null && 
-      (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition) &&
-      item.created && new Date(item.created).toDateString() === today.toDateString() // Filter for today
+      (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition)
     );
     if (filteredResi.length === 0) return "0";
 
     const sortedResi = [...filteredResi].sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime());
     const last = sortedResi[0].nokarung || "0";
     return last;
-  }, [allResiForExpedition, expedition, today]); // Add 'today' to dependencies
+  }, [allResiForExpedition, expedition]);
 
-  // Derive highestKarung from allResiForExpedition, filtered for today's data
+  // Derive highestKarung from allResiForExpedition
   const highestKarung = React.useMemo(() => {
     if (!allResiForExpedition || allResiForExpedition.length === 0) return 0;
     const validKarungNumbers = allResiForExpedition
       .filter(item => 
         item.nokarung !== null && 
-        (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition) &&
-        item.created && new Date(item.created).toDateString() === today.toDateString() // Filter for today
+        (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition)
       )
       .map(item => parseInt(item.nokarung || "0"))
       .filter(num => !isNaN(num) && num > 0);
     const highest = validKarungNumbers.length > 0 ? Math.max(...validKarungNumbers) : 0;
     return highest;
-  }, [allResiForExpedition, expedition, today]); // Add 'today' to dependencies
+  }, [allResiForExpedition, expedition]);
 
   // Karung options based on highestKarung (still client-side generation)
   const karungOptions = React.useMemo(() => {

@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, showError, dismissToast } from "@/utils/toast";
 import { beepSuccess, beepFailure, beepDouble, beepStart } from "@/utils/audio";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { format, subDays } from "date-fns";
+import { format, subDays } from "date-fns"; // Import subDays
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 import { normalizeExpeditionName } from "@/utils/expeditionUtils";
 import { addPendingOperation } from "@/integrations/indexeddb/pendingOperations";
@@ -200,37 +200,46 @@ export const useResiScanner = ({
           expedisiRecord = allFlagNoExpedisiData?.get(normalizedCurrentResi);
         }
 
-        const normalizedSelectedExpedition = normalizeExpeditionName(expedition);
-
         if (!expedisiRecord) {
-          // If resi not found in local caches at all
-          // Special handling for 'ID' expedition: allow new entries
-          if (normalizedSelectedExpedition === 'ID') {
-            actualCourierNameForResiTable = "ID_REKOMENDASI";
-            actualScheduleForResiTable = "idrek";
-            // validationStatus remains 'OK'
-          } else {
-            validationStatus = 'NOT_FOUND_IN_EXPEDISI';
-            validationMessage = `Data resi ${currentResi} tidak ditemukan di database.`;
-          }
+          // Resi not found in local caches at all
+          validationStatus = 'NOT_FOUND_IN_EXPEDISI';
+          validationMessage = `Data resi ${currentResi} tidak ditemukan di database.`;
         } else {
-          // Resi found in expedisi, check flag
           if (expedisiRecord.flag === 'NO') {
             wasFlagNo = true;
           }
-          // Check for expedition mismatch if expedisiRecord was found
-          const normalizedExpedisiCourierName = normalizeExpeditionName(expedisiRecord.couriername);
-          const isIdMatch = (normalizedSelectedExpedition === 'ID' && (normalizedExpedisiCourierName === 'ID' || normalizedExpedisiCourierName === 'ID_REKOMENDASI'));
-          const isDirectMatch = (normalizedSelectedExpedition === normalizedExpedisiCourierName);
+        }
+      }
 
-          if (!isIdMatch && !isDirectMatch) {
-            validationStatus = 'MISMATCH_EXPEDISI';
-            validationMessage = `Resi ini terdaftar untuk ekspedisi ${expedisiRecord.couriername}, bukan ${expedition}.`;
-          } else {
-            // If it's a match, set actual courier name and schedule
-            actualCourierNameForResiTable = normalizedExpedisiCourierName;
-            actualScheduleForResiTable = "ontime"; // Default schedule for existing resi
-          }
+      // 3. Check for expedition mismatch if expedisiRecord was found
+      if (validationStatus === 'OK' && expedisiRecord) {
+        const normalizedExpedisiCourierName = normalizeExpeditionName(expedisiRecord.couriername);
+        const normalizedSelectedExpedition = normalizeExpeditionName(expedition);
+
+        // Special handling for 'ID' which can match 'ID' or 'ID_REKOMENDASI'
+        const isIdMatch = (normalizedSelectedExpedition === 'ID' && (normalizedExpedisiCourierName === 'ID' || normalizedExpedisiCourierName === 'ID_REKOMENDASI'));
+        const isDirectMatch = (normalizedSelectedExpedition === normalizedExpedisiCourierName);
+
+        if (!isIdMatch && !isDirectMatch) {
+          validationStatus = 'MISMATCH_EXPEDISI';
+          validationMessage = `Resi ini terdaftar untuk ekspedisi ${expedisiRecord.couriername}, bukan ${expedition}.`;
+        }
+      }
+
+      // Determine actualCourierNameForResiTable and actualScheduleForResiTable based on validation outcome
+      if (validationStatus === 'OK') {
+        // If selected expedition is 'ID' AND resi was NOT found in tbl_expedisi (meaning it's a truly new ID entry)
+        if (normalizeExpeditionName(expedition) === 'ID' && !expedisiRecord) { 
+          actualCourierNameForResiTable = "ID_REKOMENDASI";
+          actualScheduleForResiTable = "idrek";
+        } else if (expedisiRecord) { // If resi was found in tbl_expedisi (either initially or from allFlagNoExpedisiData)
+          actualCourierNameForResiTable = normalizeExpeditionName(expedisiRecord.couriername);
+          actualScheduleForResiTable = "ontime"; // Default schedule for existing resi
+        } else { // This 'else' block should ideally not be reached if validationStatus is 'OK'
+                 // and the above conditions cover all valid 'OK' paths.
+                 // If it is reached, it implies a logic error or an unexpected state.
+          actualCourierNameForResiTable = normalizeExpeditionName(expedition); // Fallback
+          actualScheduleForResiTable = "ontime"; // Fallback
         }
       }
 

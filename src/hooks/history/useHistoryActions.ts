@@ -89,7 +89,7 @@ export const useHistoryActions = ({ historyData, formattedStartDate, formattedEn
         showError(`Gagal menghapus resi ${resiToDelete}: ${error.message}`);
         console.error("Error deleting resi:", error);
         // Revert optimistic update on error
-        queryClient.invalidateQueries({ queryKey: ["historyData"] });
+        queryClient.invalidateQueries(["historyData"], {});
       } else {
         showSuccess(`Resi ${resiToDelete} berhasil dihapus.`);
 
@@ -102,7 +102,7 @@ export const useHistoryActions = ({ historyData, formattedStartDate, formattedEn
       showError(`Gagal menghapus resi ${resiToDelete}: ${error.message || "Silakan coba lagi."}`);
       console.error("Error deleting resi (outer catch):", error);
       // Ensure optimistic update is reverted if an unexpected error occurs
-      queryClient.invalidateQueries({ queryKey: ["historyData"] });
+      queryClient.invalidateQueries(["historyData"], {});
     } finally {
       setIsDeleteDialogOpen(false);
       setResiToDelete(null);

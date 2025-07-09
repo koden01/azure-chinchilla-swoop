@@ -374,7 +374,7 @@ export const useResiScanner = ({
         },
       });
 
-      queryClient.invalidateQueries({ queryKey: ["historyData"] });
+      queryClient.invalidateQueries(["historyData"], {});
       debouncedTriggerSync();
 
     } catch (error: any) {
@@ -405,7 +405,7 @@ export const useResiScanner = ({
         queryClient.invalidateQueries({ queryKey: queryKeyForRemainingExpeditionItems });
         queryClient.invalidateQueries({ queryKey: queryKeyForIdExpeditionScanCount });
         // Invalidate historyData on error to ensure it refetches correct state
-        queryClient.invalidateQueries({ queryKey: ["historyData"] });
+        queryClient.invalidateQueries(["historyData"], {});
       });
     } finally {
       setIsProcessing(false);

@@ -4,7 +4,6 @@ import { showSuccess, showError, dismissToast } from "@/utils/toast";
 import { beepSuccess, beepFailure, beepDouble, beepStart } from "@/utils/audio";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-// import { fetchAllDataPaginated } from "@/utils/supabaseFetch"; // Menghapus fetchAllDataPaginated
 import { normalizeExpeditionName } from "@/utils/expeditionUtils";
 import { addPendingOperation } from "@/integrations/indexeddb/pendingOperations";
 import { useBackgroundSync } from "@/hooks/useBackgroundSync";
@@ -253,7 +252,8 @@ export const useResiScanner = ({
       showSuccess(`Resi ${currentResi} Berhasil`);
       playBeep(beepSuccess);
 
-      await addPendingOperation({
+      // Removed 'await' here to make it non-blocking
+      addPendingOperation({
         id: `scan-${currentResi}-${Date.now()}`,
         type: "scan",
         payload: {

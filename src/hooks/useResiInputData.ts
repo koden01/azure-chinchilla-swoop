@@ -196,7 +196,8 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     const count = allResiForExpedition.filter(item => 
       isSameDay(new Date(item.created), today) && // Filter for today only
       item.nokarung === selectedKarung && 
-      (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition)
+      (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition) &&
+      (item.schedule === 'ontime' || item.schedule === 'late' || item.schedule === 'idrek') // Add schedule filter
     ).length;
     return count;
   }, [allResiForExpedition, expedition, today]);
@@ -207,7 +208,8 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     const filteredResi = allResiForExpedition.filter(item => 
       isSameDay(new Date(item.created), today) && // Filter for today only
       item.nokarung !== null && 
-      (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition)
+      (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition) &&
+      (item.schedule === 'ontime' || item.schedule === 'late' || item.schedule === 'idrek') // Add schedule filter
     );
     if (filteredResi.length === 0) return "0";
 
@@ -223,7 +225,8 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       .filter(item => 
         isSameDay(new Date(item.created), today) && // Filter for today only
         item.nokarung !== null && 
-        (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition)
+        (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition) &&
+        (item.schedule === 'ontime' || item.schedule === 'late' || item.schedule === 'idrek') // Add schedule filter
       )
       .map(item => parseInt(item.nokarung || "0"))
       .filter(num => !isNaN(num) && num > 0);

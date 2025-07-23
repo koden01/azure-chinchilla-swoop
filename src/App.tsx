@@ -1,22 +1,33 @@
-import React from 'react';
-import { Routes, Route } from 'react-router-dom';
-import Layout from '@/components/Layout';
+import React from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Layout from "@/components/Layout";
+import Index from "@/pages/Index";
+import DashboardPage from "@/pages/DashboardPage";
+import HistoryPage from "@/pages/History";
+import NotFound from "@/pages/NotFound";
 
-const InputPage = React.lazy(() => import('@/pages/Input').then(module => module.default));
-const DashboardPage = React.lazy(() => import('@/pages/DashboardPage').then(module => module.default));
-const History = React.lazy(() => import('@/pages/History').then(module => module.default));
+const InputPage = React.lazy(() => import("@/pages/Input"));
 
 function App() {
   return (
-    <Layout>
-      <React.Suspense fallback={<div>Loading...</div>}>
+    <Router>
+      <Layout>
         <Routes>
-          <Route path="/" element={<InputPage />} />
+          <Route path="/" element={<Index />} />
           <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/history" element={<History />} />
+          <Route path="/history" element={<HistoryPage />} />
+          <Route 
+            path="/input" 
+            element={
+              <React.Suspense fallback={<div>Loading...</div>}>
+                <InputPage />
+              </React.Suspense>
+            } 
+          />
+          <Route path="*" element={<NotFound />} />
         </Routes>
-      </React.Suspense>
-    </Layout>
+      </Layout>
+    </Router>
   );
 }
 

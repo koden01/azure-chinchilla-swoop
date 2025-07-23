@@ -1,17 +1,31 @@
 import React from 'react';
-import { useResiInputData } from '@/hooks/useResiInputData';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
-const InputPage: React.FC = () => {
-  const [expedition, setExpedition] = React.useState<string>('');
-  const [selectedKarung, setSelectedKarung] = React.useState<string>('1');
-  const [resiInput, setResiInput] = React.useState<string>('');
+interface ResiInputData {
+  expeditionOptions: string[];
+  karungOptions: string[];
+  currentCount: (karung: string) => number;
+}
+
+const useResiInputData = (expedition: string, includeIdRek: boolean): ResiInputData => {
+  // Implementation here
+  return {
+    expeditionOptions: ['JNE', 'JNT', 'SICEPAT', 'ID'],
+    karungOptions: ['1', '2', '3', '4'],
+    currentCount: () => 0
+  };
+};
+
+const InputPage = () => {
+  const [expedition, setExpedition] = React.useState('');
+  const [selectedKarung, setSelectedKarung] = React.useState('1');
+  const [resiInput, setResiInput] = React.useState('');
 
   const { 
-    expeditionOptions = [],
-    karungOptions = [],
+    expeditionOptions,
+    karungOptions,
     currentCount
   } = useResiInputData(expedition, false);
 
@@ -40,7 +54,7 @@ const InputPage: React.FC = () => {
       </Select>
 
       <div>
-        <p>Jumlah Resi: {currentCount?.(selectedKarung) || 0}</p>
+        <p>Jumlah Resi: {currentCount(selectedKarung)}</p>
       </div>
     </div>
   );

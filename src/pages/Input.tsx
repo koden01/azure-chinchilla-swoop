@@ -4,10 +4,10 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
-const InputPage = () => {
-  const [expedition, setExpedition] = React.useState('');
-  const [selectedKarung, setSelectedKarung] = React.useState('1');
-  const [resiInput, setResiInput] = React.useState('');
+const InputPage: React.FC = () => {
+  const [expedition, setExpedition] = React.useState<string>('');
+  const [selectedKarung, setSelectedKarung] = React.useState<string>('1');
+  const [resiInput, setResiInput] = React.useState<string>('');
 
   const { 
     expeditionOptions = [],

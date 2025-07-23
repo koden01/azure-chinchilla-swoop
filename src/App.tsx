@@ -1,2 +1,2 @@
 const InputPage = React.lazy(() => import('@/pages/Input')
-  .then(module => ({ default: module.default })));
+  .then(module => ({ default: module.InputPage })));

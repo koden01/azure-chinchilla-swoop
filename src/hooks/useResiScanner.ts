@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, showError, dismissToast } from "@/utils/toast";
 import { beepSuccess, beepFailure, beepDouble, beepStart } from "@/utils/audio";
 import { useQueryClient } from "@tanstack/react-query";
-import { format } from "date-fns";
+import { format, isSameDay } from "date-fns"; // Import isSameDay
 import { normalizeExpeditionName } from "@/utils/expeditionUtils";
 import { addPendingOperation } from "@/integrations/indexeddb/pendingOperations";
 import { useBackgroundSync } from "@/hooks/useBackgroundSync";
@@ -155,11 +155,19 @@ export const useResiScanner = ({
         expedisiRecordFromCache = allFlagNoExpedisiData.get(normalizedCurrentResi);
         wasFlagNo = true;
         actualCourierNameForResiTable = normalizeExpeditionName(expedisiRecordFromCache.couriername);
-        actualScheduleForResiTable = "ontime";
+        
+        // Determine schedule optimistically based on expedisi created date
+        const expedisiCreatedDate = expedisiRecordFromCache.created ? new Date(expedisiRecordFromCache.created) : null;
+        if (expedisiCreatedDate && isSameDay(expedisiCreatedDate, today)) {
+          actualScheduleForResiTable = "ontime";
+        } else {
+          actualScheduleForResiTable = "late";
+        }
+
       } else {
         if (normalizeExpeditionName(expedition) === 'ID') {
           actualCourierNameForResiTable = "ID_REKOMENDASI";
-          actualScheduleForResiTable = "idrek";
+          actualScheduleForResiTable = "idrek"; // For ID_REKOMENDASI, it's always 'idrek'
         } else {
           validationStatus = 'NOT_FOUND_IN_EXPEDISI';
           validationMessage = `Data resi ${currentResi} tidak ditemukan di database.`;
@@ -214,7 +222,7 @@ export const useResiScanner = ({
           nokarung: selectedKarung,
           created: new Date().toISOString(),
           Keterangan: actualCourierNameForResiTable,
-          schedule: actualScheduleForResiTable,
+          schedule: actualScheduleForResiTable, // Now correctly set to 'ontime' or 'late' optimistically
         };
 
         if (existingResiIndex !== -1) {
@@ -281,7 +289,7 @@ export const useResiScanner = ({
       playBeep(beepFailure);
 
       setOptimisticTotalExpeditionItems(initialTotalExpeditionItems || 0);
-      setOptimisticRemainingExpeditionItems(initialRemainingExpeditionItems || 0);
+      setOptimisticRemainingExpeditionItems(initialTotalExpeditionItems || 0); // Reset to initial total
       setOptimisticIdExpeditionScanCount(initialIdExpeditionScanCount || 0);
 
       startTransition(() => {
@@ -297,7 +305,7 @@ export const useResiScanner = ({
     } finally {
       setIsProcessing(false);
     }
-  }, [expedition, selectedKarung, formattedDate, allExpedisiDataUnfiltered, allFlagNoExpedisiData, allResiForExpedition, queryClient, debouncedTriggerSync, validateInput, startTransition, isPending, initialTotalExpeditionItems, initialRemainingExpeditionItems, initialIdExpeditionScanCount, queryKeyForInputPageDisplay, queryKeyForKarungSummary, queryKeyForTotalExpeditionItems, queryKeyForRemainingExpeditionItems, queryKeyForIdExpeditionScanCount, allFlagYesExpedisiResiNumbers]);
+  }, [expedition, selectedKarung, formattedDate, allExpedisiDataUnfiltered, allFlagNoExpedisiData, allResiForExpedition, queryClient, debouncedTriggerSync, validateInput, startTransition, isPending, initialTotalExpeditionItems, initialRemainingExpeditionItems, initialIdExpeditionScanCount, queryKeyForInputPageDisplay, queryKeyForKarungSummary, queryKeyForTotalExpeditionItems, queryKeyForRemainingExpeditionItems, queryKeyForIdExpeditionScanCount, allFlagYesExpedisiResiNumbers, today]);
 
   React.useEffect(() => {
     const handleGlobalKeyDown = (event: KeyboardEvent) => {

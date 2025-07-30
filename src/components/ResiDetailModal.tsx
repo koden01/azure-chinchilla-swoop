@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Dialog,
@@ -75,8 +73,13 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
 
-  // Removed the useEffect that was resetting filters here.
-  // Filters will now persist as long as the modal component is mounted.
+  useEffect(() => {
+    // Reset filter and sorting when modal opens or data/type changes
+    setGlobalFilter("");
+    setSorting([]);
+    setColumnFilters([]);
+    table.setPageIndex(0); // Reset to first page
+  }, [data, isOpen, modalType]);
 
   const handleCopyToClipboard = useCallback(async (text: string, label: string) => {
     try {

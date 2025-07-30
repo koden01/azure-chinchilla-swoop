@@ -1,5 +1,5 @@
 import React, { Suspense } from "react";
-import { Toaster } from "@/components/ui/sonner"; // Correctly import Toaster from sonner
+import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { persistQueryClient } from '@tanstack/query-persist-client-core';
@@ -13,14 +13,13 @@ import { useBackgroundSync } from "./hooks/useBackgroundSync";
 const DashboardPage = React.lazy(() => import("./pages/DashboardPage"));
 const InputPage = React.lazy(() => import("./pages/Input"));
 const HistoryPage = React.lazy(() => import("./pages/History"));
-const IndexPage = React.lazy(() => import("./pages/Index")); // Add IndexPage
 const NotFound = React.lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       gcTime: 1000 * 60 * 60, // Cache garbage collection time: 1 hour
-      staleTime: 1000 * 60 * 60, // Data is considered fresh for 60 minutes
+      staleTime: 1000 * 60 * 60, // Data is considered fresh for 60 minutes (changed from 5 minutes)
     },
   },
 });
@@ -39,17 +38,17 @@ persistQueryClient({
       query.queryHash.includes("allExpedisiDataUnfiltered") || // Persist allExpedisiDataUnfiltered
       query.queryHash.includes("expedisiDataForSelectedDate") || // Persist expedisi data for selected date
       query.queryHash.includes("recentResiNumbersForValidation") || // Corrected: Persist recentResiNumbersForValidation
-      query.queryHash.includes("allFlagNoExpedisiData") || // Persist allFlagNoExpedisiData
-      query.queryHash.includes("allFlagYesExpedisiResiNumbers"), // Persist allFlagYesExpedisiResiNumbers
+      query.queryHash.includes("allFlagNoExpedisiData"), // Persist allFlagNoExpedisiData
   },
 });
 
 const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
+      {/* useBackgroundSync dipindahkan ke sini */}
       <BackgroundSyncInitializer /> 
       <TooltipProvider>
-        <Toaster
+        <Sonner
           position="top-center"
           duration={3000}
           toastOptions={{}}
@@ -59,9 +58,8 @@ const App = () => {
             <Layout>
               <Suspense fallback={<div className="text-center p-8 text-gray-600">Memuat aplikasi...</div>}>
                 <Routes>
-                  <Route path="/" element={<IndexPage />} /> {/* Use IndexPage */}
+                  <Route path="/" element={<InputPage />} />
                   <Route path="/dashboard" element={<DashboardPage />} />
-                  <Route path="/input" element={<InputPage />} /> {/* Added /input route */}
                   <Route path="/history" element={<HistoryPage />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>

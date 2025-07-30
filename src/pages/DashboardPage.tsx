@@ -7,7 +7,6 @@ import DashboardSummaryCards from "@/components/dashboard/DashboardSummaryCards"
 import DashboardExpeditionDetails from "@/components/dashboard/DashboardExpeditionDetails";
 import { useCombinedDashboardData } from "@/hooks/dashboard/useCombinedDashboardData";
 import { useDashboardModals } from "@/hooks/useDashboardModals";
-import { Toaster } from "@/components/ui/sonner"; // Ensure sonner Toaster is imported
 
 const DashboardPage: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());

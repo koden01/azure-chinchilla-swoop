@@ -1,97 +1,355 @@
-"use client";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Copy } from "lucide-react";
+import { format } from "date-fns";
+import { useDebounce } from "@/hooks/useDebounce";
+import { showSuccess, showError } from "@/utils/toast";
+import { ModalDataItem } from "@/types/data";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
-import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { format } from 'date-fns';
-import { CalendarIcon } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { supabase } from '@/integrations/supabase/client';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useToast } from '@/components/ui/use-toast';
+import {
+  ColumnDef,
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+  SortingState,
+  ColumnFiltersState,
+  VisibilityState,
+} from "@tanstack/react-table";
 
 interface ResiDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
-  expeditionName: string;
-  searchResi: string;
-  setSearchResi: (value: string) => void;
-  searchNokarung: string;
-  setSearchNokarung: (value: string) => void;
-  selectedDate: Date | undefined;
-  setSelectedDate: (date: Date | undefined) => void;
+  data: ModalDataItem[];
+  modalType: "belumKirim" | "followUp" | "expeditionDetail" | "transaksiHariIni" | null;
+  selectedCourier?: string | null;
+  onBatalResi: (resiNumber: string) => Promise<void>;
+  onConfirmResi: (resiNumber: string) => Promise<void>;
+  onCekfuToggle: (resiNumber: string, currentCekfuStatus: boolean) => Promise<void>;
 }
 
 const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
   isOpen,
   onClose,
   title,
-  expeditionName,
-  searchResi,
-  setSearchResi,
-  searchNokarung,
-  setSearchNokarung,
-  selectedDate,
-  setSelectedDate,
+  data,
+  modalType,
+  selectedCourier,
+  onBatalResi,
+  onConfirmResi,
+  onCekfuToggle,
 }) => {
-  const [filteredData, setFilteredData] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
-
-  const fetchData = async () => {
-    if (!selectedDate) {
-      setFilteredData([]);
-      return;
-    }
-    setIsLoading(true);
-    const formattedDate = format(selectedDate, 'yyyy-MM-dd');
-
-    try {
-      const { data, error } = await supabase.rpc('get_filtered_resi_for_expedition_and_date', {
-        p_couriername: expeditionName,
-        p_selected_date: formattedDate,
-        p_resi: searchResi || null,
-        p_nokarung: searchNokarung || null,
-      });
-
-      if (error) {
-        console.error("Error fetching filtered data:", error);
-        toast({
-          title: "Error",
-          description: "Gagal memuat data detail resi.",
-          variant: "destructive",
-        });
-        setFilteredData([]);
-      } else {
-        setFilteredData(data || []);
-      }
-    } catch (error) {
-      console.error("Unexpected error:", error);
-      toast({
-        title: "Error",
-        description: "Terjadi kesalahan tak terduga saat memuat data.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const [globalFilter, setGlobalFilter] = useState("");
+  const debouncedGlobalFilter = useDebounce(globalFilter, 300);
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
 
   useEffect(() => {
-    if (isOpen) {
-      fetchData();
-    }
-  }, [isOpen, searchResi, searchNokarung, selectedDate, expeditionName]);
+    // Reset filter and sorting when modal opens or data/type changes
+    setGlobalFilter("");
+    setSorting([]);
+    setColumnFilters([]);
+    table.setPageIndex(0); // Reset to first page
+  }, [data, isOpen, modalType]);
 
-  const handleClearFilter = () => {
-    setSearchResi("");
-    setSearchNokarung("");
-    setSelectedDate(new Date()); // Reset to today
-  };
+  const handleCopyToClipboard = useCallback(async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      showSuccess(`${label} '${text}' berhasil disalin!`);
+    } catch (err: any) {
+      showError(`Gagal menyalin ${label}: ${err.message || "Unknown error"}`);
+      console.error(`Failed to copy ${label}:`, err);
+    }
+  }, []);
+
+  const columns = useMemo<ColumnDef<ModalDataItem>[]>(() => {
+    const baseColumns: ColumnDef<ModalDataItem>[] = [];
+
+    if (modalType === "belumKirim" || modalType === "expeditionDetail" || modalType === "transaksiHariIni") {
+      baseColumns.push(
+        {
+          accessorKey: "resino",
+          header: "No. Resi",
+          cell: ({ row }) => (
+            <div className="flex items-center space-x-1">
+              <span>{row.original.resino}</span>
+              {row.original.resino && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent row click
+                    handleCopyToClipboard(row.original.resino!, "Nomor Resi");
+                  }}
+                >
+                  <Copy className="h-3 w-3" />
+                </Button>
+              )}
+            </div>
+          ),
+        },
+        {
+          accessorKey: "orderno",
+          header: "No Order",
+          cell: ({ row }) => (
+            <div className="flex items-center space-x-1">
+              <span>{row.original.orderno || "-"}</span>
+              {row.original.orderno && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent row click
+                    handleCopyToClipboard(row.original.orderno!, "Nomor Order");
+                  }}
+                >
+                  <Copy className="h-3 w-3" />
+                </Button>
+              )}
+            </div>
+          ),
+        },
+        {
+          accessorKey: "chanelsales",
+          header: "Marketplace",
+          cell: ({ row }) => row.original.chanelsales || "-",
+        },
+        {
+          accessorKey: "datetrans",
+          header: "Tanggal Pembelian",
+          cell: ({ row }) => {
+            const date = row.original.datetrans;
+            return date ? format(new Date(date as string), "dd/MM/yyyy HH:mm") : "-";
+          },
+        },
+        {
+          accessorKey: "couriername",
+          header: "Kurir",
+          cell: ({ row }) => row.original.couriername || "-",
+        },
+        {
+          accessorKey: "cekfu",
+          header: "Followup",
+          cell: ({ row }) => (
+            <Checkbox
+              checked={row.original.cekfu || false}
+              onCheckedChange={() => row.original.resino && onCekfuToggle(row.original.resino, row.original.cekfu || false)}
+            />
+          ),
+        },
+        {
+          id: "actions",
+          header: "Aksi",
+          cell: ({ row }) => (
+            <div className="flex space-x-2">
+              <Button variant="destructive" size="sm" onClick={() => row.original.resino && onBatalResi(row.original.resino)}>
+                Batal
+              </Button>
+              <Button className="bg-green-600 hover:bg-green-700 text-white" size="sm" onClick={() => row.original.resino && onConfirmResi(row.original.resino)}>
+                Konfirmasi
+              </Button>
+            </div>
+          ),
+          enableSorting: false,
+          enableColumnFilter: false,
+        }
+      );
+    } else if (modalType === "followUp") {
+      baseColumns.push(
+        {
+          accessorKey: "Resi",
+          header: "No. Resi",
+          cell: ({ row }) => (
+            <div className="flex items-center space-x-1">
+              <span>{row.original.Resi}</span>
+              {row.original.Resi && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent row click
+                    handleCopyToClipboard(row.original.Resi!, "Nomor Resi");
+                  }}
+                >
+                  <Copy className="h-3 w-3" />
+                </Button>
+              )}
+            </div>
+          ),
+        },
+        {
+          accessorKey: "created_resi",
+          header: "Tanggal Resi",
+          cell: ({ row }) => {
+            const date = row.original.created_resi;
+            return date ? format(new Date(date as string), "dd/MM/yyyy HH:mm") : "-";
+          },
+        },
+        {
+          accessorKey: "created_expedisi",
+          header: "Tanggal Expedisi",
+          cell: ({ row }) => {
+            const date = row.original.created_expedisi;
+            return date ? format(new Date(date as string), "dd/MM/yyyy HH:mm") : "-";
+          },
+        },
+        {
+          accessorKey: "couriername",
+          header: "Kurir",
+          cell: ({ row }) => row.original.couriername || "-",
+        },
+        {
+          accessorKey: "cekfu",
+          header: "Followup",
+          cell: ({ row }) => (
+            <Checkbox
+              checked={row.original.cekfu || false}
+              onCheckedChange={() => row.original.Resi && onCekfuToggle(row.original.Resi, row.original.cekfu || false)}
+            />
+          ),
+        },
+        {
+          id: "actions",
+          header: "Aksi",
+          cell: ({ row }) => (
+            <div className="flex space-x-2">
+              <Button variant="destructive" size="sm" onClick={() => row.original.Resi && onBatalResi(row.original.Resi)}>
+                Batal
+              </Button>
+              <Button className="bg-green-600 hover:bg-green-700 text-white" size="sm" onClick={() => row.original.Resi && onConfirmResi(row.original.Resi)}>
+                Konfirmasi
+              </Button>
+            </div>
+          ),
+          enableSorting: false,
+          enableColumnFilter: false,
+        }
+      );
+    }
+    return baseColumns;
+  }, [modalType, onBatalResi, onConfirmResi, onCekfuToggle, handleCopyToClipboard]);
+
+  const table = useReactTable({
+    data,
+    columns,
+    state: {
+      sorting,
+      columnFilters,
+      globalFilter: debouncedGlobalFilter,
+      columnVisibility,
+    },
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    onGlobalFilterChange: setGlobalFilter,
+    onColumnVisibilityChange: setColumnVisibility,
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    initialState: {
+      pagination: {
+        pageSize: 10, // Default page size
+      },
+    },
+  });
+
+  const handleCopyTableData = useCallback(async () => {
+    const rowsToCopy = table.getFilteredRowModel().rows;
+    if (rowsToCopy.length === 0) {
+      showError("Tidak ada data untuk disalin.");
+      return;
+    }
+
+    const headers = table.getHeaderGroups()[0].headers
+      .filter(header => header.id !== "actions") // Exclude the "Aksi" column
+      .map(header => flexRender(header.column.columnDef.header, header.getContext()));
+    const headerRow = headers.join('\t');
+
+    const dataRows = rowsToCopy.map(row => {
+      const rowValues = row.getVisibleCells()
+        .filter(cell => cell.column.id !== "actions") // Exclude the "Aksi" column
+        .map(cell => {
+          if (cell.column.id === "datetrans" || cell.column.id === "created_resi" || cell.column.id === "created_expedisi") {
+            const dateValue = cell.getValue() as string | null;
+            return dateValue ? format(new Date(dateValue), "dd/MM/yyyy HH:mm") : "-";
+          }
+          if (cell.column.id === "cekfu") {
+            return cell.getValue() ? "YES" : "NO";
+          }
+          // Handle the case where cell.column.id is 'resino' or 'orderno' and it contains a button
+          // We only want the text content, not the button HTML.
+          if (cell.column.id === "resino" || cell.column.id === "orderno" || cell.column.id === "Resi") {
+            const value = cell.getValue();
+            return String(value || "");
+          }
+          return String(cell.getValue() || "");
+        });
+      return rowValues.join('\t');
+    }).join('\n');
+
+    const textToCopy = `${headerRow}\n${dataRows}`;
+
+    try {
+      await navigator.clipboard.writeText(textToCopy);
+      showSuccess(`Berhasil menyalin ${rowsToCopy.length} baris data!`);
+    } catch (err: any) {
+      showError(`Gagal menyalin data tabel: ${err.message || "Unknown error"}`);
+      console.error("Failed to copy table data:", err);
+    }
+  }, [table]);
+
+  const getPaginationPages = useMemo(() => {
+    const pages = [];
+    const totalPages = table.getPageCount();
+    const currentPage = table.getState().pagination.pageIndex + 1;
+
+    if (totalPages <= 3) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (currentPage <= 2) {
+        pages.push(1, 2, 3);
+      } else if (currentPage >= totalPages - 1) {
+        pages.push(totalPages - 2, totalPages - 1, totalPages);
+      } else {
+        pages.push(currentPage - 1, currentPage, currentPage + 1);
+      }
+    }
+    return pages;
+  }, [table.getPageCount(), table.getState().pagination.pageIndex]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -99,84 +357,113 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
-            Lihat detail resi untuk ekspedisi {expeditionName}.
+            Menampilkan {table.getFilteredRowModel().rows.length} dari {data.length} resi.
+            {selectedCourier && ` (Kurir: ${selectedCourier})`}
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2">
-            <Input
-              placeholder="Cari Resi..."
-              value={searchResi}
-              onChange={(e) => setSearchResi(e.target.value)}
-              className="flex-1"
-            />
-            <Input
-              placeholder="Cari No. Karung..."
-              value={searchNokarung}
-              onChange={(e) => setSearchNokarung(e.target.value)}
-              className="flex-1"
-            />
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant={"outline"}
-                  className={cn(
-                    "w-full sm:w-[280px] justify-start text-left font-normal",
-                    !selectedDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {selectedDate ? format(selectedDate, "PPP") : <span>Pilih tanggal</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={setSelectedDate}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-            <Button onClick={fetchData} disabled={isLoading}>
-              {isLoading ? "Memuat..." : "Terapkan Filter"}
-            </Button>
-            <Button variant="outline" onClick={handleClearFilter} disabled={isLoading}>
-              Bersihkan Filter
-            </Button>
-          </div>
-          <div className="mt-4 overflow-auto max-h-[calc(90vh-200px)]">
-            {isLoading ? (
-              <p>Memuat data...</p>
-            ) : filteredData.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Resi</TableHead>
-                    <TableHead>No. Karung</TableHead>
-                    <TableHead>Tanggal Dibuat</TableHead>
-                    <TableHead>Ekspedisi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredData.map((item, index) => (
-                    <TableRow key={index}>
-                      <TableCell>{item.Resi}</TableCell>
-                      <TableCell>{item.nokarung}</TableCell>
-                      <TableCell>{item.created ? format(new Date(item.created), 'dd MMM yyyy HH:mm') : '-'}</TableCell>
-                      <TableCell>{item.couriername}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <p>Tidak ada data yang ditemukan untuk filter ini.</p>
-            )}
-          </div>
+        <div className="my-4 flex flex-col md:flex-row gap-2 w-full overflow-x-hidden">
+          <Input
+            id="search-term-input"
+            placeholder="Cari..."
+            value={globalFilter}
+            onChange={(e) => setGlobalFilter(e.target.value)}
+            className="w-full"
+          />
+          <Button
+            onClick={handleCopyTableData}
+            className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            <Copy className="mr-2 h-4 w-4" /> Copy Table Data
+          </Button>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Tutup</Button>
-        </DialogFooter>
+        <div className="overflow-x-scroll flex-grow">
+          <Table>
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => {
+                    return (
+                      <TableHead key={header.id} colSpan={header.colSpan}>
+                        {header.isPlaceholder ? null : (
+                          <div
+                            {...{
+                              className: header.column.getCanSort()
+                                ? "cursor-pointer select-none"
+                                : "",
+                              onClick: header.column.getToggleSortingHandler(),
+                            }}
+                          >
+                            {flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                            {{
+                              asc: " 🔼",
+                              desc: " 🔽",
+                            }[header.column.getIsSorted() as string] ?? null}
+                          </div>
+                        )}
+                      </TableHead>
+                    );
+                  })}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && "selected"}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={columns.length} className="h-24 text-center">
+                    Tidak ada data.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+        {table.getPageCount() > 1 && (
+          <Pagination className="mt-4">
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  href="#"
+                  onClick={() => table.previousPage()}
+                  className={!table.getCanPreviousPage() ? "pointer-events-none opacity-50" : ""}
+                />
+              </PaginationItem>
+              {getPaginationPages.map((pageNumber) => (
+                <PaginationItem key={pageNumber}>
+                  <PaginationLink
+                    href="#"
+                    isActive={pageNumber === table.getState().pagination.pageIndex + 1}
+                    onClick={() => table.setPageIndex(pageNumber - 1)}
+                  >
+                    {pageNumber}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
+              <PaginationItem>
+                <PaginationNext
+                  href="#"
+                  onClick={() => table.nextPage()}
+                  className={!table.getCanNextPage() ? "pointer-events-none opacity-50" : ""}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        )}
       </DialogContent>
     </Dialog>
   );

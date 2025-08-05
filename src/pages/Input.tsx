@@ -16,7 +16,7 @@ import KarungSummaryModal from "@/components/KarungSummaryModal";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
-import { useAllFlagYesExpedisiResiNumbers } from "@/hooks/useAllFlagYesExpedisiResiNumbers"; // NEW: Import the new hook
+import { useAllFlagYesExpedisiResiNumbers } from "@/hooks/useAllFlagYesExpedisiResiNumbers";
 
 const InputPage = () => {
   const { expedition, setExpedition } = useExpedition();
@@ -163,7 +163,10 @@ const InputPage = () => {
               <label htmlFor="expedition-select" className="block text-left text-sm font-medium mb-2">
                 Expedisi
               </label>
-              <Select onValueChange={setExpedition} value={expedition} disabled={isProcessing || isLoadingAllFlagNoExpedisiData || isLoadingAllFlagYesExpedisiResiNumbers}>
+              <Select onValueChange={(value) => {
+                setExpedition(value);
+                resiInputRef.current?.focus(); // Auto-focus here
+              }} value={expedition} disabled={isProcessing || isLoadingAllFlagNoExpedisiData || isLoadingAllFlagYesExpedisiResiNumbers}>
                 <SelectTrigger id="expedition-select" className="w-full bg-white text-gray-800 h-12 text-center justify-center">
                   <SelectValue placeholder="Pilih Expedisi" />
                 </SelectTrigger>
@@ -178,7 +181,10 @@ const InputPage = () => {
               <label htmlFor="no-karung-select" className="block text-left text-sm font-medium mb-2">
                 No Karung
               </label>
-              <Select onValueChange={setSelectedKarung} value={selectedKarung} disabled={!expedition || isProcessing || isLoadingAllFlagNoExpedisiData || isLoadingAllFlagYesExpedisiResiNumbers}>
+              <Select onValueChange={(value) => {
+                setSelectedKarung(value);
+                resiInputRef.current?.focus(); // Auto-focus here
+              }} value={selectedKarung} disabled={!expedition || isProcessing || isLoadingAllFlagNoExpedisiData || isLoadingAllFlagYesExpedisiResiNumbers}>
                 <SelectTrigger id="no-karung-select" className="w-full bg-white text-gray-800 h-12 text-center justify-center">
                   <SelectValue placeholder="Pilih No Karung" />
                 </SelectTrigger>

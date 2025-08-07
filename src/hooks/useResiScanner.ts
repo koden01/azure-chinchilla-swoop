@@ -174,9 +174,22 @@ export const useResiScanner = ({
         }
       }
 
+      if (validationStatus === 'OK' && expedisiRecordFromCache) {
+        const normalizedExpedisiCourierName = normalizeExpeditionName(expedisiRecordFromCache.couriername);
+        const normalizedSelectedExpedition = normalizeExpeditionName(expedition);
+
+        const isIdMatch = (normalizedSelectedExpedition === 'ID' && (normalizedExpedisiCourierName === 'ID' || normalizedExpedisiCourierName === 'ID_REKOMENDASI'));
+        const isDirectMatch = (normalizedSelectedExpedition === normalizedExpedisiCourierName);
+
+        if (!isIdMatch && !isDirectMatch) {
+          validationStatus = 'MISMATCH_EXPEDISI';
+          validationMessage = `Resi ini terdaftar untuk ekspedisi ${expedisiRecordFromCache.couriername}, bukan ${expedition}.`;
+        }
+      }
+
       if (validationStatus !== 'OK') {
         showError(validationMessage || "Validasi gagal.");
-        if (validationStatus === 'NOT_FOUND_IN_EXPEDISI') {
+        if (validationStatus === 'MISMATCH_EXPEDISI' || validationStatus === 'NOT_FOUND_IN_EXPEDISI') {
           playBeep(beepFailure);
         } else {
           playBeep(beepDouble);
@@ -295,10 +308,17 @@ export const useResiScanner = ({
   }, [expedition, selectedKarung, formattedDate, allExpedisiDataUnfiltered, allFlagNoExpedisiData, allResiForExpedition, queryClient, debouncedTriggerSync, validateInput, startTransition, isPending, initialTotalExpeditionItems, initialRemainingExpeditionItems, initialIdExpeditionScanCount, queryKeyForInputPageDisplay, queryKeyForKarungSummary, queryKeyForTotalExpeditionItems, queryKeyForRemainingExpeditionItems, queryKeyForIdExpeditionScanCount, allFlagYesExpedisiResiNumbers, today]);
 
   React.useEffect(() => {
-    const handleGlobalKeyUp = (event: KeyboardEvent) => {
+    const handleGlobalKeyDown = (event: KeyboardEvent) => {
       if (isProcessing || !expedition || !selectedKarung) {
         return;
       }
+
+      const currentTime = Date.now();
+      
+      if (currentTime - lastKeyPressTime.current > SCANNER_TIMEOUT_MS) {
+        scannerInputBuffer.current = '';
+      }
+      lastKeyPressTime.current = currentTime;
 
       if (event.key === 'Enter') {
         event.preventDefault();
@@ -307,27 +327,19 @@ export const useResiScanner = ({
           processScannedResi(scannerInputBuffer.current);
           scannerInputBuffer.current = '';
         }
-      } else {
-        const currentTime = Date.now();
-        if (currentTime - lastKeyPressTime.current > SCANNER_TIMEOUT_MS) {
-          scannerInputBuffer.current = '';
-        }
-        lastKeyPressTime.current = currentTime;
-
-        if (event.key.length === 1) {
-          scannerInputBuffer.current += event.key;
-          setResiNumber(scannerInputBuffer.current);
-        } else if (event.key === 'Backspace') {
-          scannerInputBuffer.current = scannerInputBuffer.current.slice(0, -1);
-          setResiNumber(scannerInputBuffer.current);
-        }
+      } else if (event.key.length === 1) {
+        scannerInputBuffer.current += event.key;
+        setResiNumber(scannerInputBuffer.current);
+      } else if (event.key === 'Backspace') {
+        scannerInputBuffer.current = scannerInputBuffer.current.slice(0, -1);
+        setResiNumber(scannerInputBuffer.current);
       }
     };
 
-    window.addEventListener('keyup', handleGlobalKeyUp);
+    window.addEventListener('keydown', handleGlobalKeyDown);
 
     return () => {
-      window.removeEventListener('keyup', handleGlobalKeyUp);
+      window.removeEventListener('keydown', handleGlobalKeyDown);
     };
   }, [isProcessing, expedition, selectedKarung, processScannedResi]);
 

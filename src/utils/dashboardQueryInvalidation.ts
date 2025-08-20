@@ -10,7 +10,7 @@ export const invalidateDashboardQueries = (queryClient: QueryClient, date: Date 
   // These are usually tied to a specific date.
   queryClient.invalidateQueries({ queryKey: ["transaksiHariIni", formattedDate] });
   queryClient.invalidateQueries({ queryKey: ["totalScan", formattedDate] });
-  queryClient.invalidateQueries({ queryKey: ["idRekCount", formattedDate] }); // This is for Dashboard page
+  // queryClient.invalidateQueries({ queryKey: ["idRekCount", formattedDate] }); // Removed
   queryClient.invalidateQueries({ queryKey: ["belumKirim", formattedDate] });
   queryClient.invalidateQueries({ queryKey: ["scanFollowupLateCount", formattedDate] });
   queryClient.invalidateQueries({ queryKey: ["batalCount", formattedDate] });
@@ -21,18 +21,15 @@ export const invalidateDashboardQueries = (queryClient: QueryClient, date: Date 
   queryClient.invalidateQueries({ queryKey: ["allResiData"], exact: false });
   
   // Invalidate queries specific to the Input page and comprehensive data
-  // Normalize expedition name for invalidation if it's ID_REKOMENDASI, as Input page treats it as 'ID'
+  // No special normalization for 'ID_REKOMENDASI' needed here anymore
   let normalizedExpeditionForInput: string | undefined = expedition;
-  if (expedition === 'ID_REKOMENDASI') {
-    normalizedExpeditionForInput = 'ID';
-  }
 
   if (normalizedExpeditionForInput) {
     queryClient.invalidateQueries({ queryKey: ["karungSummary", normalizedExpeditionForInput, formattedDate] });
     queryClient.invalidateQueries({ queryKey: ["lastKarung", normalizedExpeditionForInput, formattedDate] });
     queryClient.invalidateQueries({ queryKey: ["allResiForExpedition", normalizedExpeditionForInput, formattedDate] });
     // Menambahkan invalidasi untuk query Input page yang relevan
-    queryClient.invalidateQueries({ queryKey: ["idExpeditionScanCount", formattedDate] });
+    // queryClient.invalidateQueries({ queryKey: ["idExpeditionScanCount", formattedDate] }); // Removed
     queryClient.invalidateQueries({ queryKey: ["totalExpeditionItems", normalizedExpeditionForInput, formattedDate] });
     queryClient.invalidateQueries({ queryKey: ["remainingExpeditionItems", normalizedExpeditionForInput, formattedDate] });
   }

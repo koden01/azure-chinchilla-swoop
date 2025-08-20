@@ -10,7 +10,7 @@ interface ExpeditionSummary {
   totalScan: number;
   sisa: number;
   jumlahKarung: number;
-  idRekomendasi?: number;
+  // idRekomendasi?: number; // Removed
   totalBatal: number;
   totalScanFollowUp: number;
 }
@@ -49,7 +49,7 @@ const DashboardExpeditionDetails: React.FC<DashboardExpeditionDetailsProps> = ({
                   totalScan={summary.totalScan}
                   sisa={summary.sisa}
                   jumlahKarung={summary.jumlahKarung}
-                  idRekomendasi={summary.idRekomendasi}
+                  // idRekomendasi={summary.idRekomendasi} // Removed
                   totalBatal={summary.totalBatal}
                   totalScanFollowUp={summary.totalScanFollowUp}
                 />

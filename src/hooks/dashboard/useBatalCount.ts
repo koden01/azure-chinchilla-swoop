@@ -13,6 +13,7 @@ export const useBatalCount = (date: Date | undefined) => {
         .from("tbl_resi")
         .select("*", { count: "exact" })
         .eq("schedule", "batal")
+        // No special handling for 'ID' or 'ID_REKOMENDASI' here
         .gte("created", startOfDay(date).toISOString())
         .lt("created", endOfDay(date).toISOString());
       if (error) {

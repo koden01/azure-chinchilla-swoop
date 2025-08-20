@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, showError, dismissToast } from "@/utils/toast";
 import { beepSuccess, beepFailure, beepDouble, beepStart } from "@/utils/audio";
 import { useQueryClient } from "@tanstack/react-query";
-import { format, isSameDay } from "date-fns"; // Import isSameDay
+import { format, isSameDay } from "date-fns";
 import { normalizeExpeditionName } from "@/utils/expeditionUtils";
 import { addPendingOperation } from "@/integrations/indexeddb/pendingOperations";
 import { useBackgroundSync } from "@/hooks/useBackgroundSync";
@@ -17,7 +17,7 @@ interface UseResiScannerProps {
   allResiForExpedition: any[] | undefined;
   initialTotalExpeditionItems: number | undefined;
   initialRemainingExpeditionItems: number | undefined;
-  initialIdExpeditionScanCount: number | undefined;
+  // initialIdExpeditionScanCount: number | undefined; // Removed
   allFlagNoExpedisiData: Map<string, any> | undefined;
   allFlagYesExpedisiResiNumbers: Set<string> | undefined;
 }
@@ -30,7 +30,7 @@ export const useResiScanner = ({
   allResiForExpedition,
   initialTotalExpeditionItems,
   initialRemainingExpeditionItems,
-  initialIdExpeditionScanCount,
+  // initialIdExpeditionScanCount, // Removed
   allFlagNoExpedisiData,
   allFlagYesExpedisiResiNumbers,
 }: UseResiScannerProps) => {
@@ -38,7 +38,7 @@ export const useResiScanner = ({
   const [isProcessing, setIsProcessing] = React.useState<boolean>(false);
   const [optimisticTotalExpeditionItems, setOptimisticTotalExpeditionItems] = React.useState(initialTotalExpeditionItems || 0);
   const [optimisticRemainingExpeditionItems, setOptimisticRemainingExpeditionItems] = React.useState(initialRemainingExpeditionItems || 0);
-  const [optimisticIdExpeditionScanCount, setOptimisticIdExpeditionScanCount] = React.useState(initialIdExpeditionScanCount || 0);
+  // const [optimisticIdExpeditionScanCount, setOptimisticIdExpeditionScanCount] = React.useState(initialIdExpeditionScanCount || 0); // Removed
   const resiInputRef = React.useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const { triggerSync: debouncedTriggerSync } = useBackgroundSync();
@@ -51,7 +51,7 @@ export const useResiScanner = ({
   const queryKeyForKarungSummary = ["karungSummary", expedition, formattedToday];
   const queryKeyForTotalExpeditionItems = ["totalExpeditionItems", expedition, formattedToday];
   const queryKeyForRemainingExpeditionItems = ["remainingExpeditionItems", expedition, formattedToday];
-  const queryKeyForIdExpeditionScanCount = ["idExpeditionScanCount", formattedToday];
+  // const queryKeyForIdExpeditionScanCount = ["idExpeditionScanCount", formattedToday]; // Removed
 
   const scannerInputBuffer = React.useRef<string>('');
   const lastKeyPressTime = React.useRef<number>(0);
@@ -65,9 +65,9 @@ export const useResiScanner = ({
     setOptimisticRemainingExpeditionItems(initialRemainingExpeditionItems || 0);
   }, [initialRemainingExpeditionItems]);
 
-  React.useEffect(() => {
-    setOptimisticIdExpeditionScanCount(initialIdExpeditionScanCount || 0);
-  }, [initialIdExpeditionScanCount]);
+  // React.useEffect(() => { // Removed
+  //   setOptimisticIdExpeditionScanCount(initialIdExpeditionScanCount || 0);
+  // }, [initialIdExpeditionScanCount]);
 
   const playBeep = (audio: HTMLAudioElement) => {
     setTimeout(() => {
@@ -165,23 +165,19 @@ export const useResiScanner = ({
         }
 
       } else {
-        if (normalizeExpeditionName(expedition) === 'ID') {
-          actualCourierNameForResiTable = "ID_REKOMENDASI";
-          actualScheduleForResiTable = "idrek"; // For ID_REKOMENDASI, it's always 'idrek'
-        } else {
-          validationStatus = 'NOT_FOUND_IN_EXPEDISI';
-          validationMessage = `Data resi ${currentResi} tidak ditemukan di database.`;
-        }
+        // No special handling for 'ID' here. If not found in tbl_expedisi, it's not found.
+        validationStatus = 'NOT_FOUND_IN_EXPEDISI';
+        validationMessage = `Data resi ${currentResi} tidak ditemukan di database.`;
       }
 
       if (validationStatus === 'OK' && expedisiRecordFromCache) {
         const normalizedExpedisiCourierName = normalizeExpeditionName(expedisiRecordFromCache.couriername);
         const normalizedSelectedExpedition = normalizeExpeditionName(expedition);
 
-        const isIdMatch = (normalizedSelectedExpedition === 'ID' && (normalizedExpedisiCourierName === 'ID' || normalizedExpedisiCourierName === 'ID_REKOMENDASI'));
+        // No special 'ID' match logic, just direct match
         const isDirectMatch = (normalizedSelectedExpedition === normalizedExpedisiCourierName);
 
-        if (!isIdMatch && !isDirectMatch) {
+        if (!isDirectMatch) {
           validationStatus = 'MISMATCH_EXPEDISI';
           validationMessage = `Resi ini terdaftar untuk ekspedisi ${expedisiRecordFromCache.couriername}, bukan ${expedition}.`;
         }
@@ -199,20 +195,19 @@ export const useResiScanner = ({
       }
 
       setOptimisticTotalExpeditionItems(prev => {
-        const isTrulyNewIdEntry = (normalizeExpeditionName(expedition) === 'ID' && !expedisiRecordFromCache);
-        return prev + (isTrulyNewIdEntry ? 1 : 0);
+        // If the resi was not found in tbl_expedisi (meaning it's a new entry for this expedition)
+        // and it matches the currently selected expedition, increment total.
+        // This logic needs to be careful if 'ID_REKOMENDASI' is now a separate expedition.
+        // If it's a new resi for the selected expedition, increment total.
+        const isNewEntryForSelectedExpedition = !expedisiRecordFromCache && normalizeExpeditionName(expedition) === normalizeExpeditionName(expedition);
+        return prev + (isNewEntryForSelectedExpedition ? 1 : 0);
       });
       setOptimisticRemainingExpeditionItems(prev => {
         const newRemaining = prev - (wasFlagNo ? 1 : 0);
         return newRemaining;
       });
       
-      if (expedition === 'ID') {
-        setOptimisticIdExpeditionScanCount(prev => {
-          const newIdScanCount = prev + 1;
-          return newIdScanCount;
-        });
-      }
+      // Removed optimisticIdExpeditionScanCount update
 
       queryClient.setQueryData(queryKeyForInputPageDisplay, (oldData: ResiExpedisiData[] | undefined) => {
         const newData = [...(oldData || [])];
@@ -221,8 +216,8 @@ export const useResiScanner = ({
           Resi: currentResi,
           nokarung: selectedKarung,
           created: new Date().toISOString(),
-          Keterangan: actualCourierNameForResiTable,
-          schedule: actualScheduleForResiTable, // Now correctly set to 'ontime' or 'late' optimistically
+          Keterangan: actualCourierNameForResiTable || expedition, // Use actualCourierNameForResiTable or current expedition
+          schedule: actualScheduleForResiTable,
         };
 
         if (existingResiIndex !== -1) {
@@ -240,7 +235,7 @@ export const useResiScanner = ({
           ...(existingExpedisi || { resino: currentResi, created: new Date().toISOString() }),
           flag: "YES",
           cekfu: false,
-          couriername: actualCourierNameForResiTable,
+          couriername: actualCourierNameForResiTable || expedition, // Use actualCourierNameForResiTable or current expedition
         });
         return newMap;
       });
@@ -267,7 +262,7 @@ export const useResiScanner = ({
         payload: {
           resiNumber: currentResi,
           selectedKarung: selectedKarung,
-          courierNameFromExpedisi: actualCourierNameForResiTable,
+          courierNameFromExpedisi: actualCourierNameForResiTable || expedition, // Use actualCourierNameForResiTable or current expedition
         },
         timestamp: Date.now(),
       });
@@ -290,7 +285,7 @@ export const useResiScanner = ({
 
       setOptimisticTotalExpeditionItems(initialTotalExpeditionItems || 0);
       setOptimisticRemainingExpeditionItems(initialTotalExpeditionItems || 0); // Reset to initial total
-      setOptimisticIdExpeditionScanCount(initialIdExpeditionScanCount || 0);
+      // setOptimisticIdExpeditionScanCount(initialIdExpeditionScanCount || 0); // Removed
 
       startTransition(() => {
         queryClient.invalidateQueries({ queryKey: queryKeyForInputPageDisplay });
@@ -299,13 +294,13 @@ export const useResiScanner = ({
         queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] });
         queryClient.invalidateQueries({ queryKey: queryKeyForTotalExpeditionItems });
         queryClient.invalidateQueries({ queryKey: queryKeyForRemainingExpeditionItems });
-        queryClient.invalidateQueries({ queryKey: queryKeyForIdExpeditionScanCount });
+        // queryClient.invalidateQueries({ queryKey: queryKeyForIdExpeditionScanCount }); // Removed
         queryClient.invalidateQueries({ queryKey: ["allFlagYesExpedisiResiNumbers"] });
       });
     } finally {
       setIsProcessing(false);
     }
-  }, [expedition, selectedKarung, formattedDate, allExpedisiDataUnfiltered, allFlagNoExpedisiData, allResiForExpedition, queryClient, debouncedTriggerSync, validateInput, startTransition, isPending, initialTotalExpeditionItems, initialRemainingExpeditionItems, initialIdExpeditionScanCount, queryKeyForInputPageDisplay, queryKeyForKarungSummary, queryKeyForTotalExpeditionItems, queryKeyForRemainingExpeditionItems, queryKeyForIdExpeditionScanCount, allFlagYesExpedisiResiNumbers, today]);
+  }, [expedition, selectedKarung, formattedDate, allExpedisiDataUnfiltered, allFlagNoExpedisiData, allResiForExpedition, queryClient, debouncedTriggerSync, validateInput, startTransition, isPending, initialTotalExpeditionItems, initialRemainingExpeditionItems, allFlagYesExpedisiResiNumbers, today, queryKeyForInputPageDisplay, queryKeyForKarungSummary, queryKeyForTotalExpeditionItems, queryKeyForRemainingExpeditionItems]);
 
   React.useEffect(() => {
     const handleGlobalKeyDown = (event: KeyboardEvent) => {
@@ -354,6 +349,6 @@ export const useResiScanner = ({
     isLoadingAllFlagNoExpedisiData: false,
     optimisticTotalExpeditionItems,
     optimisticRemainingExpeditionItems,
-    optimisticIdExpeditionScanCount,
+    optimisticIdExpeditionScanCount: 0, // Always 0 as special handling is removed
   };
 };

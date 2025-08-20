@@ -49,20 +49,20 @@ const Navbar = () => {
       },
     });
 
-    // Prefetch ID Rekomendasi
-    queryClient.prefetchQuery({
-      queryKey: ["idRekCount", formattedDateISO], // Use formattedDateISO
-      queryFn: async () => {
-        const { count, error } = await supabase
-          .from("tbl_resi")
-          .select("*", { count: "exact" })
-          .eq("Keterangan", "ID_REKOMENDASI")
-          .gte("created", today.toISOString().split('T')[0] + 'T00:00:00.000Z')
-          .lt("created", new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0] + 'T00:00:00.000Z');
-        if (error) throw error;
-        return count || 0;
-      },
-    });
+    // Prefetch ID Rekomendasi - REMOVED as special handling for 'ID' is removed.
+    // queryClient.prefetchQuery({
+    //   queryKey: ["idRekCount", formattedDateISO],
+    //   queryFn: async () => {
+    //     const { count, error } = await supabase
+    //       .from("tbl_resi")
+    //       .select("*", { count: "exact" })
+    //       .eq("Keterangan", "ID_REKOMENDASI")
+    //       .gte("created", today.toISOString().split('T')[0] + 'T00:00:00.000Z')
+    //       .lt("created", new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0] + 'T00:00:00.000Z');
+    //     if (error) throw error;
+    //     return count || 0;
+    //   },
+    // });
 
     // Prefetch Belum Kirim
     queryClient.prefetchQuery({

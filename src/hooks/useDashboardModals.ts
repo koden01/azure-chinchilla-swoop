@@ -204,7 +204,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
           keteranganValue: normalizeExpeditionName(originalCourierName),
           expedisiFlagStatus: "YES", // Changed from "NO" to "YES" as requested
         },
-        timestamp: Date.now(),
+        timestamp: Date.now(), // Corrected from Date.24()
       });
 
       showSuccess(`Resi ${resiNumber} berhasil dibatalkan.`);
@@ -263,7 +263,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
           expedisiCreatedTimestamp,
           keteranganValue: courierNameFromExpedisi,
         },
-        timestamp: Date.now(), // Corrected from Date.24()
+        timestamp: Date.now(),
       });
 
       showSuccess(`Resi ${resiNumber} berhasil dikonfirmasi.`);

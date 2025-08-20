@@ -3,10 +3,11 @@
 /**
  * Daftar nama ekspedisi yang dikenal (dinormalisasi ke UPPERCASE).
  * Ini harus mencakup semua nama kurir yang mungkin muncul di tbl_expedisi.couriername
- * dan tbl_resi.Keterangan (kecuali 'ID_REKOMENDASI' yang akan dipetakan ke 'ID').
+ * dan tbl_resi.Keterangan.
  */
 export const KNOWN_EXPEDITIONS = [
-  "ID", // Untuk ID dan ID_REKOMENDASI
+  "ID",
+  "ID_REKOMENDASI", // Sekarang diperlakukan sebagai ekspedisi terpisah
   "JNE",
   "SPX",
   "INSTAN",
@@ -17,18 +18,14 @@ export const KNOWN_EXPEDITIONS = [
 
 /**
  * Menormalisasi nama ekspedisi atau keterangan.
- * Mengubah 'ID_REKOMENDASI' menjadi 'ID' dan mengonversi ke UPPERCASE.
+ * Hanya mengonversi ke UPPERCASE. 'ID_REKOMENDASI' tidak lagi dipetakan ke 'ID'.
  *
  * @param name Nama ekspedisi atau keterangan.
  * @returns Nama yang dinormalisasi.
  */
 export function normalizeExpeditionName(name: string | null | undefined): string | null {
   if (!name) return null;
-  const trimmedUpper = name.trim().toUpperCase();
-  if (trimmedUpper === "ID_REKOMENDASI") {
-    return "ID";
-  }
-  return trimmedUpper;
+  return name.trim().toUpperCase();
 }
 
 /**
@@ -46,10 +43,10 @@ export function getKeteranganBadgeClasses(keterangan: string | null | undefined)
       return "bg-green-100 text-green-800";
     case "BATAL":
       return "bg-orange-100 text-orange-800";
-    case "ID": // Jika ID juga perlu badge khusus
+    case "ID":
       return "bg-purple-100 text-purple-800";
-    case "ID_REKOMENDASI": // Jika ID_REKOMENDASI juga perlu badge khusus
-      return "bg-purple-100 text-purple-800";
+    case "ID_REKOMENDASI":
+      return "bg-pink-100 text-pink-800"; // Warna berbeda untuk ID_REKOMENDASI
     default:
       return "bg-gray-100 text-gray-800";
   }

@@ -12,7 +12,8 @@ export const useTotalScanCount = (date: Date | undefined) => {
       const { count, error } = await supabase
         .from("tbl_resi")
         .select("*", { count: "exact" })
-        .eq("schedule", "ontime")
+        .eq("schedule", "ontime") // Only count 'ontime' scans
+        // No special handling for 'ID' or 'ID_REKOMENDASI' here
         .gte("created", startOfDay(date).toISOString())
         .lt("created", endOfDay(date).toISOString());
       if (error) {

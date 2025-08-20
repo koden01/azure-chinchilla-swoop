@@ -8,7 +8,7 @@ interface ExpeditionDetailCardProps {
   totalScan: number;
   sisa: number;
   jumlahKarung: number;
-  idRekomendasi?: number;
+  // idRekomendasi?: number; // Removed
   totalBatal: number;
   totalScanFollowUp: number;
   // gradientFrom dan gradientTo tidak lagi digunakan untuk background card itu sendiri
@@ -23,12 +23,12 @@ const ExpeditionDetailCard: React.FC<ExpeditionDetailCardProps> = React.memo(({
   totalScan,
   sisa,
   jumlahKarung,
-  idRekomendasi,
+  // idRekomendasi, // Removed
   totalBatal,
   totalScanFollowUp,
 }) => {
   const normalizedName = normalizeExpeditionName(name);
-  const showIdRekomendasi = normalizedName === "ID" && idRekomendasi !== undefined;
+  // const showIdRekomendasi = normalizedName === "ID" && idRekomendasi !== undefined; // Removed
 
   return (
     <Card
@@ -46,7 +46,7 @@ const ExpeditionDetailCard: React.FC<ExpeditionDetailCardProps> = React.memo(({
             <p>Jumlah Karung:</p>
             <p>Batal:</p>
             <p>Scan Follow Up:</p>
-            {showIdRekomendasi && <p>ID Rekomendasi:</p>}
+            {/* {showIdRekomendasi && <p>ID Rekomendasi:</p>} */} {/* Removed */}
           </div>
           <div className="text-right font-medium">
             <p>{totalTransaksi}</p>
@@ -55,7 +55,7 @@ const ExpeditionDetailCard: React.FC<ExpeditionDetailCardProps> = React.memo(({
             <p>{jumlahKarung}</p>
             <p>{totalBatal}</p>
             <p>{totalScanFollowUp}</p>
-            {showIdRekomendasi && <p>{idRekomendasi}</p>}
+            {/* {showIdRekomendasi && <p>{idRekomendasi}</p>} */} {/* Removed */}
           </div>
         </CardContent>
       </div>

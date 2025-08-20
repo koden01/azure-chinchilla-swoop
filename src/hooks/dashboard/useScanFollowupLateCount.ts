@@ -13,6 +13,7 @@ export const useScanFollowupLateCount = (date: Date | undefined) => {
         .from("tbl_resi")
         .select("*", { count: "exact" })
         .eq("schedule", "late")
+        // No special handling for 'ID' or 'ID_REKOMENDASI' here, just 'late' schedule
         .gte("created", startOfDay(date).toISOString())
         .lt("created", endOfDay(date).toISOString());
       if (error) {

@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, startOfDay, endOfDay, isSameDay } from "date-fns"; // Menghapus subDays
+import { format, startOfDay, endOfDay, isSameDay } from "date-fns";
 import React from "react";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 import { normalizeExpeditionName, KNOWN_EXPEDITIONS } from "@/utils/expeditionUtils";
@@ -25,7 +25,6 @@ interface AllKarungSummaryItem {
 export const useResiInputData = (expedition: string, showAllExpeditionSummary: boolean) => {
   const today = new Date();
   const formattedToday = format(today, "yyyy-MM-dd");
-  // const fiveDaysAgo = subDays(today, 4); // Dihapus karena tidak lagi diperlukan
 
   // Query to fetch all resi data for the current expedition and date range for local validation
   const { data: allResiForExpedition, isLoading: isLoadingAllResiForExpedition } = useQuery<ResiExpedisiData[]>({
@@ -41,13 +40,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
         today, // Hanya hari ini
         today, // Hanya hari ini
         "Resi, nokarung, created, Keterangan, schedule",
-        (baseQuery) => {
-          if (expedition === 'ID') {
-            return baseQuery.in("Keterangan", ['ID', 'ID_REKOMENDASI']);
-          } else {
-            return baseQuery.eq("Keterangan", expedition);
-          }
-        }
+        (baseQuery) => baseQuery.eq("Keterangan", expedition) // Tidak ada penanganan khusus untuk 'ID'
       );
       return data || [];
     },
@@ -109,7 +102,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       }
       
       const namesSet = new Set<string>();
-      KNOWN_EXPEDITIONS.forEach(name => namesSet.add(name));
+      KNOWN_EXPEDITIONS.forEach(name => namesSet.add(name)); // Tambahkan semua KNOWN_EXPEDITIONS
       data.forEach((item: { couriername: string | null }) => {
         if (item.couriername) {
           const normalizedName = normalizeExpeditionName(item.couriername);
@@ -166,27 +159,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     staleTime: 1000 * 30,
   });
 
-  // NEW: Query to get the specific scan count for 'ID' expedition from tbl_resi
-  const { data: idExpeditionScanCount, isLoading: isLoadingIdExpeditionScanCount } = useQuery<number>({
-    queryKey: ["idExpeditionScanCount", formattedToday],
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from("tbl_resi")
-        .select("*", { count: "exact" })
-        .in("Keterangan", ["ID", "ID_REKOMENDASI"])
-        .in("schedule", ["ontime", "idrek"])
-        .gte("created", startOfDay(today).toISOString())
-        .lt("created", endOfDay(today).toISOString());
-      
-      if (error) {
-        console.error("Error fetching ID expedition scan count:", error);
-        throw error;
-      }
-      return count || 0;
-    },
-    enabled: expedition === 'ID',
-    staleTime: 1000 * 30,
-  });
+  // Removed idExpeditionScanCount as special handling for 'ID' is removed.
 
   // Derive currentCount from allResiForExpedition, filtered for TODAY only
   const currentCount = React.useCallback((selectedKarung: string) => {
@@ -196,8 +169,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     const count = allResiForExpedition.filter(item => 
       isSameDay(new Date(item.created), today) && // Filter for today only
       item.nokarung === selectedKarung && 
-      (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition)
-      // Removed schedule filter
+      item.Keterangan === expedition // Tidak ada penanganan khusus untuk 'ID'
     ).length;
     return count;
   }, [allResiForExpedition, expedition, today]);
@@ -208,8 +180,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     const filteredResi = allResiForExpedition.filter(item => 
       isSameDay(new Date(item.created), today) && // Filter for today only
       item.nokarung !== null && 
-      (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition)
-      // Removed schedule filter
+      item.Keterangan === expedition // Tidak ada penanganan khusus untuk 'ID'
     );
     if (filteredResi.length === 0) return "0";
 
@@ -225,8 +196,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
       .filter(item => 
         isSameDay(new Date(item.created), today) && // Filter for today only
         item.nokarung !== null && 
-        (expedition === 'ID' ? (item.Keterangan === 'ID' || item.Keterangan === 'ID_REKOMENDASI') : item.Keterangan === expedition)
-        // Removed schedule filter
+        item.Keterangan === expedition // Tidak ada penanganan khusus untuk 'ID'
       )
       .map(item => parseInt(item.nokarung || "0"))
       .filter(num => !isNaN(num) && num > 0);
@@ -267,7 +237,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
 
   return {
     allResiForExpedition,
-    isLoadingAllResiForExpedition: isLoadingAllResiForExpedition || isLoadingAllKarungSummaries || isLoadingUniqueExpeditionNames || isLoadingTotalExpeditionItems || isLoadingRemainingExpeditionItems || isLoadingIdExpeditionScanCount,
+    isLoadingAllResiForExpedition: isLoadingAllResiForExpedition || isLoadingAllKarungSummaries || isLoadingUniqueExpeditionNames || isLoadingTotalExpeditionItems || isLoadingRemainingExpeditionItems, // Removed isLoadingIdExpeditionScanCount
     currentCount,
     lastKarung,
     highestKarung,
@@ -282,7 +252,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     remainingExpeditionItems,
     isLoadingTotalExpeditionItems,
     isLoadingRemainingExpeditionItems,
-    idExpeditionScanCount,
-    isLoadingIdExpeditionScanCount,
+    idExpeditionScanCount: 0, // Set to 0 or remove if not needed elsewhere
+    isLoadingIdExpeditionScanCount: false, // Set to false
   };
 };

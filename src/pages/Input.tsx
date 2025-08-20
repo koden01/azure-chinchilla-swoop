@@ -86,7 +86,7 @@ const InputPage = () => {
     expeditionOptions,
     totalExpeditionItems,
     remainingExpeditionItems,
-    idExpeditionScanCount,
+    // idExpeditionScanCount, // Removed
     currentCount: getResiCountForKarung,
   } = useResiInputData(expedition, false);
 
@@ -96,7 +96,7 @@ const InputPage = () => {
     isProcessing,
     optimisticTotalExpeditionItems,
     optimisticRemainingExpeditionItems,
-    optimisticIdExpeditionScanCount,
+    // optimisticIdExpeditionScanCount, // Removed
   } = useResiScanner({ 
     expedition, 
     selectedKarung, 
@@ -105,7 +105,7 @@ const InputPage = () => {
     allResiForExpedition,
     initialTotalExpeditionItems: totalExpeditionItems,
     initialRemainingExpeditionItems: remainingExpeditionItems,
-    initialIdExpeditionScanCount: idExpeditionScanCount,
+    // initialIdExpeditionScanCount: 0, // Pass 0 as it's no longer used // Removed
     // NEW: Pass the new cached data
     allFlagNoExpedisiData,
     allFlagYesExpedisiResiNumbers,
@@ -116,11 +116,9 @@ const InputPage = () => {
   }, [getResiCountForKarung, selectedKarung]);
 
   const scanCountToDisplay = React.useMemo(() => {
-    if (expedition === 'ID') {
-      return optimisticIdExpeditionScanCount;
-    }
+    // No special handling for 'ID' anymore, always calculate based on total and remaining
     return optimisticTotalExpeditionItems - optimisticRemainingExpeditionItems;
-  }, [expedition, optimisticIdExpeditionScanCount, optimisticTotalExpeditionItems, optimisticRemainingExpeditionItems]);
+  }, [optimisticTotalExpeditionItems, optimisticRemainingExpeditionItems]);
 
   React.useEffect(() => {
     if (expedition) {

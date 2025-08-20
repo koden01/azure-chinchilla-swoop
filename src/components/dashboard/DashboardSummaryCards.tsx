@@ -9,8 +9,8 @@ interface DashboardSummaryCardsProps {
   isLoadingTransaksiHariIni: boolean;
   totalScan: number | undefined;
   isLoadingTotalScan: boolean;
-  idRekCount: number | undefined;
-  isLoadingIdRekCount: boolean;
+  // idRekCount: number | undefined; // Removed
+  // isLoadingIdRekCount: boolean; // Removed
   belumKirim: number | undefined;
   isLoadingBelumKirim: boolean;
   followUpFlagNoCount: number | undefined;
@@ -30,8 +30,8 @@ const DashboardSummaryCards: React.FC<DashboardSummaryCardsProps> = ({
   isLoadingTransaksiHariIni,
   totalScan,
   isLoadingTotalScan,
-  idRekCount,
-  isLoadingIdRekCount,
+  // idRekCount, // Removed
+  // isLoadingIdRekCount, // Removed
   belumKirim,
   isLoadingBelumKirim,
   followUpFlagNoCount,
@@ -61,8 +61,8 @@ const DashboardSummaryCards: React.FC<DashboardSummaryCardsProps> = ({
       <SummaryCard
         title="Total Scan"
         value={isLoadingTotalScan ? <Loader2 className="h-5 w-5 animate-spin" /> : totalScan}
-        secondaryTitle="ID Rekomendasi"
-        secondaryValue={isLoadingIdRekCount ? <Loader2 className="h-3 w-3 animate-spin inline-block" /> : idRekCount}
+        // secondaryTitle="ID Rekomendasi" // Removed
+        // secondaryValue={isLoadingIdRekCount ? <Loader2 className="h-3 w-3 animate-spin inline-block" /> : idRekCount} // Removed
         gradientFrom="from-green-500"
         gradientTo="to-teal-600"
         icon="maximize"

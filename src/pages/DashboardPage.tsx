@@ -16,8 +16,6 @@ const DashboardPage: React.FC = () => {
     isLoadingTransaksiHariIni,
     totalScan,
     isLoadingTotalScan,
-    // idRekCount, // Removed
-    // isLoadingIdRekCount, // Removed
     belumKirim,
     isLoadingBelumKirim,
     followUpFlagNoCount,
@@ -55,7 +53,6 @@ const DashboardPage: React.FC = () => {
   const isLoadingAny =
     isLoadingTransaksiHariIni ||
     isLoadingTotalScan ||
-    // isLoadingIdRekCount || // Removed
     isLoadingBelumKirim ||
     isLoadingFollowUpFlagNoCount ||
     isLoadingScanFollowupLateCount ||
@@ -86,8 +83,6 @@ const DashboardPage: React.FC = () => {
             isLoadingTransaksiHariIni={isLoadingTransaksiHariIni}
             totalScan={totalScan}
             isLoadingTotalScan={isLoadingTotalScan}
-            // idRekCount={idRekCount} // Removed
-            // isLoadingIdRekCount={isLoadingIdRekCount} // Removed
             belumKirim={belumKirim}
             isLoadingBelumKirim={isLoadingBelumKirim}
             followUpFlagNoCount={followUpFlagNoCount}

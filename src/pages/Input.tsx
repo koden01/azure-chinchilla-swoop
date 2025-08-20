@@ -105,7 +105,6 @@ const InputPage = () => {
     allResiForExpedition,
     initialTotalExpeditionItems: totalExpeditionItems,
     initialRemainingExpeditionItems: remainingExpeditionItems,
-    initialIdExpeditionScanCount: 0, // Pass 0 as it's no longer used
     // NEW: Pass the new cached data
     allFlagNoExpedisiData,
     allFlagYesExpedisiResiNumbers,

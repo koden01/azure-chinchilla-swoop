@@ -43,7 +43,7 @@ interface DashboardDataReturn {
   expedisiDataForSelectedDate: ModalDataItem[] | undefined;
   isLoadingExpedisiDataForSelectedDate: boolean;
   allResiData: ModalDataItem[] | undefined;
-  isLoadingAllRes: boolean; // Corrected from isLoadingAllResi
+  isLoadingAllResi: boolean;
   isLoadingAllExpedisiUnfiltered: boolean;
 }
 
@@ -62,7 +62,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
   // Fetch data needed for detail modals and expedition summaries
   const { data: followUpData, isLoading: isLoadingFollowUp } = useFollowUpRecords(date);
   const { data: expedisiDataForSelectedDate, isLoading: isLoadingExpedisiDataForSelectedDate } = useExpedisiRecordsForSelectedDate(date);
-  const { data: allResiData, isLoading: isLoadingAllRes } = useAllResiRecords(date); // Corrected here
+  const { data: allResiData, isLoading: isLoadingAllResi } = useAllResiRecords(date);
   const { data: allExpedisiDataUnfiltered, isLoading: isLoadingAllExpedisiUnfiltered } = useAllExpedisiRecordsUnfiltered();
 
   // Get pending operations from IndexedDB
@@ -338,7 +338,7 @@ export const useCombinedDashboardData = (date: Date | undefined): DashboardDataR
     expedisiDataForSelectedDate: expedisiDataForSelectedDateWithOptimisticUpdates,
     isLoadingExpedisiDataForSelectedDate,
     allResiData: currentResiDataWithOptimisticUpdates,
-    isLoadingAllRes, // Corrected here
+    isLoadingAllResi,
     isLoadingAllExpedisiUnfiltered,
   };
 };

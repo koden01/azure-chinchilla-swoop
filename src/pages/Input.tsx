@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import { Input } from "@/components/ui/input";
 import {
@@ -131,6 +133,13 @@ const InputPage = () => {
       setSelectedKarung("");
     }
   }, [expedition, highestKarung]);
+
+  // NEW: Effect to focus on the scan resi input when expedition or karung changes
+  React.useEffect(() => {
+    if (expedition && selectedKarung && resiInputRef.current) {
+      resiInputRef.current.focus();
+    }
+  }, [expedition, selectedKarung, resiInputRef]);
 
   const isInputDisabled = !expedition || !selectedKarung || isProcessing || isLoadingAllExpedisiUnfiltered || isLoadingAllFlagNoExpedisiData || isLoadingAllFlagYesExpedisiResiNumbers;
 

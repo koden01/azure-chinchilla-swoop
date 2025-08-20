@@ -1,6 +1,5 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { normalizeExpeditionName } from "@/utils/expeditionUtils"; // Import new utility
 
 interface ExpeditionDetailCardProps {
   name: string;
@@ -27,7 +26,6 @@ const ExpeditionDetailCard: React.FC<ExpeditionDetailCardProps> = React.memo(({
   totalBatal,
   totalScanFollowUp,
 }) => {
-  const normalizedName = normalizeExpeditionName(name);
   // const showIdRekomendasi = normalizedName === "ID" && idRekomendasi !== undefined; // Removed
 
   return (

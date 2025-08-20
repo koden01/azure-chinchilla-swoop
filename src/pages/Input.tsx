@@ -105,7 +105,7 @@ const InputPage = () => {
     allResiForExpedition,
     initialTotalExpeditionItems: totalExpeditionItems,
     initialRemainingExpeditionItems: remainingExpeditionItems,
-    // initialIdExpeditionScanCount: 0, // Pass 0 as it's no longer used // Removed
+    initialIdExpeditionScanCount: 0, // Pass 0 as it's no longer used
     // NEW: Pass the new cached data
     allFlagNoExpedisiData,
     allFlagYesExpedisiResiNumbers,
@@ -116,7 +116,7 @@ const InputPage = () => {
   }, [getResiCountForKarung, selectedKarung]);
 
   const scanCountToDisplay = React.useMemo(() => {
-    // No special handling for 'ID' anymore, always calculate based on total and remaining
+    // Scan count is now always Total - Sisa (Remaining)
     return optimisticTotalExpeditionItems - optimisticRemainingExpeditionItems;
   }, [optimisticTotalExpeditionItems, optimisticRemainingExpeditionItems]);
 

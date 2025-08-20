@@ -17,7 +17,6 @@ interface UseResiScannerProps {
   allResiForExpedition: any[] | undefined;
   initialTotalExpeditionItems: number | undefined;
   initialRemainingExpeditionItems: number | undefined;
-  // initialIdExpeditionScanCount: number | undefined; // Removed
   allFlagNoExpedisiData: Map<string, any> | undefined;
   allFlagYesExpedisiResiNumbers: Set<string> | undefined;
 }
@@ -30,7 +29,6 @@ export const useResiScanner = ({
   allResiForExpedition,
   initialTotalExpeditionItems,
   initialRemainingExpeditionItems,
-  // initialIdExpeditionScanCount, // Removed
   allFlagNoExpedisiData,
   allFlagYesExpedisiResiNumbers,
 }: UseResiScannerProps) => {
@@ -38,7 +36,6 @@ export const useResiScanner = ({
   const [isProcessing, setIsProcessing] = React.useState<boolean>(false);
   const [optimisticTotalExpeditionItems, setOptimisticTotalExpeditionItems] = React.useState(initialTotalExpeditionItems || 0);
   const [optimisticRemainingExpeditionItems, setOptimisticRemainingExpeditionItems] = React.useState(initialRemainingExpeditionItems || 0);
-  // const [optimisticIdExpeditionScanCount, setOptimisticIdExpeditionScanCount] = React.useState(initialIdExpeditionScanCount || 0); // Removed
   const resiInputRef = React.useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const { triggerSync: debouncedTriggerSync } = useBackgroundSync();
@@ -51,7 +48,6 @@ export const useResiScanner = ({
   const queryKeyForKarungSummary = ["karungSummary", expedition, formattedToday];
   const queryKeyForTotalExpeditionItems = ["totalExpeditionItems", expedition, formattedToday];
   const queryKeyForRemainingExpeditionItems = ["remainingExpeditionItems", expedition, formattedToday];
-  // const queryKeyForIdExpeditionScanCount = ["idExpeditionScanCount", formattedToday]; // Removed
 
   const scannerInputBuffer = React.useRef<string>('');
   const lastKeyPressTime = React.useRef<number>(0);
@@ -64,10 +60,6 @@ export const useResiScanner = ({
   React.useEffect(() => {
     setOptimisticRemainingExpeditionItems(initialRemainingExpeditionItems || 0);
   }, [initialRemainingExpeditionItems]);
-
-  // React.useEffect(() => { // Removed
-  //   setOptimisticIdExpeditionScanCount(initialIdExpeditionScanCount || 0);
-  // }, [initialIdExpeditionScanCount]);
 
   const playBeep = (audio: HTMLAudioElement) => {
     setTimeout(() => {
@@ -165,7 +157,7 @@ export const useResiScanner = ({
         }
 
       } else {
-        // No special handling for 'ID' here. If not found in tbl_expedisi, it's not found.
+        // If not found in tbl_expedisi, it's not found.
         validationStatus = 'NOT_FOUND_IN_EXPEDISI';
         validationMessage = `Data resi ${currentResi} tidak ditemukan di database.`;
       }
@@ -174,7 +166,7 @@ export const useResiScanner = ({
         const normalizedExpedisiCourierName = normalizeExpeditionName(expedisiRecordFromCache.couriername);
         const normalizedSelectedExpedition = normalizeExpeditionName(expedition);
 
-        // No special 'ID' match logic, just direct match
+        // Direct match for expedition names
         const isDirectMatch = (normalizedSelectedExpedition === normalizedExpedisiCourierName);
 
         if (!isDirectMatch) {
@@ -197,8 +189,6 @@ export const useResiScanner = ({
       setOptimisticTotalExpeditionItems(prev => {
         // If the resi was not found in tbl_expedisi (meaning it's a new entry for this expedition)
         // and it matches the currently selected expedition, increment total.
-        // This logic needs to be careful if 'ID_REKOMENDASI' is now a separate expedition.
-        // If it's a new resi for the selected expedition, increment total.
         const isNewEntryForSelectedExpedition = !expedisiRecordFromCache && normalizeExpeditionName(expedition) === normalizeExpeditionName(expedition);
         return prev + (isNewEntryForSelectedExpedition ? 1 : 0);
       });
@@ -207,8 +197,6 @@ export const useResiScanner = ({
         return newRemaining;
       });
       
-      // Removed optimisticIdExpeditionScanCount update
-
       queryClient.setQueryData(queryKeyForInputPageDisplay, (oldData: ResiExpedisiData[] | undefined) => {
         const newData = [...(oldData || [])];
         const existingResiIndex = newData.findIndex(item => (item.Resi || "").toLowerCase() === normalizedCurrentResi);
@@ -285,7 +273,6 @@ export const useResiScanner = ({
 
       setOptimisticTotalExpeditionItems(initialTotalExpeditionItems || 0);
       setOptimisticRemainingExpeditionItems(initialTotalExpeditionItems || 0); // Reset to initial total
-      // setOptimisticIdExpeditionScanCount(initialIdExpeditionScanCount || 0); // Removed
 
       startTransition(() => {
         queryClient.invalidateQueries({ queryKey: queryKeyForInputPageDisplay });
@@ -294,7 +281,6 @@ export const useResiScanner = ({
         queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] });
         queryClient.invalidateQueries({ queryKey: queryKeyForTotalExpeditionItems });
         queryClient.invalidateQueries({ queryKey: queryKeyForRemainingExpeditionItems });
-        // queryClient.invalidateQueries({ queryKey: queryKeyForIdExpeditionScanCount }); // Removed
         queryClient.invalidateQueries({ queryKey: ["allFlagYesExpedisiResiNumbers"] });
       });
     } finally {

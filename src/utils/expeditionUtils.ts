@@ -7,7 +7,7 @@
  */
 export const KNOWN_EXPEDITIONS = [
   "ID",
-  "ID_REKOMENDASI", // Sekarang diperlakukan sebagai ekspedisi terpisah
+  // "ID_REKOMENDASI", // Dihapus karena tidak lagi diperlakukan khusus
   "JNE",
   "SPX",
   "INSTAN",
@@ -45,8 +45,8 @@ export function getKeteranganBadgeClasses(keterangan: string | null | undefined)
       return "bg-orange-100 text-orange-800";
     case "ID":
       return "bg-purple-100 text-purple-800";
-    case "ID_REKOMENDASI":
-      return "bg-pink-100 text-pink-800"; // Warna berbeda untuk ID_REKOMENDASI
+    // case "ID_REKOMENDASI": // Dihapus karena tidak lagi diperlakukan khusus
+    //   return "bg-pink-100 text-pink-800"; 
     default:
       return "bg-gray-100 text-gray-800";
   }

@@ -159,8 +159,6 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     staleTime: 1000 * 30,
   });
 
-  // Removed idExpeditionScanCount as special handling for 'ID' is removed.
-
   // Derive currentCount from allResiForExpedition, filtered for TODAY only
   const currentCount = React.useCallback((selectedKarung: string) => {
     if (!allResiForExpedition || !selectedKarung) {
@@ -237,7 +235,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
 
   return {
     allResiForExpedition,
-    isLoadingAllResiForExpedition: isLoadingAllResiForExpedition || isLoadingAllKarungSummaries || isLoadingUniqueExpeditionNames || isLoadingTotalExpeditionItems || isLoadingRemainingExpeditionItems, // Removed isLoadingIdExpeditionScanCount
+    isLoadingAllResiForExpedition: isLoadingAllResiForExpedition || isLoadingAllKarungSummaries || isLoadingUniqueExpeditionNames || isLoadingTotalExpeditionItems || isLoadingRemainingExpeditionItems,
     currentCount,
     lastKarung,
     highestKarung,
@@ -252,7 +250,7 @@ export const useResiInputData = (expedition: string, showAllExpeditionSummary: b
     remainingExpeditionItems,
     isLoadingTotalExpeditionItems,
     isLoadingRemainingExpeditionItems,
-    idExpeditionScanCount: 0, // Set to 0 or remove if not needed elsewhere
-    isLoadingIdExpeditionScanCount: false, // Set to false
+    idExpeditionScanCount: 0, // Always 0 as special handling is removed
+    isLoadingIdExpeditionScanCount: false, // Always false
   };
 };

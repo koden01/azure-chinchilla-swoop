@@ -112,10 +112,12 @@ export const useResiScanner = ({
     let actualScheduleForResiTable: string | null = null;
     let expedisiRecordFromCache: any = null;
     let wasFlagNo = false;
+    let finalBeepSound: HTMLAudioElement = beepSuccess; // Default to success
 
     try {
       if (allFlagYesExpedisiResiNumbers?.has(normalizedCurrentResi)) {
         validationStatus = 'DUPLICATE_PROCESSED';
+        finalBeepSound = beepDouble; // Set beep for duplicate
         const { data: resiDetails, error: resiDetailsError } = await supabase
             .from("tbl_resi")
             .select("created, Keterangan, nokarung, schedule")
@@ -160,6 +162,7 @@ export const useResiScanner = ({
         // If not found in tbl_expedisi, it's not found.
         validationStatus = 'NOT_FOUND_IN_EXPEDISI';
         validationMessage = `Data resi ${currentResi} tidak ditemukan di database.`;
+        finalBeepSound = beepFailure; // Set beep for not found
       }
 
       if (validationStatus === 'OK' && expedisiRecordFromCache) {
@@ -172,16 +175,13 @@ export const useResiScanner = ({
         if (!isDirectMatch) {
           validationStatus = 'MISMATCH_EXPEDISI';
           validationMessage = `Resi ini terdaftar untuk ekspedisi ${expedisiRecordFromCache.couriername}, bukan ${expedition}.`;
+          finalBeepSound = beepFailure; // Set beep for mismatch
         }
       }
 
       if (validationStatus !== 'OK') {
         showError(validationMessage || "Validasi gagal.");
-        if (validationStatus === 'MISMATCH_EXPEDISI' || validationStatus === 'NOT_FOUND_IN_EXPEDISI') {
-          playBeep(beepFailure);
-        } else {
-          playBeep(beepDouble);
-        }
+        playBeep(finalBeepSound); // Play the determined failure/duplicate beep
         setIsProcessing(false);
         return;
       }
@@ -241,7 +241,7 @@ export const useResiScanner = ({
       });
       
       showSuccess(`Resi ${currentResi} Berhasil`);
-      playBeep(beepSuccess);
+      playBeep(finalBeepSound); // Play the success beep here
 
       // Removed 'await' here to make it non-blocking
       addPendingOperation({
@@ -269,8 +269,8 @@ export const useResiScanner = ({
         errorMessage = `Terjadi kesalahan Supabase (${error.code}): ${error.message || error.details}`;
       }
       showError(errorMessage);
-      playBeep(beepFailure);
-
+      playBeep(beepFailure); // Always play beepFailure for unexpected errors
+      
       setOptimisticTotalExpeditionItems(initialTotalExpeditionItems || 0);
       setOptimisticRemainingExpeditionItems(initialTotalExpeditionItems || 0); // Reset to initial total
 

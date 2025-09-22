@@ -142,6 +142,7 @@ const InputPage = () => {
     isLoadingAllExpedisiUnfiltered,
     isLoadingAllFlagNoExpedisiData,
     isLoadingAllFlagYesExpedisiResiNumbers,
+    isCameraActive, // Added to debug log
     totalDisabled: isInputDisabled
   });
 

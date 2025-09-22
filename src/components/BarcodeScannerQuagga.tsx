@@ -19,7 +19,7 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
 
     const initializeQuagga = async () => {
       setIsInitializing(true);
-      setIsScanning(false); // Ensure scanning is false until init is complete
+      setIsScanning(false);
 
       try {
         await Quagga.init({
@@ -31,14 +31,14 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
               width: { min: 640 },
               height: { min: 480 },
               aspectRatio: { min: 1, max: 100 },
-              facingMode: "environment", // Prefer rear camera
+              facingMode: "environment",
             },
           },
           locator: {
             patchSize: "medium",
             halfSample: true,
             debug: {
-              showCanvas: false, // Set to true for debugging Quagga's detection
+              showCanvas: false,
               showPatches: false,
               showFoundPatches: false,
               showSkeleton: false,
@@ -47,7 +47,7 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
               showQuagga: false,
             },
           },
-          numOfWorkers: navigator.hardwareConcurrency || 0, // Use all available cores
+          numOfWorkers: navigator.hardwareConcurrency || 0,
           locate: true,
           decoder: {
             readers: [
@@ -69,7 +69,7 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
             console.error("QuaggaJS initialization error:", err);
             showError(`Gagal menginisialisasi kamera: ${err.message || "Pastikan browser Anda mengizinkan akses kamera."}`);
             setIsInitializing(false);
-            onClose(); // Close scanner on error
+            onClose();
             return;
           }
           console.log("QuaggaJS initialization finished. Starting...");
@@ -81,7 +81,7 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
         console.error("QuaggaJS init promise error:", error);
         showError(`Gagal menginisialisasi kamera: ${error.message || "Terjadi kesalahan tak terduga."}`);
         setIsInitializing(false);
-        onClose(); // Close scanner on error
+        onClose();
       }
     };
 
@@ -91,12 +91,12 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
       if (result.codeResult && result.codeResult.code) {
         const code = result.codeResult.code;
         console.log("Barcode detected:", code);
-        onScan(code); // Call onScan, but don't stop Quagga or close the component
+        onScan(code);
       }
     });
 
     return () => {
-      if (isScanning) { // Only stop if it was actually scanning
+      if (isScanning) {
         Quagga.stop();
         console.log("QuaggaJS stopped.");
       }
@@ -105,7 +105,7 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
 
   const handleCloseClick = () => {
     if (isScanning) {
-      Quagga.stop(); // Explicitly stop Quagga when closing
+      Quagga.stop();
     }
     onClose();
   };

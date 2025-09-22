@@ -92,7 +92,7 @@ const InputPage = () => {
     isProcessing,
     optimisticTotalExpeditionItems,
     optimisticRemainingExpeditionItems,
-    handleScanResi, // FIX: Destructure handleScanResi instead of processScannedResi
+    handleScanResi,
   } = useResiScanner({ 
     expedition, 
     selectedKarung, 
@@ -132,10 +132,20 @@ const InputPage = () => {
     }
   }, [expedition, selectedKarung, resiInputRef, isCameraActive]);
 
+  // Debug log untuk melihat status loading
+  console.log("Loading states:", {
+    isLoadingAllExpedisiUnfiltered,
+    isLoadingAllFlagNoExpedisiData,
+    isLoadingAllFlagYesExpedisiResiNumbers,
+    isProcessing,
+    expedition,
+    selectedKarung
+  });
+
   const isInputDisabled = !expedition || !selectedKarung || isProcessing || isLoadingAllExpedisiUnfiltered || isLoadingAllFlagNoExpedisiData || isLoadingAllFlagYesExpedisiResiNumbers;
 
   const handleCameraScan = (decodedText: string) => {
-    handleScanResi(decodedText); // FIX: Call handleScanResi
+    handleScanResi(decodedText);
   };
 
   return (
@@ -184,7 +194,7 @@ const InputPage = () => {
                   <SelectValue placeholder="Pilih Expedisi" />
                 </SelectTrigger>
                 <SelectContent className="max-h-[200px] overflow-y-auto">
-                  {expeditionOptions.map((expName) => (
+                  {expeditionOptions?.map((expName) => (
                     <SelectItem key={expName} value={expName}>{expName}</SelectItem>
                   ))}
                 </SelectContent>
@@ -199,7 +209,7 @@ const InputPage = () => {
                   <SelectValue placeholder="Pilih No Karung" />
                 </SelectTrigger>
                 <SelectContent className="max-h-[200px] overflow-y-auto">
-                  {karungOptions.map((num) => (
+                  {karungOptions?.map((num) => (
                     <SelectItem key={num} value={num}>{num}</SelectItem>
                   ))}
                 </SelectContent>

@@ -55,6 +55,10 @@ export const useResiScanner = ({
   const lastKeyPressTime = React.useRef<number>(0);
   const SCANNER_TIMEOUT_MS = 500;
 
+  // NEW: Cooldown mechanism for audio playback
+  const lastBeepTime = React.useRef<number>(0);
+  const BEEP_COOLDOWN_MS = 100; // Minimum time between beeps
+
   React.useEffect(() => {
     setOptimisticTotalExpeditionItems(initialTotalExpeditionItems || 0);
   }, [initialTotalExpeditionItems]);
@@ -64,20 +68,21 @@ export const useResiScanner = ({
   }, [initialRemainingExpeditionItems]);
 
   const playBeep = (audio: HTMLAudioElement) => {
+    const now = Date.now();
+    if (now - lastBeepTime.current < BEEP_COOLDOWN_MS) {
+      // Too soon, ignore this beep request
+      return;
+    }
+    lastBeepTime.current = now;
+
     // Stop any currently playing instance of this audio
     audio.pause();
     audio.currentTime = 0; // Reset to start
     
-    // Add a small timeout before playing to prevent rapid interruption issues
-    setTimeout(() => {
-      audio.play().catch(e => {
-        console.error("[useResiScanner] Error playing beep sound:", e);
-        // The specific error "The play() request was interrupted by a new load request"
-        // is a DOMException that can be caught here.
-        // We can choose to ignore it if it's just an interruption,
-        // or log it for debugging. For now, logging is sufficient.
-      });
-    }, 0); // 0ms timeout means it will be executed in the next available event loop cycle
+    // Play the audio, catching potential errors (like user gesture requirement)
+    audio.play().catch(e => {
+      console.error("[useResiScanner] Error playing beep sound:", e);
+    });
   };
 
   const validateInput = (resi: string) => {
@@ -289,7 +294,7 @@ export const useResiScanner = ({
         queryClient.invalidateQueries({ queryKey: ["allExpedisiDataUnfiltered", formattedToday] });
         queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] });
         queryClient.invalidateQueries({ queryKey: queryKeyForTotalExpeditionItems });
-        queryClient.invalidateQueries({ queryKey: queryKeyForRemainingExpeditionItems });
+        queryClient.invalidateQueries({ queryKey: ["remainingExpeditionItems", expedition, formattedToday] }); // Invalidate remaining items for current expedition
         queryClient.invalidateQueries({ queryKey: ["allFlagYesExpedisiResiNumbers"] });
       });
     } finally {

@@ -19,6 +19,7 @@ interface UseResiScannerProps {
   initialRemainingExpeditionItems: number | undefined;
   allFlagNoExpedisiData: Map<string, any> | undefined;
   allFlagYesExpedisiResiNumbers: Set<string> | undefined;
+  isCameraActive: boolean; // NEW: Add isCameraActive prop
 }
 
 export const useResiScanner = ({ 
@@ -31,6 +32,7 @@ export const useResiScanner = ({
   initialRemainingExpeditionItems,
   allFlagNoExpedisiData,
   allFlagYesExpedisiResiNumbers,
+  isCameraActive, // Use the new prop
 }: UseResiScannerProps) => {
   const [resiNumber, setResiNumber] = React.useState<string>("");
   const [isProcessing, setIsProcessing] = React.useState<boolean>(false);
@@ -290,7 +292,8 @@ export const useResiScanner = ({
 
   React.useEffect(() => {
     const handleGlobalKeyDown = (event: KeyboardEvent) => {
-      if (isProcessing || !expedition || !selectedKarung) {
+      // NEW: Only process keyboard input if camera is NOT active
+      if (isCameraActive || isProcessing || !expedition || !selectedKarung) {
         return;
       }
 
@@ -322,13 +325,13 @@ export const useResiScanner = ({
     return () => {
       window.removeEventListener('keydown', handleGlobalKeyDown);
     };
-  }, [isProcessing, expedition, selectedKarung, processScannedResi]);
+  }, [isProcessing, expedition, selectedKarung, processScannedResi, isCameraActive]); // Add isCameraActive to dependencies
 
 
   return {
     resiNumber,
     setResiNumber,
-    handleScanResi: processScannedResi,
+    processScannedResi, // Expose processScannedResi
     resiInputRef,
     isProcessing: isProcessing || isPending,
     isLoadingRecentScannedResiNumbers: false,

@@ -20,7 +20,7 @@ import { format } from "date-fns";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 import { useAllFlagYesExpedisiResiNumbers } from "@/hooks/useAllFlagYesExpedisiResiNumbers";
 import { Button } from "@/components/ui/button";
-import BarcodeScannerQuagga from "@/components/BarcodeScannerQuagga";
+import BarcodeScannerQuagga from "@/components/BarcodeScannerQuagga.tsx"; // Menambahkan ekstensi .tsx
 
 const InputPage = () => {
   const { expedition, setExpedition } = useExpedition();
@@ -92,7 +92,7 @@ const InputPage = () => {
     isProcessing,
     optimisticTotalExpeditionItems,
     optimisticRemainingExpeditionItems,
-    handleScanResi, // FIX: Destructure handleScanResi instead of processScannedResi
+    handleScanResi,
   } = useResiScanner({ 
     expedition, 
     selectedKarung, 
@@ -135,7 +135,7 @@ const InputPage = () => {
   const isInputDisabled = !expedition || !selectedKarung || isProcessing || isLoadingAllExpedisiUnfiltered || isLoadingAllFlagNoExpedisiData || isLoadingAllFlagYesExpedisiResiNumbers;
 
   const handleCameraScan = (decodedText: string) => {
-    handleScanResi(decodedText); // FIX: Call handleScanResi
+    handleScanResi(decodedText);
   };
 
   return (
@@ -143,7 +143,7 @@ const InputPage = () => {
       <div className="flex flex-col items-center justify-center p-4 md:p-6 bg-gray-50">
         <div className="w-full bg-gradient-to-r from-blue-500 to-purple-600 p-6 md:p-8 rounded-lg shadow-md text-white text-center space-y-4">
           <div className="flex items-center justify-center mb-4">
-            <h2 className="text-2xl font-semibold mr-4">Input Data Resi</h2>
+            <h2 className="2xl font-semibold mr-4">Input Data Resi</h2>
             <Button
               variant="ghost"
               size="icon"

@@ -91,36 +91,9 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
       if (result.codeResult && result.codeResult.code) {
         const code = result.codeResult.code;
         console.log("Barcode detected:", code);
-        Quagga.stop(); // Stop scanning after detection
-        onScan(code);
-        onClose(); // Close the camera view
+        onScan(code); // Call onScan, but don't stop Quagga or close the component
       }
     });
-
-    // Optional: for debugging processing frames
-    // Quagga.onProcessed((result) => {
-    //   const drawingCtx = Quagga.canvas.ctx.overlay;
-    //   const drawingCanvas = Quagga.canvas.dom.overlay;
-
-    //   if (result) {
-    //     if (result.boxes) {
-    //       drawingCtx.clearRect(0, 0, parseInt(drawingCanvas.getAttribute("width")!), parseInt(drawingCanvas.getAttribute("height")!));
-    //       result.boxes.filter(function (box) {
-    //         return box !== result.box;
-    //       }).forEach(function (box) {
-    //         Quagga.ImageDebug.drawPath(box, { x: 0, y: 1 }, drawingCtx, { color: "green", lineWidth: 2 });
-    //       });
-    //     }
-
-    //     if (result.box) {
-    //       Quagga.ImageDebug.drawPath(result.box, { x: 0, y: 1 }, drawingCtx, { color: "#00F", lineWidth: 2 });
-    //     }
-
-    //     if (result.codeResult && result.codeResult.code) {
-    //       Quagga.ImageDebug.drawPath(result.line, { x: 'x', y: 'y' }, drawingCtx, { color: 'red', lineWidth: 3 });
-    //     }
-    //   }
-    // });
 
     return () => {
       if (isScanning) { // Only stop if it was actually scanning
@@ -129,6 +102,13 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
       }
     };
   }, [onScan, onClose, isScanning]);
+
+  const handleCloseClick = () => {
+    if (isScanning) {
+      Quagga.stop(); // Explicitly stop Quagga when closing
+    }
+    onClose();
+  };
 
   return (
     <div className="relative w-full h-auto aspect-video bg-gray-900 rounded-lg overflow-hidden flex items-center justify-center">
@@ -140,7 +120,7 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
             variant="ghost"
             size="sm"
             className="mt-4 text-white hover:bg-white/20"
-            onClick={onClose}
+            onClick={handleCloseClick}
           >
             <XCircle className="h-4 w-4 mr-2" /> Tutup
           </Button>
@@ -151,7 +131,7 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
         variant="ghost"
         size="icon"
         className="absolute top-2 right-2 text-white hover:bg-white/20 z-20"
-        onClick={onClose}
+        onClick={handleCloseClick}
         disabled={isInitializing}
       >
         <XCircle className="h-6 w-6" />

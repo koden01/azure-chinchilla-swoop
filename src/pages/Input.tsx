@@ -127,6 +127,7 @@ const InputPage = () => {
   }, [expedition, highestKarung]);
 
   React.useEffect(() => {
+    // Only focus if camera is not active
     if (expedition && selectedKarung && resiInputRef.current && !isCameraActive) {
       resiInputRef.current.focus();
     }
@@ -136,72 +137,84 @@ const InputPage = () => {
 
   const handleCameraScan = (decodedText: string) => {
     processScannedResi(decodedText);
-    setIsCameraActive(false); // Close camera after scan
+    // Camera remains active, no setIsCameraActive(false) here
   };
 
   return (
     <React.Fragment>
       <div className="flex flex-col items-center justify-center p-4 md:p-6 bg-gray-50">
         <div className="w-full bg-gradient-to-r from-blue-500 to-purple-600 p-6 md:p-8 rounded-lg shadow-md text-white text-center space-y-4">
-          <h2 className="text-2xl font-semibold">Input Data Resi</h2>
-          <div className="text-6xl font-bold">
-            {isInputDisabled
-              ? "..."
-              : currentCountForDisplay}
+          <div className="flex items-center justify-center mb-4">
+            <h2 className="text-2xl font-semibold mr-4">Input Data Resi</h2>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-white hover:bg-white/20"
+              onClick={() => setIsCameraActive(prev => !prev)}
+              disabled={isInputDisabled && !isCameraActive} // Disable if input is disabled AND camera is not active
+            >
+              <Camera className={cn("h-6 w-6", isCameraActive ? "text-green-400" : "text-white")} />
+            </Button>
           </div>
-          <div
-            className="text-xl cursor-pointer hover:underline"
-            onClick={() => {
-              if (expedition) {
-                setIsKarungSummaryModal(true);
-              }
-            }}
-          >
-            {expedition ? `${expedition} - Karung ${selectedKarung || '?'}` : "Pilih Expedisi"}
-          </div>
-          <p className="text-sm opacity-80">
-            Total: {isInputDisabled ? "..." : optimisticTotalExpeditionItems} - Scan: {isInputDisabled ? "..." : scanCountToDisplay} - Sisa: {isInputDisabled ? "..." : optimisticRemainingExpeditionItems}
-          </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
-            <div>
-              <label htmlFor="expedition-select" className="block text-left text-sm font-medium mb-2">
-                Expedisi
-              </label>
-              <Select onValueChange={setExpedition} value={expedition} disabled={isProcessing || isLoadingAllFlagNoExpedisiData || isLoadingAllFlagYesExpedisiResiNumbers || isCameraActive}>
-                <SelectTrigger id="expedition-select" className="w-full bg-white text-gray-800 h-12 text-center justify-center">
-                  <SelectValue placeholder="Pilih Expedisi" />
-                </SelectTrigger>
-                <SelectContent className="max-h-[200px] overflow-y-auto">
-                  {expeditionOptions.map((expName) => (
-                    <SelectItem key={expName} value={expName}>{expName}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label htmlFor="no-karung-select" className="block text-left text-sm font-medium mb-2">
-                No Karung
-              </label>
-              <Select onValueChange={setSelectedKarung} value={selectedKarung} disabled={!expedition || isProcessing || isLoadingAllFlagNoExpedisiData || isLoadingAllFlagYesExpedisiResiNumbers || isCameraActive}>
-                <SelectTrigger id="no-karung-select" className="w-full bg-white text-gray-800 h-12 text-center justify-center">
-                  <SelectValue placeholder="Pilih No Karung" />
-                </SelectTrigger>
-                <SelectContent className="max-h-[200px] overflow-y-auto">
-                  {karungOptions.map((num) => (
-                    <SelectItem key={num} value={num}>{num}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="md:col-span-2 relative">
-              <label htmlFor="scan-resi" className="block text-left text-sm font-medium mb-2">
-                Scan Resi
-              </label>
-              {isCameraActive ? (
-                <BarcodeScannerQuagga onScan={handleCameraScan} onClose={() => setIsCameraActive(false)} />
-              ) : (
-                <>
+          {isCameraActive ? (
+            <BarcodeScannerQuagga onScan={handleCameraScan} onClose={() => setIsCameraActive(false)} />
+          ) : (
+            <>
+              <div className="text-6xl font-bold">
+                {isInputDisabled
+                  ? "..."
+                  : currentCountForDisplay}
+              </div>
+              <div
+                className="text-xl cursor-pointer hover:underline"
+                onClick={() => {
+                  if (expedition) {
+                    setIsKarungSummaryModal(true);
+                  }
+                }}
+              >
+                {expedition ? `${expedition} - Karung ${selectedKarung || '?'}` : "Pilih Expedisi"}
+              </div>
+              <p className="text-sm opacity-80">
+                Total: {isInputDisabled ? "..." : optimisticTotalExpeditionItems} - Scan: {isInputDisabled ? "..." : scanCountToDisplay} - Sisa: {isInputDisabled ? "..." : optimisticRemainingExpeditionItems}
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
+                <div>
+                  <label htmlFor="expedition-select" className="block text-left text-sm font-medium mb-2">
+                    Expedisi
+                  </label>
+                  <Select onValueChange={setExpedition} value={expedition} disabled={isInputDisabled || isCameraActive}>
+                    <SelectTrigger id="expedition-select" className="w-full bg-white text-gray-800 h-12 text-center justify-center">
+                      <SelectValue placeholder="Pilih Expedisi" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[200px] overflow-y-auto">
+                      {expeditionOptions.map((expName) => (
+                        <SelectItem key={expName} value={expName}>{expName}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label htmlFor="no-karung-select" className="block text-left text-sm font-medium mb-2">
+                    No Karung
+                  </label>
+                  <Select onValueChange={setSelectedKarung} value={selectedKarung} disabled={!expedition || isInputDisabled || isCameraActive}>
+                    <SelectTrigger id="no-karung-select" className="w-full bg-white text-gray-800 h-12 text-center justify-center">
+                      <SelectValue placeholder="Pilih No Karung" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[200px] overflow-y-auto">
+                      {karungOptions.map((num) => (
+                        <SelectItem key={num} value={num}>{num}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="md:col-span-2 relative">
+                  <label htmlFor="scan-resi" className="block text-left text-sm font-medium mb-2">
+                    Scan Resi
+                  </label>
                   <Input
                     id="scan-resi"
                     type="text"
@@ -215,28 +228,19 @@ const InputPage = () => {
                     disabled={isInputDisabled}
                     inputMode="none"
                   />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 text-gray-500 hover:text-gray-700"
-                    onClick={() => setIsCameraActive(true)}
-                    disabled={isInputDisabled}
-                  >
-                    <Camera className="h-5 w-5" />
-                  </Button>
                   {isProcessing && (
-                    <Loader2 className="absolute right-12 top-1/2 -translate-y-1/2 h-6 w-6 animate-spin text-gray-500" />
+                    <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 animate-spin text-gray-500" />
                   )}
                   {(isLoadingAllExpedisiUnfiltered || isLoadingAllFlagNoExpedisiData || isLoadingAllFlagYesExpedisiResiNumbers) && !isProcessing && (
-                    <div className="absolute right-12 top-1/2 -translate-y-1/2 flex items-center text-gray-500">
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center text-gray-500">
                       <Loader2 className="h-6 w-6 animate-spin mr-2" />
                       <span className="text-sm">Memuat validasi...</span>
                     </div>
                   )}
-                </>
-              )}
-            </div>
-          </div>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
 

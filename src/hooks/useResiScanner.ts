@@ -64,13 +64,18 @@ export const useResiScanner = ({
   }, [initialRemainingExpeditionItems]);
 
   const playBeep = (audio: HTMLAudioElement) => {
-    setTimeout(() => {
-      try {
-        audio.play();
-      } catch (e) {
-        console.error("[useResiScanner] Error playing beep sound:", e);
-      }
-    }, 0);
+    // Stop any currently playing instance of this audio
+    audio.pause();
+    audio.currentTime = 0; // Reset to start
+    
+    // Play the audio, catching potential errors (like user gesture requirement)
+    audio.play().catch(e => {
+      console.error("[useResiScanner] Error playing beep sound:", e);
+      // The specific error "The play() request was interrupted by a new load request"
+      // is a DOMException that can be caught here.
+      // We can choose to ignore it if it's just an interruption,
+      // or log it for debugging. For now, logging is sufficient.
+    });
   };
 
   const validateInput = (resi: string) => {

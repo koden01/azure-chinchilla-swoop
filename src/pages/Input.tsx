@@ -245,10 +245,14 @@ const InputPage = () => {
             </div>
           </div>
 
-          {/* Camera view appears below the input fields */}
+          {/* Camera view appears below the input fields - Only render when camera is active */}
           {isCameraActive && (
             <div className="mt-6">
-              <BarcodeScannerQuagga onScan={handleCameraScan} onClose={() => setIsCameraActive(false)} />
+              <BarcodeScannerQuagga 
+                onScan={handleCameraScan} 
+                onClose={() => setIsCameraActive(false)} 
+                key={Date.now()} // Add key to force re-render when camera is activated
+              />
             </div>
           )}
         </div>

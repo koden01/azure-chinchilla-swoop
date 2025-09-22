@@ -6,7 +6,7 @@ import { showError, showSuccess } from '@/utils/toast';
 
 interface BarcodeScannerQuaggaProps {
   onScan: (decodedText: string) => void;
-  onClose: () => void;
+  onClose: () => void; // This prop should update the parent's isCameraActive state
 }
 
 const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onClose }) => {
@@ -121,6 +121,7 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
     if (isScanning) {
       Quagga.stop();
     }
+    // Call the parent's onClose function to update isCameraActive state
     onClose();
   };
 

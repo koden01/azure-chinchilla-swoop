@@ -19,7 +19,6 @@ interface UseResiScannerProps {
   initialRemainingExpeditionItems: number | undefined;
   allFlagNoExpedisiData: Map<string, any> | undefined;
   allFlagYesExpedisiResiNumbers: Set<string> | undefined;
-  isCameraActive: boolean; // NEW: Add isCameraActive prop
 }
 
 export const useResiScanner = ({ 
@@ -32,7 +31,6 @@ export const useResiScanner = ({
   initialRemainingExpeditionItems,
   allFlagNoExpedisiData,
   allFlagYesExpedisiResiNumbers,
-  isCameraActive, // Use the new prop
 }: UseResiScannerProps) => {
   const [resiNumber, setResiNumber] = React.useState<string>("");
   const [isProcessing, setIsProcessing] = React.useState<boolean>(false);
@@ -55,10 +53,6 @@ export const useResiScanner = ({
   const lastKeyPressTime = React.useRef<number>(0);
   const SCANNER_TIMEOUT_MS = 500;
 
-  // NEW: Cooldown mechanism for audio playback
-  const lastBeepTime = React.useRef<number>(0);
-  const BEEP_COOLDOWN_MS = 100; // Minimum time between beeps
-
   React.useEffect(() => {
     setOptimisticTotalExpeditionItems(initialTotalExpeditionItems || 0);
   }, [initialTotalExpeditionItems]);
@@ -68,21 +62,13 @@ export const useResiScanner = ({
   }, [initialRemainingExpeditionItems]);
 
   const playBeep = (audio: HTMLAudioElement) => {
-    const now = Date.now();
-    if (now - lastBeepTime.current < BEEP_COOLDOWN_MS) {
-      // Too soon, ignore this beep request
-      return;
-    }
-    lastBeepTime.current = now;
-
-    // Stop any currently playing instance of this audio
-    audio.pause();
-    audio.currentTime = 0; // Reset to start
-    
-    // Play the audio, catching potential errors (like user gesture requirement)
-    audio.play().catch(e => {
-      console.error("[useResiScanner] Error playing beep sound:", e);
-    });
+    setTimeout(() => {
+      try {
+        audio.play();
+      } catch (e) {
+        console.error("[useResiScanner] Error playing beep sound:", e);
+      }
+    }, 0);
   };
 
   const validateInput = (resi: string) => {
@@ -294,7 +280,7 @@ export const useResiScanner = ({
         queryClient.invalidateQueries({ queryKey: ["allExpedisiDataUnfiltered", formattedToday] });
         queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] });
         queryClient.invalidateQueries({ queryKey: queryKeyForTotalExpeditionItems });
-        queryClient.invalidateQueries({ queryKey: ["remainingExpeditionItems", expedition, formattedToday] }); // Invalidate remaining items for current expedition
+        queryClient.invalidateQueries({ queryKey: queryKeyForRemainingExpeditionItems });
         queryClient.invalidateQueries({ queryKey: ["allFlagYesExpedisiResiNumbers"] });
       });
     } finally {
@@ -304,8 +290,7 @@ export const useResiScanner = ({
 
   React.useEffect(() => {
     const handleGlobalKeyDown = (event: KeyboardEvent) => {
-      // NEW: Only process keyboard input if camera is NOT active
-      if (isCameraActive || isProcessing || !expedition || !selectedKarung) {
+      if (isProcessing || !expedition || !selectedKarung) {
         return;
       }
 
@@ -337,13 +322,13 @@ export const useResiScanner = ({
     return () => {
       window.removeEventListener('keydown', handleGlobalKeyDown);
     };
-  }, [isProcessing, expedition, selectedKarung, processScannedResi, isCameraActive]); // Add isCameraActive to dependencies
+  }, [isProcessing, expedition, selectedKarung, processScannedResi]);
 
 
   return {
     resiNumber,
     setResiNumber,
-    processScannedResi, // Expose processScannedResi
+    handleScanResi: processScannedResi,
     resiInputRef,
     isProcessing: isProcessing || isPending,
     isLoadingRecentScannedResiNumbers: false,

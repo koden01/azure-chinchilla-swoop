@@ -142,7 +142,7 @@ const InputPage = () => {
     isLoadingAllExpedisiUnfiltered,
     isLoadingAllFlagNoExpedisiData,
     isLoadingAllFlagYesExpedisiResiNumbers,
-    isCameraActive, // Added to debug log
+    isCameraActive,
     totalDisabled: isInputDisabled
   });
 
@@ -191,7 +191,7 @@ const InputPage = () => {
               <label htmlFor="expedition-select" className="block text-left text-sm font-medium mb-2">
                 Expedisi
               </label>
-              <Select onValueChange={setExpedition} value={expedition} disabled={isCameraActive}>
+              <Select onValueChange={setExpedition} value={expedition} disabled={isInputDisabled}>
                 <SelectTrigger id="expedition-select" className="w-full bg-white text-gray-800 h-12 text-center justify-center">
                   <SelectValue placeholder="Pilih Expedisi" />
                 </SelectTrigger>
@@ -206,7 +206,7 @@ const InputPage = () => {
               <label htmlFor="no-karung-select" className="block text-left text-sm font-medium mb-2">
                 No Karung
               </label>
-              <Select onValueChange={setSelectedKarung} value={selectedKarung} disabled={!expedition || isCameraActive}>
+              <Select onValueChange={setSelectedKarung} value={selectedKarung} disabled={isInputDisabled}>
                 <SelectTrigger id="no-karung-select" className="w-full bg-white text-gray-800 h-12 text-center justify-center">
                   <SelectValue placeholder="Pilih No Karung" />
                 </SelectTrigger>
@@ -229,9 +229,9 @@ const InputPage = () => {
                 ref={resiInputRef}
                 className={cn(
                   "w-full bg-white text-gray-800 h-16 text-2xl text-center pr-10",
-                  (isInputDisabled || isCameraActive) && "opacity-70 cursor-not-allowed"
+                  isInputDisabled && "opacity-70 cursor-not-allowed"
                 )}
-                disabled={isInputDisabled || isCameraActive}
+                disabled={isInputDisabled}
                 inputMode="none"
               />
               {isProcessing && (

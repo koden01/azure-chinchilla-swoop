@@ -107,49 +107,89 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
       lastProcessedTimeRef.current = 0;
 
       try {
-        let deviceId: string | undefined;
-        let stream: MediaStream;
+        let stream: MediaStream | null = null;
+        let cameraInfoMessage: string | null = null;
 
-        // Try to enumerate devices first
+        // --- Attempt 1: Find specific rear camera deviceId ---
         try {
           console.log("[ZXing] Listing video input devices...");
           const videoInputDevices = await codeReader.listVideoInputDevices();
-          if (videoInputDevices.length === 0) {
-            throw new Error("Tidak ada perangkat kamera yang ditemukan.");
-          }
-          console.log("[ZXing] Found video devices:", videoInputDevices);
-
+          
           const rearCamera = videoInputDevices.find(device => device.label.toLowerCase().includes('back') || device.label.toLowerCase().includes('environment'));
-          deviceId = rearCamera ? rearCamera.deviceId : videoInputDevices[0].deviceId;
-          console.log("[ZXing] Using deviceId:", deviceId);
-
-          const videoConstraints: MediaStreamConstraints = {
-            video: {
-              deviceId: deviceId,
-              facingMode: rearCamera ? 'environment' : 'user', // Prefer back camera
-              width: { ideal: 1280 }, // Request a good resolution
-              height: { ideal: 720 },
-            },
-          };
-          stream = await navigator.mediaDevices.getUserMedia(videoConstraints);
-
-        } catch (enumerateError: any) {
-          console.warn("[ZXing] Error enumerating devices, trying direct getUserMedia:", enumerateError.message);
-          // Fallback: try to get a stream without specifying deviceId
-          // This might pick the front camera on mobile, but it's better than nothing.
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              width: { ideal: 1280 },
-              height: { ideal: 720 },
-            },
-          });
-          setCameraError("Tidak dapat menemukan kamera belakang secara otomatis. Menggunakan kamera default. Pastikan aplikasi berjalan di HTTPS dan izin kamera diberikan.");
+          
+          if (rearCamera) {
+            console.log("[ZXing] Attempting to use identified rear camera deviceId.");
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: {
+                deviceId: rearCamera.deviceId,
+                facingMode: 'environment',
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+              },
+            });
+            cameraInfoMessage = "Kamera belakang digunakan.";
+          } else if (videoInputDevices.length > 0) {
+            // If no explicit rear camera, try the first available device with 'environment' facingMode
+            console.log("[ZXing] No explicit rear camera found, trying first device with 'environment' facingMode.");
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: {
+                deviceId: videoInputDevices[0].deviceId,
+                facingMode: 'environment',
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+              },
+            });
+            cameraInfoMessage = "Kamera belakang digunakan (melalui facingMode 'environment' pada perangkat default).";
+          }
+        } catch (e: any) {
+          console.warn("[ZXing] Failed to get stream with specific deviceId/enumerateDevices:", e.message);
+          stream = null; // Reset stream for next attempt
         }
 
+        // --- Attempt 2: Fallback to generic 'environment' facingMode ---
+        if (!stream) {
+          try {
+            console.log("[ZXing] Attempting fallback to generic facingMode: 'environment'.");
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: {
+                facingMode: 'environment',
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+              },
+            });
+            cameraInfoMessage = "Kamera belakang digunakan (melalui facingMode 'environment').";
+          } catch (e: any) {
+            console.warn("[ZXing] Failed to get stream with generic 'environment' facingMode:", e.message);
+            stream = null; // Reset stream for next attempt
+          }
+        }
 
+        // --- Attempt 3: Fallback to 'user' (front) camera ---
+        if (!stream) {
+          try {
+            console.log("[ZXing] Attempting fallback to facingMode: 'user' (front camera).");
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: {
+                facingMode: 'user',
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+              },
+            });
+            cameraInfoMessage = "Kamera depan digunakan (kamera belakang tidak dapat diakses).";
+          } catch (e: any) {
+            console.warn("[ZXing] Failed to get stream with 'user' facingMode:", e.message);
+            stream = null; // Reset stream for next attempt
+          }
+        }
+
+        // --- Final check: If no stream, throw error ---
+        if (!stream) {
+          throw new Error("Tidak dapat mengakses kamera. Pastikan izin kamera diberikan dan aplikasi berjalan di HTTPS.");
+        }
+
+        // --- If stream is acquired, proceed ---
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
-          // Only attempt to play if not already playing
           if (videoRef.current.paused) {
             videoRef.current.play().catch(e => console.error("Error playing video:", e));
           }
@@ -207,11 +247,12 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
           
           setIsScanning(true); // Set to true when scanning starts successfully
           setIsInitializing(false); // Set to false when scanning starts successfully
-          console.log("[ZXing] Scanning started successfully using decodeFromStream.");
+          console.log("[ZXing] Scanning started successfully. " + (cameraInfoMessage || ""));
+          if (cameraInfoMessage && cameraInfoMessage.includes("Kamera depan digunakan")) {
+            setCameraError(cameraInfoMessage + " Pastikan aplikasi berjalan di HTTPS dan izin kamera diberikan.");
+          }
         } else {
-          console.error("[ZXing] videoRef.current is null, cannot start scanning.");
-          setCameraError("Gagal memulai kamera: Elemen video tidak tersedia.");
-          setIsInitializing(false);
+          throw new Error("Gagal memulai kamera: Elemen video tidak tersedia.");
         }
       } catch (err: any) {
         console.error("ZXing Camera access error:", err);
@@ -281,32 +322,81 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
 
       const startScanningRetry = async () => {
         try {
-          let deviceId: string | undefined;
-          let stream: MediaStream;
+          let stream: MediaStream | null = null;
+          let cameraInfoMessage: string | null = null;
 
+          // --- Attempt 1: Find specific rear camera deviceId ---
           try {
             const videoInputDevices = await codeReader.listVideoInputDevices();
             const rearCamera = videoInputDevices.find(device => device.label.toLowerCase().includes('back') || device.label.toLowerCase().includes('environment'));
-            deviceId = rearCamera ? rearCamera.deviceId : videoInputDevices[0].deviceId;
+            
+            if (rearCamera) {
+              console.log("[ZXing] Attempting to use identified rear camera deviceId (retry).");
+              stream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                  deviceId: rearCamera.deviceId,
+                  facingMode: 'environment',
+                  width: { ideal: 1280 },
+                  height: { ideal: 720 },
+                },
+              });
+              cameraInfoMessage = "Kamera belakang digunakan.";
+            } else if (videoInputDevices.length > 0) {
+              console.log("[ZXing] No explicit rear camera found, trying first device with 'environment' facingMode (retry).");
+              stream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                  deviceId: videoInputDevices[0].deviceId,
+                  facingMode: 'environment',
+                  width: { ideal: 1280 },
+                  height: { ideal: 720 },
+                },
+              });
+              cameraInfoMessage = "Kamera belakang digunakan (melalui facingMode 'environment' pada perangkat default).";
+            }
+          } catch (e: any) {
+            console.warn("[ZXing] Failed to get stream with specific deviceId/enumerateDevices (retry):", e.message);
+            stream = null;
+          }
 
-            const videoConstraints: MediaStreamConstraints = {
-              video: {
-                deviceId: deviceId,
-                facingMode: rearCamera ? 'environment' : 'user',
-                width: { ideal: 1280 },
-                height: { ideal: 720 },
-              },
-            };
-            stream = await navigator.mediaDevices.getUserMedia(videoConstraints);
-          } catch (enumerateError: any) {
-            console.warn("[ZXing] Error enumerating devices during retry, trying direct getUserMedia:", enumerateError.message);
-            stream = await navigator.mediaDevices.getUserMedia({
-              video: {
-                width: { ideal: 1280 },
-                height: { ideal: 720 },
-              },
-            });
-            setCameraError("Tidak dapat menemukan kamera belakang secara otomatis. Menggunakan kamera default. Pastikan aplikasi berjalan di HTTPS dan izin kamera diberikan.");
+          // --- Attempt 2: Fallback to generic 'environment' facingMode ---
+          if (!stream) {
+            try {
+              console.log("[ZXing] Attempting fallback to generic facingMode: 'environment' (retry).");
+              stream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                  facingMode: 'environment',
+                  width: { ideal: 1280 },
+                  height: { ideal: 720 },
+                },
+              });
+              cameraInfoMessage = "Kamera belakang digunakan (melalui facingMode 'environment').";
+            } catch (e: any) {
+              console.warn("[ZXing] Failed to get stream with generic 'environment' facingMode (retry):", e.message);
+              stream = null;
+            }
+          }
+
+          // --- Attempt 3: Fallback to 'user' (front) camera ---
+          if (!stream) {
+            try {
+              console.log("[ZXing] Attempting fallback to facingMode: 'user' (front camera, retry).");
+              stream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                  facingMode: 'user',
+                  width: { ideal: 1280 },
+                  height: { ideal: 720 },
+                },
+              });
+              cameraInfoMessage = "Kamera depan digunakan (kamera belakang tidak dapat diakses).";
+            } catch (e: any) {
+              console.warn("[ZXing] Failed to get stream with 'user' facingMode (retry):", e.message);
+              stream = null;
+            }
+          }
+
+          // --- Final check: If no stream, throw error ---
+          if (!stream) {
+            throw new Error("Tidak dapat mengakses kamera. Pastikan izin kamera diberikan dan aplikasi berjalan di HTTPS.");
           }
 
           if (videoRef.current) {
@@ -359,11 +449,12 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
             
             setIsScanning(true);
             setIsInitializing(false);
-            console.log("[ZXing] Scanning retried successfully using decodeFromStream.");
+            console.log("[ZXing] Scanning retried successfully. " + (cameraInfoMessage || ""));
+            if (cameraInfoMessage && cameraInfoMessage.includes("Kamera depan digunakan")) {
+              setCameraError(cameraInfoMessage + " Pastikan aplikasi berjalan di HTTPS dan izin kamera diberikan.");
+            }
           } else {
-            console.error("[ZXing] videoRef.current is null during retry, cannot start scanning.");
-            setCameraError("Gagal memulai kamera setelah retry: Elemen video tidak tersedia.");
-            setIsInitializing(false);
+            throw new Error("Gagal memulai kamera setelah retry: Elemen video tidak tersedia.");
           }
         } catch (err: any) {
           console.error("ZXing Camera access error during retry:", err);

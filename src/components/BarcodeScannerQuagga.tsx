@@ -33,7 +33,7 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // Draw bounding box
-    ctx.strokeStyle = '#00ff00';
+    ctx.strokeStyle = '#00ff00'; // Green for detected barcode
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(box[0][0], box[0][1]);
@@ -48,7 +48,7 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
     const centerY = canvas.height / 2;
     const crosshairSize = 20;
 
-    ctx.strokeStyle = '#ff0000';
+    ctx.strokeStyle = '#ff0000'; // Red crosshair
     ctx.lineWidth = 2;
     
     // Horizontal line
@@ -76,8 +76,8 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
             facingMode: 'environment',
-            width: { ideal: 640 }, // Reduced from 1280
-            height: { ideal: 480 } // Reduced from 720
+            width: { ideal: 640 },
+            height: { ideal: 480 }
           }
         });
         
@@ -95,13 +95,21 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
               aspectRatio: { min: 1, max: 2 },
               facingMode: "environment",
             },
+            // Define a specific area for detection to focus on the center
+            area: {
+              top: "20%",    // top 20% of the stream
+              right: "20%",  // right 20%
+              left: "20%",   // left 20%
+              bottom: "20%"  // bottom 20%
+            }
           },
           locator: {
-            patchSize: "medium", // Changed from large to medium
-            halfSample: false, // Changed from true to false for better performance
+            patchSize: "medium",
+            halfSample: false,
+            minConfidence: 0.8, // Only decode if confidence is 80% or higher
           },
-          numOfWorkers: 1, // Keep only 1 worker
-          frequency: 10, // Increased from 3 to 10 for faster detection
+          numOfWorkers: 1,
+          frequency: 10,
           decoder: {
             readers: [
               "code_128_reader",
@@ -109,7 +117,7 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
               "code_39_reader"
             ],
           },
-          locate: true,
+          locate: true, // Enable location to draw bounding boxes
         }, (err) => {
           if (err) {
             console.error("Quagga initialization error:", err);
@@ -146,21 +154,23 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
 
       if (result?.codeResult?.code && result.codeResult.format) {
         const code = result.codeResult.code.trim();
-        console.log("Barcode detected:", code, "Format:", result.codeResult.format);
+        console.log("Barcode detected:", code, "Format:", result.codeResult.format, "Confidence:", result.codeResult.decodedCodes[0]?.confidence);
         
         // Draw bounding box
         if (result.box) {
           drawBoundingBox(result.box);
         }
 
-        // Validate barcode length and format
-        if (code.length >= 8 && code.length <= 13) {
+        // Validate barcode length and confidence
+        // Only process if confidence is high (already set in locator.minConfidence, but good to double check)
+        const confidence = result.codeResult.decodedCodes[0]?.confidence || 0;
+        if (code.length >= 8 && code.length <= 13 && confidence >= 0.8) { // Ensure length and confidence
           setDetectedBarcode(code);
           lastDetectionTime.current = currentTime;
           
           // Auto-confirm after short delay
           setTimeout(() => {
-            if (detectedBarcode === code) {
+            if (detectedBarcode === code) { // Only confirm if it's still the same detected barcode
               handleConfirmBarcode();
             }
           }, 500);
@@ -168,27 +178,26 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
       }
     });
 
-    // Handle process frames for better performance
+    // Handle process frames for better performance and drawing guide box
     Quagga.onProcessed((result) => {
-      if (result && result.boxes) {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
+      const canvas = canvasRef.current;
+      if (!canvas) return;
 
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
 
-        // Clear previous drawing
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // Clear previous drawing
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Draw guide box in the center
-        const centerX = canvas.width / 2;
-        const centerY = canvas.height / 2;
-        const boxSize = 200;
+      // Draw guide box in the center (more subtle blue)
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const boxWidth = canvas.width * 0.6; // 60% of canvas width
+      const boxHeight = canvas.height * 0.3; // 30% of canvas height
 
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(centerX - boxSize/2, centerY - boxSize/2, boxSize, boxSize);
-      }
+      ctx.strokeStyle = 'rgba(100, 149, 237, 0.5)'; // CornflowerBlue with transparency
+      ctx.lineWidth = 2;
+      ctx.strokeRect(centerX - boxWidth/2, centerY - boxHeight/2, boxWidth, boxHeight);
     });
 
     return () => {
@@ -200,7 +209,7 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [onScan, scanningActive]);
+  }, [onScan, scanningActive, detectedBarcode]); // Added detectedBarcode to dependencies for auto-confirm logic
 
   const handleCloseClick = () => {
     if (quaggaInitializedRef.current) {
@@ -256,16 +265,24 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
                   height: { min: 240 },
                   facingMode: "environment",
                 },
+                area: {
+                  top: "20%",
+                  right: "20%",
+                  left: "20%",
+                  bottom: "20%"
+                }
               },
               locator: {
                 patchSize: "medium",
                 halfSample: false,
+                minConfidence: 0.8,
               },
               numOfWorkers: 1,
               frequency: 10,
               decoder: {
                 readers: ["code_128_reader", "ean_reader", "code_39_reader"],
               },
+              locate: true,
             }, (err) => {
               if (err) {
                 setCameraError("Gagal mengakses kamera setelah retry");

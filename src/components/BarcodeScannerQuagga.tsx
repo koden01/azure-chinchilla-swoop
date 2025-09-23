@@ -52,9 +52,17 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
         },
       },
       decoder: {
-        readers: ["code_128_reader", "ean_reader", "ean_8_reader", "code_39_reader"],
-        // Menambahkan konfigurasi khusus untuk Code 128 jika diperlukan,
-        // namun patchSize dan halfSample lebih umum untuk masalah pemotongan.
+        readers: [
+          {
+            format: "code_128_reader",
+            config: {
+              tryHarder: true, // Menambahkan opsi tryHarder untuk Code 128
+            },
+          },
+          "ean_reader",
+          "ean_8_reader",
+          "code_39_reader",
+        ],
       },
       locate: true, // Aktifkan penggambaran kotak pembatas
       numOfWorkers: 0, // Gunakan 0 untuk berjalan di main thread untuk debugging yang lebih sederhana

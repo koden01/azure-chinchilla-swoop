@@ -67,9 +67,9 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
             patchSize: "medium",
             halfSample: true,
             debug: {
-              showCanvas: false,
-              showPatches: false,
-              showFoundPatches: false,
+              showCanvas: true, // Changed to true to show canvas
+              showPatches: true, // Show patches for better visualization
+              showFoundPatches: true,
               showSkeleton: false,
               showLabels: false,
               showTestMarkers: false,
@@ -141,16 +141,16 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
     });
 
     return () => {
-      if (isScanning && quaggaInitializedRef.current) {
+      if (quaggaInitializedRef.current) {
         Quagga.stop();
         console.log("QuaggaJS stopped.");
         quaggaInitializedRef.current = false;
       }
     };
-  }, [onScan, onClose, isScanning]);
+  }, [onScan, onClose]);
 
   const handleCloseClick = () => {
-    if (isScanning && quaggaInitializedRef.current) {
+    if (quaggaInitializedRef.current) {
       Quagga.stop();
       quaggaInitializedRef.current = false;
     }
@@ -158,7 +158,7 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
   };
 
   const handleRetryCamera = () => {
-    if (isScanning && quaggaInitializedRef.current) {
+    if (quaggaInitializedRef.current) {
       Quagga.stop();
       quaggaInitializedRef.current = false;
     }
@@ -185,6 +185,15 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
               locator: {
                 patchSize: "medium",
                 halfSample: true,
+                debug: {
+                  showCanvas: true,
+                  showPatches: true,
+                  showFoundPatches: true,
+                  showSkeleton: false,
+                  showLabels: false,
+                  showTestMarkers: false,
+                  showQuagga: false,
+                },
               },
               numOfWorkers: navigator.hardwareConcurrency || 0,
               locate: true,
@@ -319,7 +328,14 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
         </div>
       )}
       
-      <div id="interactive" className="w-full h-64" ref={videoRef}></div>
+      <div id="interactive" className="w-full h-64 relative" ref={videoRef}>
+        {/* Overlay untuk menunjukkan area scan */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-64 h-32 border-4 border-green-500 rounded-lg bg-green-500 bg-opacity-20 flex items-center justify-center">
+            <div className="text-white text-sm font-semibold">Arahkan barcode ke sini</div>
+          </div>
+        </div>
+      </div>
       
       {!cameraError && (
         <div className="absolute top-2 right-2 flex gap-2 z-20">

@@ -141,6 +141,14 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
           setIsScanning(true);
           setIsInitializing(false); // Set to false when scanning starts successfully
           console.log("[ZXing] Scanning started successfully.");
+          
+          // Log srcObject to verify if MediaStream is attached
+          if (videoRef.current.srcObject) {
+            console.log("[ZXing] videoRef.current.srcObject is set:", videoRef.current.srcObject);
+          } else {
+            console.warn("[ZXing] videoRef.current.srcObject is NOT set after decodeFromVideoDevice.");
+          }
+
         } else {
           console.error("[ZXing] videoRef.current is null, cannot start scanning.");
           setCameraError("Gagal memulai kamera: Elemen video tidak tersedia.");
@@ -224,6 +232,14 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
             setIsScanning(true);
             setIsInitializing(false);
             console.log("[ZXing] Scanning retried successfully.");
+            
+            // Log srcObject to verify if MediaStream is attached
+            if (videoRef.current.srcObject) {
+              console.log("[ZXing] videoRef.current.srcObject is set (retry):", videoRef.current.srcObject);
+            } else {
+              console.warn("[ZXing] videoRef.current.srcObject is NOT set after decodeFromVideoDevice (retry).");
+            }
+
           } else {
             console.error("[ZXing] videoRef.current is null during retry, cannot start scanning.");
             setCameraError("Gagal memulai kamera setelah retry: Elemen video tidak tersedia.");
@@ -241,7 +257,6 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
 
   return (
     <div className="relative w-full bg-gray-900 rounded-lg overflow-hidden">
-      {/* Conditional rendering for initialization and error states */}
       {/* Temporarily hide the initializing overlay to see if video stream appears */}
       {/* {isInitializing && !cameraError && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900 bg-opacity-75 text-white z-10 p-4">
@@ -275,9 +290,15 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
         </div>
       )}
 
-      {/* Video and Canvas elements - always rendered, but potentially covered by overlays */}
       <div className="relative">
-        <video id="video" ref={videoRef} className="w-full h-64 object-cover" />
+        <video 
+          id="video" 
+          ref={videoRef} 
+          className="w-full h-64 object-cover" 
+          autoPlay 
+          playsInline 
+          muted 
+        />
         <canvas
           ref={canvasRef}
           className="absolute top-0 left-0 w-full h-64 pointer-events-none"
@@ -285,7 +306,6 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
         />
       </div>
 
-      {/* Close button */}
       {!cameraError && (
         <div className="absolute top-2 right-2 z-20">
           <Button
@@ -301,7 +321,6 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
         </div>
       )}
 
-      {/* Scanning guide text */}
       {!cameraError && !isInitializing && (
         <div className="absolute bottom-4 left-0 right-0 text-center z-20">
           <p className="text-white text-sm bg-black bg-opacity-50 px-3 py-1 rounded-full inline-block">

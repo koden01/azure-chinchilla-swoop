@@ -123,6 +123,7 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
     ];
     hints.set(DecodeHintType.POSSIBLE_FORMATS, formats);
     hints.set(DecodeHintType.TRY_HARDER, true);
+    hints.set(DecodeHintType.PURE_BARCODE, true); // Menambahkan hint PURE_BARCODE
 
     if (!codeReaderRef.current) {
       codeReaderRef.current = new BrowserMultiFormatReader(hints);
@@ -168,6 +169,10 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        // Mengatur atribut video secara programatis
+        videoRef.current.autoplay = true;
+        videoRef.current.playsInline = true;
+        videoRef.current.muted = true;
 
         // Add a listener to log video dimensions once metadata is loaded
         videoRef.current.onloadedmetadata = () => {
@@ -311,9 +316,7 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
           id="video" 
           ref={videoRef} 
           className="w-full h-full object-cover"
-          autoPlay 
-          playsInline 
-          muted 
+          // Removed autoplay, playsInline, muted from JSX
         />
         <canvas
           ref={canvasRef}

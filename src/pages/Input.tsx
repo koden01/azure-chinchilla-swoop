@@ -9,27 +9,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Button } from "@/components/ui/button"; // Import Button
+import { Camera, Loader2 } from "lucide-react"; // Import Camera icon
 import { useResiInputData } from "@/hooks/useResiInputData";
 import { useExpedition } from "@/context/ExpeditionContext";
 import { useResiScanner } from "@/hooks/useResiScanner";
-import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import KarungSummaryModal from "@/components/KarungSummaryModal";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
-import { useAllFlagYesExpedisiResiNumbers } from "@/hooks/useAllFlagYesExpedisiResiNumbers"; // NEW: Import the new hook
+import { useAllFlagYesExpedisiResiNumbers } from "@/hooks/useAllFlagYesExpedisiResiNumbers";
+import BarcodeScannerZXing from "@/components/BarcodeScannerZXing"; // Import BarcodeScannerZXing
 
 const InputPage = () => {
   const { expedition, setExpedition } = useExpedition();
-  const [selectedKarung, setSelectedKarung] = React.useState<string>("1"); // Default to "1"
-
+  const [selectedKarung, setSelectedKarung] = React.useState<string>("1");
   const [isKarungSummaryModalOpen, setIsKarungSummaryModal] = React.useState(false);
+  const [showScanner, setShowScanner] = React.useState(false); // State untuk mengontrol visibilitas scanner
 
   const today = new Date();
   const formattedToday = format(today, "yyyy-MM-dd");
 
-  // NEW: Query to fetch tbl_expedisi data for today for local validation
   const { data: allExpedisiDataUnfiltered, isLoading: isLoadingAllExpedisiUnfiltered } = useQuery<Map<string, any>>({
     queryKey: ["allExpedisiDataUnfiltered", formattedToday],
     queryFn: async () => {
@@ -47,7 +48,6 @@ const InputPage = () => {
     gcTime: 1000 * 60 * 60 * 24,
   });
 
-  // NEW: Fetch allFlagNoExpedisiData (Map)
   const { data: allFlagNoExpedisiData, isLoading: isLoadingAllFlagNoExpedisiData } = useQuery<Map<string, any>>({
     queryKey: ["allFlagNoExpedisiData"],
     queryFn: async () => {
@@ -72,31 +72,28 @@ const InputPage = () => {
     enabled: true,
   });
 
-  // NEW: Fetch allFlagYesExpedisiResiNumbers (Set)
   const { data: allFlagYesExpedisiResiNumbers, isLoading: isLoadingAllFlagYesExpedisiResiNumbers } = useAllFlagYesExpedisiResiNumbers();
-
 
   const {
     allResiForExpedition,
-    // isLoadingAllResiForExpedition, // Dihapus karena tidak digunakan
     highestKarung,
     karungOptions,
-    formattedDate: formattedDateFromHook, // Rename to avoid conflict
+    formattedDate: formattedDateFromHook,
     karungSummary,
     expeditionOptions,
     totalExpeditionItems,
     remainingExpeditionItems,
-    // idExpeditionScanCount, // Removed
     currentCount: getResiCountForKarung,
   } = useResiInputData(expedition, false);
 
   const {
     resiNumber,
+    setResiNumber,
+    handleScanResi,
     resiInputRef,
     isProcessing,
     optimisticTotalExpeditionItems,
     optimisticRemainingExpeditionItems,
-    // optimisticIdExpeditionScanCount, // Removed
   } = useResiScanner({ 
     expedition, 
     selectedKarung, 
@@ -105,7 +102,6 @@ const InputPage = () => {
     allResiForExpedition,
     initialTotalExpeditionItems: totalExpeditionItems,
     initialRemainingExpeditionItems: remainingExpeditionItems,
-    // NEW: Pass the new cached data
     allFlagNoExpedisiData,
     allFlagYesExpedisiResiNumbers,
   });
@@ -115,7 +111,6 @@ const InputPage = () => {
   }, [getResiCountForKarung, selectedKarung]);
 
   const scanCountToDisplay = React.useMemo(() => {
-    // Scan count is now always Total - Sisa (Remaining)
     return optimisticTotalExpeditionItems - optimisticRemainingExpeditionItems;
   }, [optimisticTotalExpeditionItems, optimisticRemainingExpeditionItems]);
 
@@ -131,14 +126,20 @@ const InputPage = () => {
     }
   }, [expedition, highestKarung]);
 
-  // NEW: Effect to focus on the scan resi input when expedition or karung changes
   React.useEffect(() => {
-    if (expedition && selectedKarung && resiInputRef.current) {
+    if (expedition && selectedKarung && resiInputRef.current && !showScanner) {
       resiInputRef.current.focus();
     }
-  }, [expedition, selectedKarung, resiInputRef]);
+  }, [expedition, selectedKarung, resiInputRef, showScanner]);
 
   const isInputDisabled = !expedition || !selectedKarung || isProcessing || isLoadingAllExpedisiUnfiltered || isLoadingAllFlagNoExpedisiData || isLoadingAllFlagYesExpedisiResiNumbers;
+  const isCameraButtonDisabled = isInputDisabled; // Tombol kamera juga dinonaktifkan jika input dinonaktifkan
+
+  const handleScannedBarcode = React.useCallback(async (scannedText: string) => {
+    setResiNumber(scannedText); // Isi otomatis input resi
+    setShowScanner(false); // Tutup kamera setelah scan berhasil
+    await handleScanResi(scannedText); // Trigger proses scan
+  }, [setResiNumber, handleScanResi]);
 
   return (
     <React.Fragment>
@@ -169,7 +170,7 @@ const InputPage = () => {
               <label htmlFor="expedition-select" className="block text-left text-sm font-medium mb-2">
                 Expedisi
               </label>
-              <Select onValueChange={setExpedition} value={expedition} disabled={isProcessing || isLoadingAllFlagNoExpedisiData || isLoadingAllFlagYesExpedisiResiNumbers}>
+              <Select onValueChange={setExpedition} value={expedition} disabled={isProcessing || isLoadingAllFlagNoExpedisiData || isLoadingAllFlagYesExpedisiResiNumbers || showScanner}>
                 <SelectTrigger id="expedition-select" className="w-full bg-white text-gray-800 h-12 text-center justify-center">
                   <SelectValue placeholder="Pilih Expedisi" />
                 </SelectTrigger>
@@ -184,7 +185,7 @@ const InputPage = () => {
               <label htmlFor="no-karung-select" className="block text-left text-sm font-medium mb-2">
                 No Karung
               </label>
-              <Select onValueChange={setSelectedKarung} value={selectedKarung} disabled={!expedition || isProcessing || isLoadingAllFlagNoExpedisiData || isLoadingAllFlagYesExpedisiResiNumbers}>
+              <Select onValueChange={setSelectedKarung} value={selectedKarung} disabled={!expedition || isProcessing || isLoadingAllFlagNoExpedisiData || isLoadingAllFlagYesExpedisiResiNumbers || showScanner}>
                 <SelectTrigger id="no-karung-select" className="w-full bg-white text-gray-800 h-12 text-center justify-center">
                   <SelectValue placeholder="Pilih No Karung" />
                 </SelectTrigger>
@@ -199,30 +200,52 @@ const InputPage = () => {
               <label htmlFor="scan-resi" className="block text-left text-sm font-medium mb-2">
                 Scan Resi
               </label>
-              <Input
-                id="scan-resi"
-                type="text"
-                placeholder="Scan nomor resi"
-                value={resiNumber}
-                ref={resiInputRef}
-                className={cn(
-                  "w-full bg-white text-gray-800 h-16 text-2xl text-center pr-10",
-                  isInputDisabled && "opacity-70 cursor-not-allowed"
-                )}
-                disabled={isInputDisabled}
-                inputMode="none"
-              />
+              <div className="flex space-x-2">
+                <Input
+                  id="scan-resi"
+                  type="text"
+                  placeholder="Scan nomor resi"
+                  value={resiNumber}
+                  onChange={(e) => setResiNumber(e.target.value)} // Allow manual input
+                  ref={resiInputRef}
+                  className={cn(
+                    "w-full bg-white text-gray-800 h-16 text-2xl text-center pr-10",
+                    isInputDisabled && "opacity-70 cursor-not-allowed"
+                  )}
+                  disabled={isInputDisabled || showScanner} // Disable manual input when scanner is active
+                  inputMode="none" // Prevents virtual keyboard on mobile
+                />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-16 w-16 flex-shrink-0 bg-white text-gray-800 hover:bg-gray-100"
+                  onClick={() => setShowScanner(prev => !prev)}
+                  disabled={isCameraButtonDisabled}
+                  title={showScanner ? "Tutup Kamera" : "Buka Kamera"}
+                >
+                  <Camera className="h-8 w-8" />
+                </Button>
+              </div>
               {isProcessing && (
-                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-6 w-6 animate-spin text-gray-500" />
+                <Loader2 className="absolute right-20 top-1/2 -translate-y-1/2 h-6 w-6 animate-spin text-gray-500" />
               )}
               {(isLoadingAllExpedisiUnfiltered || isLoadingAllFlagNoExpedisiData || isLoadingAllFlagYesExpedisiResiNumbers) && !isProcessing && (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center text-gray-500">
+                <div className="absolute right-20 top-1/2 -translate-y-1/2 flex items-center text-gray-500">
                   <Loader2 className="h-6 w-6 animate-spin mr-2" />
                   <span className="text-sm">Memuat validasi...</span>
                 </div>
               )}
             </div>
           </div>
+
+          {showScanner && (
+            <div className="mt-6">
+              <BarcodeScannerZXing
+                onScan={handleScannedBarcode}
+                onClose={() => setShowScanner(false)}
+              />
+            </div>
+          )}
         </div>
       </div>
 

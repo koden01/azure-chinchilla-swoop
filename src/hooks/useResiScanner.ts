@@ -19,7 +19,6 @@ interface UseResiScannerProps {
   initialRemainingExpeditionItems: number | undefined;
   allFlagNoExpedisiData: Map<string, any> | undefined;
   allFlagYesExpedisiResiNumbers: Set<string> | undefined;
-  isCameraActive: boolean; // FIX: Added isCameraActive prop to the interface
 }
 
 export const useResiScanner = ({ 
@@ -32,7 +31,6 @@ export const useResiScanner = ({
   initialRemainingExpeditionItems,
   allFlagNoExpedisiData,
   allFlagYesExpedisiResiNumbers,
-  isCameraActive,
 }: UseResiScannerProps) => {
   const [resiNumber, setResiNumber] = React.useState<string>("");
   const [isProcessing, setIsProcessing] = React.useState<boolean>(false);
@@ -55,10 +53,6 @@ export const useResiScanner = ({
   const lastKeyPressTime = React.useRef<number>(0);
   const SCANNER_TIMEOUT_MS = 500;
 
-  // NEW: Cooldown mechanism for audio playback
-  const lastBeepTime = React.useRef<number>(0);
-  const BEEP_COOLDOWN_MS = 100; // Minimum time between beeps
-
   React.useEffect(() => {
     setOptimisticTotalExpeditionItems(initialTotalExpeditionItems || 0);
   }, [initialTotalExpeditionItems]);
@@ -68,21 +62,13 @@ export const useResiScanner = ({
   }, [initialRemainingExpeditionItems]);
 
   const playBeep = (audio: HTMLAudioElement) => {
-    const now = Date.now();
-    if (now - lastBeepTime.current < BEEP_COOLDOWN_MS) {
-      // Too soon, ignore this beep request
-      return;
-    }
-    lastBeepTime.current = now;
-
-    // Stop any currently playing instance of this audio
-    audio.pause();
-    audio.currentTime = 0; // Reset to start
-    
-    // Play the audio, catching potential errors (like user gesture requirement)
-    audio.play().catch(e => {
-      console.error("[useResiScanner] Error playing beep sound:", e);
-    });
+    setTimeout(() => {
+      try {
+        audio.play();
+      } catch (e) {
+        console.error("[useResiScanner] Error playing beep sound:", e);
+      }
+    }, 0);
   };
 
   const validateInput = (resi: string) => {
@@ -99,7 +85,7 @@ export const useResiScanner = ({
     return true;
   };
 
-  const handleScanResi = React.useCallback(async (scannedResi: string) => { // FIX: Renamed to handleScanResi
+  const processScannedResi = React.useCallback(async (scannedResi: string) => {
     playBeep(beepStart); 
     
     setIsProcessing(true); 
@@ -294,7 +280,7 @@ export const useResiScanner = ({
         queryClient.invalidateQueries({ queryKey: ["allExpedisiDataUnfiltered", formattedToday] });
         queryClient.invalidateQueries({ queryKey: ["allFlagNoExpedisiData"] });
         queryClient.invalidateQueries({ queryKey: queryKeyForTotalExpeditionItems });
-        queryClient.invalidateQueries({ queryKey: ["remainingExpeditionItems", expedition, formattedToday] }); // Invalidate remaining items for current expedition
+        queryClient.invalidateQueries({ queryKey: queryKeyForRemainingExpeditionItems });
         queryClient.invalidateQueries({ queryKey: ["allFlagYesExpedisiResiNumbers"] });
       });
     } finally {
@@ -304,8 +290,7 @@ export const useResiScanner = ({
 
   React.useEffect(() => {
     const handleGlobalKeyDown = (event: KeyboardEvent) => {
-      // Only process keyboard input if camera is NOT active
-      if (isCameraActive || isProcessing || !expedition || !selectedKarung) {
+      if (isProcessing || !expedition || !selectedKarung) {
         return;
       }
 
@@ -320,7 +305,7 @@ export const useResiScanner = ({
         event.preventDefault();
         if (scannerInputBuffer.current.length > 0) {
           setResiNumber(scannerInputBuffer.current);
-          handleScanResi(scannerInputBuffer.current); // FIX: Call handleScanResi
+          processScannedResi(scannerInputBuffer.current);
           scannerInputBuffer.current = '';
         }
       } else if (event.key.length === 1) {
@@ -337,13 +322,13 @@ export const useResiScanner = ({
     return () => {
       window.removeEventListener('keydown', handleGlobalKeyDown);
     };
-  }, [isProcessing, expedition, selectedKarung, handleScanResi, isCameraActive]); // FIX: Add handleScanResi to dependencies
+  }, [isProcessing, expedition, selectedKarung, processScannedResi]);
 
 
   return {
     resiNumber,
     setResiNumber,
-    handleScanResi, // FIX: Expose handleScanResi
+    handleScanResi: processScannedResi,
     resiInputRef,
     isProcessing: isProcessing || isPending,
     isLoadingRecentScannedResiNumbers: false,

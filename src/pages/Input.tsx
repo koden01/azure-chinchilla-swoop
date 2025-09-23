@@ -132,8 +132,19 @@ const InputPage = () => {
     }
   }, [expedition, selectedKarung, resiInputRef, isCameraActive]);
 
-  // Hanya kondisi ini yang menentukan disabled state (tidak termasuk isCameraActive)
+  // Debug: Check what's causing the disabled state
   const isInputDisabled = !expedition || !selectedKarung || isProcessing || isLoadingAllExpedisiUnfiltered || isLoadingAllFlagNoExpedisiData || isLoadingAllFlagYesExpedisiResiNumbers;
+  
+  console.log("Debug - Disabled state reasons:", {
+    noExpedition: !expedition,
+    noSelectedKarung: !selectedKarung,
+    isProcessing,
+    isLoadingAllExpedisiUnfiltered,
+    isLoadingAllFlagNoExpedisiData,
+    isLoadingAllFlagYesExpedisiResiNumbers,
+    isCameraActive,
+    totalDisabled: isInputDisabled
+  });
 
   const handleCameraScan = (decodedText: string) => {
     handleScanResi(decodedText);
@@ -192,7 +203,7 @@ const InputPage = () => {
               <label htmlFor="expedition-select" className="block text-left text-sm font-medium mb-2">
                 Expedisi
               </label>
-              <Select onValueChange={setExpedition} value={expedition} disabled={isInputDisabled}>
+              <Select onValueChange={setExpedition} value={expedition} disabled={false}>
                 <SelectTrigger id="expedition-select" className="w-full bg-white text-gray-800 h-12 text-center justify-center">
                   <SelectValue placeholder="Pilih Expedisi" />
                 </SelectTrigger>
@@ -207,7 +218,7 @@ const InputPage = () => {
               <label htmlFor="no-karung-select" className="block text-left text-sm font-medium mb-2">
                 No Karung
               </label>
-              <Select onValueChange={setSelectedKarung} value={selectedKarung} disabled={isInputDisabled}>
+              <Select onValueChange={setSelectedKarung} value={selectedKarung} disabled={!expedition}>
                 <SelectTrigger id="no-karung-select" className="w-full bg-white text-gray-800 h-12 text-center justify-center">
                   <SelectValue placeholder="Pilih No Karung" />
                 </SelectTrigger>

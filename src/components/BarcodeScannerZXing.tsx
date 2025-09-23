@@ -131,7 +131,7 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
           });
 
           // Capture controls from the return value of decodeFromStream
-          controlsRef.current = codeReader.decodeFromStream(stream, videoRef.current, (result: Result | undefined, error: Error | undefined) => {
+          controlsRef.current = (codeReader.decodeFromStream(stream, videoRef.current, (result: Result | undefined, error: Error | undefined) => {
             
             if (error) {
               // Log non-critical errors, e.g., "No MultiFormat Readers were able to detect a barcode."
@@ -166,7 +166,7 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
               }
             }
             drawOverlay();
-          });
+          }) as unknown) as IScannerControls; // Added double assertion here
           
           setIsScanning(true); // Set to true when scanning starts successfully
           setIsInitializing(false); // Set to false when scanning starts successfully
@@ -270,7 +270,7 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
             });
 
             // Capture controls from the return value of decodeFromStream
-            controlsRef.current = codeReader.decodeFromStream(stream, videoRef.current, (result: Result | undefined, error: Error | undefined) => {
+            controlsRef.current = (codeReader.decodeFromStream(stream, videoRef.current, (result: Result | undefined, error: Error | undefined) => {
               
               if (error) {
                 if (error.name !== "NotFoundException") {
@@ -299,7 +299,7 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
                 }
               }
               drawOverlay();
-            });
+            }) as unknown) as IScannerControls; // Added double assertion here
             
             setIsScanning(true);
             setIsInitializing(false);

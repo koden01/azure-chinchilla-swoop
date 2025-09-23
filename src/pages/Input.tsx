@@ -12,17 +12,19 @@ import {
 import { useResiInputData } from "@/hooks/useResiInputData";
 import { useExpedition } from "@/context/ExpeditionContext";
 import { useResiScanner } from "@/hooks/useResiScanner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Camera } from "lucide-react"; // Import Camera icon
 import { cn } from "@/lib/utils";
 import KarungSummaryModal from "@/components/KarungSummaryModal";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
-import { useAllFlagYesExpedisiResiNumbers } from "@/hooks/useAllFlagYesExpedisiResiNumbers"; // NEW: Import the new hook
+import { useAllFlagYesExpedisiResiNumbers } from "@/hooks/useAllFlagYesExpedisiResiNumbers";
+import BarcodeScannerQuagga from "@/components/BarcodeScannerQuagga"; // Import the new component
 
 const InputPage = () => {
   const { expedition, setExpedition } = useExpedition();
   const [selectedKarung, setSelectedKarung] = React.useState<string>("1"); // Default to "1"
+  const [showQuaggaScanner, setShowQuaggaScanner] = React.useState(false); // State for Quagga scanner visibility
 
   const [isKarungSummaryModalOpen, setIsKarungSummaryModal] = React.useState(false);
 
@@ -78,25 +80,24 @@ const InputPage = () => {
 
   const {
     allResiForExpedition,
-    // isLoadingAllResiForExpedition, // Dihapus karena tidak digunakan
     highestKarung,
     karungOptions,
-    formattedDate: formattedDateFromHook, // Rename to avoid conflict
+    formattedDate: formattedDateFromHook,
     karungSummary,
     expeditionOptions,
     totalExpeditionItems,
     remainingExpeditionItems,
-    // idExpeditionScanCount, // Removed
     currentCount: getResiCountForKarung,
   } = useResiInputData(expedition, false);
 
   const {
     resiNumber,
+    setResiNumber,
+    handleScanResi: processScannedResi,
     resiInputRef,
     isProcessing,
     optimisticTotalExpeditionItems,
     optimisticRemainingExpeditionItems,
-    // optimisticIdExpeditionScanCount, // Removed
   } = useResiScanner({ 
     expedition, 
     selectedKarung, 
@@ -105,7 +106,6 @@ const InputPage = () => {
     allResiForExpedition,
     initialTotalExpeditionItems: totalExpeditionItems,
     initialRemainingExpeditionItems: remainingExpeditionItems,
-    // NEW: Pass the new cached data
     allFlagNoExpedisiData,
     allFlagYesExpedisiResiNumbers,
   });
@@ -115,7 +115,6 @@ const InputPage = () => {
   }, [getResiCountForKarung, selectedKarung]);
 
   const scanCountToDisplay = React.useMemo(() => {
-    // Scan count is now always Total - Sisa (Remaining)
     return optimisticTotalExpeditionItems - optimisticRemainingExpeditionItems;
   }, [optimisticTotalExpeditionItems, optimisticRemainingExpeditionItems]);
 
@@ -131,12 +130,22 @@ const InputPage = () => {
     }
   }, [expedition, highestKarung]);
 
-  // NEW: Effect to focus on the scan resi input when expedition or karung changes
+  // Effect to focus on the scan resi input when expedition or karung changes
   React.useEffect(() => {
     if (expedition && selectedKarung && resiInputRef.current) {
       resiInputRef.current.focus();
     }
   }, [expedition, selectedKarung, resiInputRef]);
+
+  // Callback for QuaggaJS to handle scanned barcode
+  const handleQuaggaScan = React.useCallback((code: string) => {
+    setResiNumber(code); // Update the input field visually
+    processScannedResi(code); // Trigger the processing logic
+  }, [setResiNumber, processScannedResi]);
+
+  const toggleQuaggaScanner = () => {
+    setShowQuaggaScanner(prev => !prev);
+  };
 
   const isInputDisabled = !expedition || !selectedKarung || isProcessing || isLoadingAllExpedisiUnfiltered || isLoadingAllFlagNoExpedisiData || isLoadingAllFlagYesExpedisiResiNumbers;
 
@@ -199,24 +208,38 @@ const InputPage = () => {
               <label htmlFor="scan-resi" className="block text-left text-sm font-medium mb-2">
                 Scan Resi
               </label>
-              <Input
-                id="scan-resi"
-                type="text"
-                placeholder="Scan nomor resi"
-                value={resiNumber}
-                ref={resiInputRef}
-                className={cn(
-                  "w-full bg-white text-gray-800 h-16 text-2xl text-center pr-10",
-                  isInputDisabled && "opacity-70 cursor-not-allowed"
-                )}
-                disabled={isInputDisabled}
-                inputMode="none"
-              />
+              <div className="flex items-center space-x-2">
+                <Input
+                  id="scan-resi"
+                  type="text"
+                  placeholder="Scan nomor resi"
+                  value={resiNumber}
+                  ref={resiInputRef}
+                  className={cn(
+                    "w-full bg-white text-gray-800 h-16 text-2xl text-center pr-10",
+                    isInputDisabled && "opacity-70 cursor-not-allowed"
+                  )}
+                  disabled={isInputDisabled}
+                  inputMode="none"
+                />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={toggleQuaggaScanner}
+                  disabled={!expedition || isProcessing} // Disable if no expedition or currently processing
+                  className={cn(
+                    "h-16 w-16 flex-shrink-0",
+                    showQuaggaScanner ? "bg-red-500 hover:bg-red-600 text-white" : "bg-blue-500 hover:bg-blue-600 text-white"
+                  )}
+                >
+                  <Camera className="h-8 w-8" />
+                </Button>
+              </div>
               {isProcessing && (
-                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-6 w-6 animate-spin text-gray-500" />
+                <Loader2 className="absolute right-20 top-1/2 -translate-y-1/2 h-6 w-6 animate-spin text-gray-500" />
               )}
               {(isLoadingAllExpedisiUnfiltered || isLoadingAllFlagNoExpedisiData || isLoadingAllFlagYesExpedisiResiNumbers) && !isProcessing && (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center text-gray-500">
+                <div className="absolute right-20 top-1/2 -translate-y-1/2 flex items-center text-gray-500">
                   <Loader2 className="h-6 w-6 animate-spin mr-2" />
                   <span className="text-sm">Memuat validasi...</span>
                 </div>
@@ -224,6 +247,15 @@ const InputPage = () => {
             </div>
           </div>
         </div>
+        {showQuaggaScanner && (
+          <div className="md:col-span-2 mt-4 w-full max-w-2xl"> {/* Added max-w-2xl for better sizing */}
+            <BarcodeScannerQuagga
+              onScan={handleQuaggaScan}
+              onClose={() => setShowQuaggaScanner(false)}
+              isActive={showQuaggaScanner}
+            />
+          </div>
+        )}
       </div>
 
       <KarungSummaryModal

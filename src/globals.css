@@ -110,3 +110,23 @@
   background-color: #22c55e !important; /* Tailwind green-500 */
   color: #ffffff !important; /* Tailwind white */
 }
+
+/* Styling for QuaggaJS viewport */
+#interactive.viewport {
+  position: relative;
+  width: 100%;
+  height: 300px; /* Sesuaikan tinggi sesuai kebutuhan */
+  overflow: hidden;
+  border-radius: 0.5rem;
+  background-color: black;
+}
+
+#interactive.viewport canvas,
+#interactive.viewport video {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* Pastikan video mengisi container */
+}

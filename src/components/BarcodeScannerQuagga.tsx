@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import Quagga from 'quagga';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { XCircle, Loader2, CameraOff, AlertTriangle, Keyboard } from 'lucide-react';
+import { XCircle, Loader2, CameraOff, AlertTriangle, Keyboard, Check, X } from 'lucide-react';
 import { showError, showSuccess } from '@/utils/toast';
 
 interface BarcodeScannerQuaggaProps {
@@ -18,6 +18,7 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [manualInput, setManualInput] = useState('');
   const [showManualInput, setShowManualInput] = useState(false);
+  const [detectedBarcode, setDetectedBarcode] = useState<string | null>(null);
   const quaggaInitializedRef = useRef(false);
 
   useEffect(() => {
@@ -67,8 +68,8 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
             patchSize: "medium",
             halfSample: true,
             debug: {
-              showCanvas: true, // Changed to true to show canvas
-              showPatches: true, // Show patches for better visualization
+              showCanvas: true,
+              showPatches: true,
               showFoundPatches: true,
               showSkeleton: false,
               showLabels: false,
@@ -136,7 +137,10 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
       if (result.codeResult && result.codeResult.code) {
         const code = result.codeResult.code;
         console.log("Barcode detected:", code);
-        onScan(code);
+        setDetectedBarcode(code);
+        // Play beep sound for detection
+        const beep = new Audio('/sounds/beep-double.mp3');
+        beep.play().catch(() => console.log("Audio play failed"));
       }
     });
 
@@ -165,6 +169,7 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
     setCameraError(null);
     setIsInitializing(true);
     setShowManualInput(false);
+    setDetectedBarcode(null);
     
     setTimeout(() => {
       if (videoRef.current) {
@@ -242,6 +247,17 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
       setManualInput('');
       setShowManualInput(false);
     }
+  };
+
+  const handleConfirmBarcode = () => {
+    if (detectedBarcode) {
+      onScan(detectedBarcode);
+      setDetectedBarcode(null);
+    }
+  };
+
+  const handleCancelBarcode = () => {
+    setDetectedBarcode(null);
   };
 
   return (
@@ -327,6 +343,41 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
           </div>
         </div>
       )}
+
+      {detectedBarcode && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900 bg-opacity-90 z-20 p-4">
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">
+              Barcode Terdeteksi
+            </h3>
+            <div className="bg-green-100 border border-green-300 rounded-md p-4 mb-4">
+              <p className="text-green-800 font-mono text-center text-xl">
+                {detectedBarcode}
+              </p>
+            </div>
+            <div className="flex gap-3 justify-center">
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleConfirmBarcode}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <Check className="mr-2 h-4 w-4" />
+                Konfirmasi
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCancelBarcode}
+                className="border-gray-300 text-gray-700 hover:bg-gray-100"
+              >
+                <X className="mr-2 h-4 w-4" />
+                Batal
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
       
       <div id="interactive" className="w-full h-64 relative" ref={videoRef}>
         {/* Overlay untuk menunjukkan area scan */}
@@ -337,7 +388,7 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
         </div>
       </div>
       
-      {!cameraError && (
+      {!cameraError && !detectedBarcode && (
         <div className="absolute top-2 right-2 flex gap-2 z-20">
           <Button
             variant="ghost"

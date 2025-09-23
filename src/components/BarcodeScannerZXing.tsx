@@ -27,19 +27,19 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
   const [isScanningState, setIsScanningState] = useState(false);
   const [overlayTextState, setOverlayTextState] = useState<string | null>(null);
   const [boundingBoxState, setBoundingBoxState] = useState<any | null>(null);
-  const [scanLinePositionState, setScanLinePositionState] = useState(0);
+  // const [scanLinePositionState, setScanLinePositionState] = useState(0); // Dihapus karena tidak lagi digunakan
 
   // Refs to hold the latest state values for drawOverlay to keep it stable
   const isScanningRef = useRef(isScanningState);
   const overlayTextRef = useRef(overlayTextState);
   const boundingBoxRef = useRef(boundingBoxState);
-  const scanLinePositionRef = useRef(scanLinePositionState);
+  // const scanLinePositionRef = useRef(scanLinePositionState); // Dihapus karena tidak lagi digunakan
 
   // Update refs whenever state changes
   useEffect(() => { isScanningRef.current = isScanningState; }, [isScanningState]);
   useEffect(() => { overlayTextRef.current = overlayTextState; }, [overlayTextState]);
   useEffect(() => { boundingBoxRef.current = boundingBoxState; }, [boundingBoxState]);
-  useEffect(() => { scanLinePositionRef.current = scanLinePositionState; }, [scanLinePositionState]);
+  // useEffect(() => { scanLinePositionRef.current = scanLinePositionState; }, [scanLinePositionState]); // Dihapus karena tidak lagi digunakan
 
   const lastProcessedCodeRef = useRef<string | null>(null);
   const lastProcessedTimeRef = useRef<number>(0);
@@ -56,42 +56,42 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
 
     if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
       canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight; // Corrected from video.height
+      canvas.height = video.videoHeight;
     }
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const frameWidth = canvas.width * 0.8;
-    const frameHeight = canvas.height * 0.4;
-    const frameX = (canvas.width - frameWidth) / 2;
-    const frameY = (canvas.height - frameHeight) / 2;
+    // --- Overlay elements removed/commented out ---
+    // const frameWidth = canvas.width * 0.8;
+    // const frameHeight = canvas.height * 0.4;
+    // const frameX = (canvas.width - frameWidth) / 2;
+    // const frameY = (canvas.height - frameHeight) / 2;
 
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(frameX, frameY, frameWidth, frameHeight);
+    // ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+    // ctx.lineWidth = 2;
+    // ctx.strokeRect(frameX, frameY, frameWidth, frameHeight);
 
-    // Access values from refs
-    if (isScanningRef.current && !overlayTextRef.current) {
-        const currentScanLineY = frameY + (frameHeight * scanLinePositionRef.current);
-        ctx.strokeStyle = '#FF0000';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(frameX, currentScanLineY);
-        ctx.lineTo(frameX + frameWidth, currentScanLineY);
-        ctx.stroke();
-    }
+    // if (isScanningRef.current && !overlayTextRef.current) {
+    //     const currentScanLineY = frameY + (frameHeight * scanLinePositionRef.current);
+    //     ctx.strokeStyle = '#FF0000';
+    //     ctx.lineWidth = 2;
+    //     ctx.beginPath();
+    //     ctx.moveTo(frameX, currentScanLineY);
+    //     ctx.lineTo(frameX + frameWidth, currentScanLineY);
+    //     ctx.stroke();
+    // }
 
-    if (boundingBoxRef.current) {
-      ctx.strokeStyle = '#00ff00';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(boundingBoxRef.current[0].x, boundingBoxRef.current[0].y);
-      for (let i = 1; i < boundingBoxRef.current.length; i++) {
-        ctx.lineTo(boundingBoxRef.current[i].x, boundingBoxRef.current[i].y);
-      }
-      ctx.closePath();
-      ctx.stroke();
-    }
+    // if (boundingBoxRef.current) {
+    //   ctx.strokeStyle = '#00ff00';
+    //   ctx.lineWidth = 3;
+    //   ctx.beginPath();
+    //   ctx.moveTo(boundingBoxRef.current[0].x, boundingBoxRef.current[0].y);
+    //   for (let i = 1; i < boundingBoxRef.current.length; i++) {
+    //     ctx.lineTo(boundingBoxRef.current[i].x, boundingBoxRef.current[i].y);
+    //   }
+    //   ctx.closePath();
+    //   ctx.stroke();
+    // }
   }, []); // Empty dependency array: drawOverlay is now truly stable
 
   const cleanupCamera = useCallback(() => {
@@ -108,14 +108,14 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
       }
     }
     controlsRef.current = null;
-    setIsScanningState(false); // Use state setter
+    setIsScanningState(false);
     setIsInitializing(false);
     setCameraError(null);
-    setOverlayTextState(null); // Use state setter
-    setBoundingBoxState(null); // Use state setter
+    setOverlayTextState(null);
+    setBoundingBoxState(null);
     lastProcessedCodeRef.current = null;
     lastProcessedTimeRef.current = 0;
-  }, []); // No dependencies, as it only uses refs or state setters
+  }, []);
 
   const startScanning = useCallback(async () => {
     setIsInitializing(true);
@@ -222,15 +222,16 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
           videoRef.current.play().catch(e => console.error("Error playing video:", e));
         }
 
-        let currentAnimationFrameId: number;
-        const animateScanLine = (timestamp: DOMHighResTimeStamp) => {
-            const duration = 2000;
-            const progress = (timestamp % duration) / duration;
-            const position = progress < 0.5 ? progress * 2 : 1 - (progress - 0.5) * 2;
-            setScanLinePositionState(position); // Update state, which updates ref
-            currentAnimationFrameId = requestAnimationFrame(animateScanLine);
-        };
-        currentAnimationFrameId = requestAnimationFrame(animateScanLine);
+        // --- Scan line animation removed ---
+        // let currentAnimationFrameId: number;
+        // const animateScanLine = (timestamp: DOMHighResTimeStamp) => {
+        //     const duration = 2000;
+        //     const progress = (timestamp % duration) / duration;
+        //     const position = progress < 0.5 ? progress * 2 : 1 - (progress - 0.5) * 2;
+        //     setScanLinePositionState(position);
+        //     currentAnimationFrameId = requestAnimationFrame(animateScanLine);
+        // };
+        // currentAnimationFrameId = requestAnimationFrame(animateScanLine);
 
         controlsRef.current = (codeReaderRef.current.decodeFromStream(stream, videoRef.current, (result: Result | undefined, error: Error | undefined) => {
           if (error) {
@@ -251,21 +252,21 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
               onScan(code);
               beepSuccess.play().catch(() => console.log("Audio play failed"));
 
-              setOverlayTextState(code); // Update state, which updates ref
-              setBoundingBoxState(result.getResultPoints()); // Update state, which updates ref
-              setIsScanningState(false); // Update state, which updates ref
+              setOverlayTextState(code); // State ini tetap diperbarui, tetapi tidak ditampilkan
+              setBoundingBoxState(result.getResultPoints()); // State ini tetap diperbarui, tetapi tidak ditampilkan
+              setIsScanningState(false);
               
               setTimeout(() => {
                 setOverlayTextState(null);
                 setBoundingBoxState(null);
-                onClose(); // Close the scanner after a successful scan
+                onClose();
               }, detectionCooldown);
             }
           }
-          drawOverlay(); // Call the stable drawOverlay
+          drawOverlay();
         }) as unknown) as IScannerControls;
         
-        setIsScanningState(true); // Update state, which updates ref
+        setIsScanningState(true);
         setIsInitializing(false);
         console.log("[ZXing] Scanning started successfully. " + (cameraInfoMessage || ""));
         if (cameraInfoMessage && cameraInfoMessage.includes("Kamera depan digunakan")) {
@@ -281,7 +282,7 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
       setCameraError("Tidak dapat mengakses kamera: " + err.message + ". Pastikan aplikasi berjalan di HTTPS dan izin kamera diberikan.");
       setIsInitializing(false);
     }
-  }, [onScan, onClose, drawOverlay]); // drawOverlay is now stable, so this dependency is fine.
+  }, [onScan, onClose, drawOverlay]);
 
   useEffect(() => {
     let animationFrameId: number; // Declare animationFrameId here
@@ -300,12 +301,12 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
         }
       }
       controlsRef.current = null;
-      cancelAnimationFrame(animationFrameId); // Use the local animationFrameId
-      setIsScanningState(false); // Use state setter
+      // cancelAnimationFrame(animationFrameId); // Dihapus karena animasi garis pemindaian dihapus
+      setIsScanningState(false);
       setIsInitializing(false);
       setCameraError(null);
-      setOverlayTextState(null); // Use state setter
-      setBoundingBoxState(null); // Use state setter
+      setOverlayTextState(null);
+      setBoundingBoxState(null);
       lastProcessedCodeRef.current = null;
       lastProcessedTimeRef.current = 0;
     };
@@ -318,16 +319,16 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
     }
 
     return cleanup;
-  }, [isActive, startScanning]); // startScanning is now stable because drawOverlay is stable.
+  }, [isActive, startScanning]);
 
   const handleCloseClick = () => {
-    onClose(); // This will set isActive to false in the parent
+    onClose();
   };
 
   const handleRetryCamera = () => {
     console.log("[ZXing] Retrying camera initialization...");
-    cleanupCamera(); // Clean up existing camera resources
-    startScanning(); // Attempt to start scanning again
+    cleanupCamera();
+    startScanning();
   };
 
   return (
@@ -380,11 +381,12 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
         />
       </div>
 
-      {overlayTextState && (
+      {/* Overlay text removed */}
+      {/* {overlayTextState && (
         <div className="absolute bottom-0 left-0 right-0 bg-green-600 text-white text-center py-2 z-30">
           <p className="text-lg font-semibold">Hasil Scan: {overlayTextState}</p>
         </div>
-      )}
+      )} */}
 
       {!cameraError && (
         <div className="absolute top-2 right-2 z-20">
@@ -401,13 +403,14 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
         </div>
       )}
 
-      {!cameraError && !isInitializing && isScanningState && !overlayTextState && (
+      {/* Hint text removed */}
+      {/* {!cameraError && !isInitializing && isScanningState && !overlayTextState && (
         <div className="absolute bottom-4 left-0 right-0 text-center z-20">
           <p className="text-white text-sm bg-black bg-opacity-50 px-3 py-1 rounded-full inline-block">
             Arahkan barcode ke tengah layar
           </p>
         </div>
-      )}
+      )} */}
     </div>
   );
 };

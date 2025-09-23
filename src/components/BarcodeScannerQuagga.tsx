@@ -47,8 +47,8 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
         target: interactiveRef.current,
         constraints: {
           facingMode: "environment", // Prioritaskan kamera belakang
-          width: { min: 640, ideal: 800, max: 1280 },
-          height: { min: 480, ideal: 600, max: 720 },
+          width: { min: 640, ideal: 1280, max: 1920 }, // Meminta lebar ideal yang lebih besar
+          height: { min: 480, ideal: 720, max: 1080 }, // Meminta tinggi ideal yang lebih kecil dari lebar
         },
       },
       decoder: {

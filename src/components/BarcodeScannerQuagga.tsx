@@ -47,8 +47,8 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
         target: interactiveRef.current,
         constraints: {
           facingMode: "environment", // Prioritaskan kamera belakang
-          width: { min: 640, ideal: 1280, max: 1920 }, // Meminta lebar ideal yang lebih besar
-          height: { min: 480, ideal: 720, max: 1080 }, // Meminta tinggi ideal yang lebih kecil dari lebar
+          width: { min: 640, ideal: 960, max: 1920 }, // Menyesuaikan lebar ideal
+          height: { min: 480, ideal: 540, max: 1080 }, // Menyesuaikan tinggi ideal
         },
       },
       decoder: {
@@ -65,8 +65,8 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
         ],
       },
       locate: true, // Aktifkan penggambaran kotak pembatas
-      numOfWorkers: 0, // Gunakan 0 untuk berjalan di main thread untuk debugging yang lebih sederhana
-      frequency: 5, // Mengembalikan frekuensi pemrosesan frame ke 5
+      numOfWorkers: navigator.hardwareConcurrency || 4, // Menggunakan web workers untuk kinerja yang lebih baik
+      frequency: 15, // Meningkatkan frekuensi pemrosesan frame
       locator: { // Konfigurasi locator yang ditingkatkan
         patchSize: 'large', // Meningkatkan ukuran patch untuk menangani barcode yang lebih panjang
         halfSample: false, // Memproses gambar dengan resolusi penuh untuk detail yang lebih baik

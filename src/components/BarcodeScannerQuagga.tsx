@@ -10,6 +10,13 @@ interface BarcodeScannerQuaggaProps {
   onClose: () => void;
 }
 
+interface DetectionPosition {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onClose }) => {
   const videoRef = useRef<HTMLDivElement>(null);
   const manualInputRef = useRef<HTMLInputElement>(null);
@@ -19,6 +26,7 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
   const [manualInput, setManualInput] = useState('');
   const [showManualInput, setShowManualInput] = useState(false);
   const [detectedBarcode, setDetectedBarcode] = useState<string | null>(null);
+  const [detectionPosition, setDetectionPosition] = useState<DetectionPosition | null>(null);
   const quaggaInitializedRef = useRef(false);
 
   useEffect(() => {
@@ -137,6 +145,19 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
       if (result.codeResult && result.codeResult.code) {
         const code = result.codeResult.code;
         console.log("Barcode detected:", code);
+        
+        // Get the position of the detected barcode
+        if (result.box) {
+          const box = result.box;
+          const position: DetectionPosition = {
+            x: box[0][0],
+            y: box[0][1],
+            width: box[2][0] - box[0][0],
+            height: box[2][1] - box[0][1]
+          };
+          setDetectionPosition(position);
+        }
+        
         setDetectedBarcode(code);
         // Play beep sound for detection
         const beep = new Audio('/sounds/beep-double.mp3');
@@ -170,6 +191,7 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
     setIsInitializing(true);
     setShowManualInput(false);
     setDetectedBarcode(null);
+    setDetectionPosition(null);
     
     setTimeout(() => {
       if (videoRef.current) {
@@ -253,11 +275,13 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
     if (detectedBarcode) {
       onScan(detectedBarcode);
       setDetectedBarcode(null);
+      setDetectionPosition(null);
     }
   };
 
   const handleCancelBarcode = () => {
     setDetectedBarcode(null);
+    setDetectionPosition(null);
   };
 
   return (
@@ -344,36 +368,52 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
         </div>
       )}
 
-      {detectedBarcode && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900 bg-opacity-90 z-20 p-4">
-          <div className="bg-white rounded-lg p-6 max-w-sm w-full">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">
-              Barcode Terdeteksi
-            </h3>
-            <div className="bg-green-100 border border-green-300 rounded-md p-4 mb-4">
-              <p className="text-green-800 font-mono text-center text-xl">
-                {detectedBarcode}
-              </p>
-            </div>
-            <div className="flex gap-3 justify-center">
-              <Button
-                variant="default"
-                size="sm"
-                onClick={handleConfirmBarcode}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                <Check className="mr-2 h-4 w-4" />
-                Konfirmasi
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleCancelBarcode}
-                className="border-gray-300 text-gray-700 hover:bg-gray-100"
-              >
-                <X className="mr-2 h-4 w-4" />
-                Batal
-              </Button>
+      {detectedBarcode && detectionPosition && (
+        <div className="absolute inset-0 z-20">
+          {/* Overlay hijau di lokasi barcode */}
+          <div
+            className="absolute border-4 border-green-500 bg-green-500 bg-opacity-30 rounded-lg"
+            style={{
+              left: `${detectionPosition.x}px`,
+              top: `${detectionPosition.y}px`,
+              width: `${detectionPosition.width}px`,
+              height: `${detectionPosition.height}px`,
+            }}
+          />
+          
+          {/* Bubble text di bawah barcode */}
+          <div
+            className="absolute bg-white rounded-lg p-3 shadow-lg z-30"
+            style={{
+              left: `${detectionPosition.x}px`,
+              top: `${detectionPosition.y + detectionPosition.height + 10}px`,
+              minWidth: '200px',
+            }}
+          >
+            <div className="text-center">
+              <p className="text-sm font-semibold text-gray-800 mb-2">Barcode Terdeteksi</p>
+              <div className="bg-green-100 border border-green-300 rounded-md p-2 mb-3">
+                <p className="text-green-800 font-mono text-sm">{detectedBarcode}</p>
+              </div>
+              <div className="flex gap-2 justify-center">
+                <Button
+                  size="sm"
+                  onClick={handleConfirmBarcode}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  <Check className="h-3 w-3 mr-1" />
+                  OK
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCancelBarcode}
+                  className="border-gray-300 text-gray-700 hover:bg-gray-100"
+                >
+                  <X className="h-3 w-3 mr-1" />
+                  Batal
+                </Button>
+              </div>
             </div>
           </div>
         </div>

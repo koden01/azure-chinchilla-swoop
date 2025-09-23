@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Quagga from 'quagga';
 import { Button } from '@/components/ui/button';
-import { XCircle, Loader2, CameraOff } from 'lucide-react';
+import { XCircle, Loader2, CameraOff, AlertTriangle } from 'lucide-react';
 import { showError, showSuccess } from '@/utils/toast';
 
 interface BarcodeScannerQuaggaProps {
@@ -25,7 +25,14 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
 
     // Check if getUserMedia is available
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      setCameraError("Camera access not supported in this browser");
+      setCameraError("Camera access not supported in this browser. Please use a modern browser like Chrome, Firefox, or Safari.");
+      setIsInitializing(false);
+      return;
+    }
+
+    // Check if we're on HTTPS (required for camera access)
+    if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+      setCameraError("Camera access requires HTTPS connection. Please access this app via HTTPS or use localhost for development.");
       setIsInitializing(false);
       return;
     }
@@ -85,12 +92,14 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
             console.error("QuaggaJS initialization error:", err);
             let errorMessage = "Gagal mengakses kamera";
             
-            if (err.name === 'NotReadableError') {
-              errorMessage = "Kamera sedang digunakan oleh aplikasi lain. Tutup aplikasi lain yang menggunakan kamera dan coba lagi.";
-            } else if (err.name === 'PermissionDeniedError') {
+            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
               errorMessage = "Izin akses kamera ditolak. Silakan berikan izin akses kamera di pengaturan browser Anda.";
-            } else if (err.name === 'NotFoundError') {
+            } else if (err.name === 'NotFoundError' || err.name === 'OverconstrainedError') {
               errorMessage = "Tidak ada kamera yang ditemukan. Pastikan perangkat Anda memiliki kamera yang berfungsi.";
+            } else if (err.name === 'NotReadableError') {
+              errorMessage = "Kamera sedang digunakan oleh aplikasi lain. Tutup aplikasi lain yang menggunakan kamera dan coba lagi.";
+            } else if (err.name === 'AbortError') {
+              errorMessage = "Operasi kamera dibatalkan. Silakan coba lagi.";
             } else if (err.message?.includes('getUserMedia')) {
               errorMessage = "Browser tidak mendukung akses kamera. Pastikan Anda menggunakan browser modern seperti Chrome, Firefox, atau Safari.";
             }
@@ -239,7 +248,7 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
       
       {cameraError && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900 bg-opacity-90 text-white z-10 p-4">
-          <CameraOff className="h-12 w-12 mb-4 text-red-400" />
+          <AlertTriangle className="h-12 w-12 mb-4 text-yellow-400" />
           <p className="text-center mb-4">{cameraError}</p>
           <div className="flex gap-2">
             <Button

@@ -107,28 +107,45 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
       lastProcessedTimeRef.current = 0;
 
       try {
-        console.log("[ZXing] Listing video input devices...");
-        const videoInputDevices = await codeReader.listVideoInputDevices();
-        if (videoInputDevices.length === 0) {
-          throw new Error("Tidak ada perangkat kamera yang ditemukan.");
+        let deviceId: string | undefined;
+        let stream: MediaStream;
+
+        // Try to enumerate devices first
+        try {
+          console.log("[ZXing] Listing video input devices...");
+          const videoInputDevices = await codeReader.listVideoInputDevices();
+          if (videoInputDevices.length === 0) {
+            throw new Error("Tidak ada perangkat kamera yang ditemukan.");
+          }
+          console.log("[ZXing] Found video devices:", videoInputDevices);
+
+          const rearCamera = videoInputDevices.find(device => device.label.toLowerCase().includes('back') || device.label.toLowerCase().includes('environment'));
+          deviceId = rearCamera ? rearCamera.deviceId : videoInputDevices[0].deviceId;
+          console.log("[ZXing] Using deviceId:", deviceId);
+
+          const videoConstraints: MediaStreamConstraints = {
+            video: {
+              deviceId: deviceId,
+              facingMode: rearCamera ? 'environment' : 'user', // Prefer back camera
+              width: { ideal: 1280 }, // Request a good resolution
+              height: { ideal: 720 },
+            },
+          };
+          stream = await navigator.mediaDevices.getUserMedia(videoConstraints);
+
+        } catch (enumerateError: any) {
+          console.warn("[ZXing] Error enumerating devices, trying direct getUserMedia:", enumerateError.message);
+          // Fallback: try to get a stream without specifying deviceId
+          // This might pick the front camera on mobile, but it's better than nothing.
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+            },
+          });
+          setCameraError("Tidak dapat menemukan kamera belakang secara otomatis. Menggunakan kamera default. Pastikan aplikasi berjalan di HTTPS dan izin kamera diberikan.");
         }
-        console.log("[ZXing] Found video devices:", videoInputDevices);
 
-        const rearCamera = videoInputDevices.find(device => device.label.toLowerCase().includes('back') || device.label.toLowerCase().includes('environment'));
-        const deviceId = rearCamera ? rearCamera.deviceId : videoInputDevices[0].deviceId;
-        console.log("[ZXing] Using deviceId:", deviceId);
-
-        // Explicitly set video constraints for better resolution
-        const videoConstraints: MediaStreamConstraints = {
-          video: {
-            deviceId: deviceId,
-            facingMode: rearCamera ? 'environment' : 'user', // Prefer back camera
-            width: { ideal: 1280 }, // Request a good resolution
-            height: { ideal: 720 },
-          },
-        };
-
-        const stream = await navigator.mediaDevices.getUserMedia(videoConstraints);
 
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
@@ -198,7 +215,7 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
         }
       } catch (err: any) {
         console.error("ZXing Camera access error:", err);
-        setCameraError("Tidak dapat mengakses kamera: " + err.message);
+        setCameraError("Tidak dapat mengakses kamera: " + err.message + ". Pastikan aplikasi berjalan di HTTPS dan izin kamera diberikan.");
         setIsInitializing(false);
       }
     };
@@ -264,20 +281,33 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
 
       const startScanningRetry = async () => {
         try {
-          const videoInputDevices = await codeReader.listVideoInputDevices();
-          const rearCamera = videoInputDevices.find(device => device.label.toLowerCase().includes('back') || device.label.toLowerCase().includes('environment'));
-          const deviceId = rearCamera ? rearCamera.deviceId : videoInputDevices[0].deviceId;
+          let deviceId: string | undefined;
+          let stream: MediaStream;
 
-          const videoConstraints: MediaStreamConstraints = {
-            video: {
-              deviceId: deviceId,
-              facingMode: rearCamera ? 'environment' : 'user',
-              width: { ideal: 1280 },
-              height: { ideal: 720 },
-            },
-          };
+          try {
+            const videoInputDevices = await codeReader.listVideoInputDevices();
+            const rearCamera = videoInputDevices.find(device => device.label.toLowerCase().includes('back') || device.label.toLowerCase().includes('environment'));
+            deviceId = rearCamera ? rearCamera.deviceId : videoInputDevices[0].deviceId;
 
-          const stream = await navigator.mediaDevices.getUserMedia(videoConstraints);
+            const videoConstraints: MediaStreamConstraints = {
+              video: {
+                deviceId: deviceId,
+                facingMode: rearCamera ? 'environment' : 'user',
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+              },
+            };
+            stream = await navigator.mediaDevices.getUserMedia(videoConstraints);
+          } catch (enumerateError: any) {
+            console.warn("[ZXing] Error enumerating devices during retry, trying direct getUserMedia:", enumerateError.message);
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: {
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+              },
+            });
+            setCameraError("Tidak dapat menemukan kamera belakang secara otomatis. Menggunakan kamera default. Pastikan aplikasi berjalan di HTTPS dan izin kamera diberikan.");
+          }
 
           if (videoRef.current) {
             videoRef.current.srcObject = stream;
@@ -337,7 +367,7 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
           }
         } catch (err: any) {
           console.error("ZXing Camera access error during retry:", err);
-          setCameraError("Gagal mengakses kamera setelah retry: " + err.message);
+          setCameraError("Gagal mengakses kamera setelah retry: " + err.message + ". Pastikan aplikasi berjalan di HTTPS dan izin kamera diberikan.");
           setIsInitializing(false);
         }
       };

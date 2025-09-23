@@ -1,8 +1,17 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { BrowserMultiFormatReader, DecodeHintType, BarcodeFormat, Result } from '@zxing/library'; // Removed IScannerControls
+import { BrowserMultiFormatReader, DecodeHintType, BarcodeFormat, Result } from '@zxing/library';
 import { Button } from '@/components/ui/button';
 import { XCircle, Loader2, CameraOff, AlertTriangle, CheckCircle } from 'lucide-react';
 import { beepSuccess } from '@/utils/audio';
+
+// Define IScannerControls locally as it's not directly exported from @zxing/library
+interface IScannerControls {
+  stream: MediaStream; // Changed to MediaStream (not MediaStream | null)
+  stop(): void;
+}
+
+// Define DecodeContinuouslyCallback locally to ensure correct signature is used
+type LocalDecodeContinuouslyCallback = (result: Result | undefined, error: Error | undefined, controls: IScannerControls) => void;
 
 interface BarcodeScannerZXingProps {
   onScan: (decodedText: string) => void;
@@ -30,7 +39,7 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
 
     // Set canvas dimensions to match video
     canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    canvas.height = video.videoHeight; // Use video.videoHeight for consistency
 
     // Clear previous drawing
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -83,8 +92,8 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
 
         if (videoRef.current) {
           controlsRef.current.videoElement = videoRef.current;
-          // Correct callback signature
-          codeReader.decodeFromVideoDevice(deviceId, videoRef.current, (result: Result | undefined, error: Error | undefined, controls: { stream: MediaStream | null }) => { 
+          // Use the locally defined type for the callback and cast to any
+          const callback: LocalDecodeContinuouslyCallback = (result, error, controls) => {
             if (result) {
               console.log('ZXing Barcode detected:', result.getText(), 'Format:', result.getBarcodeFormat().toString());
               if (!detectedBarcode) { // Only set if no barcode is currently detected
@@ -100,7 +109,8 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
               // Only log errors if no result was found, to avoid spamming for intermittent errors
               // console.error('ZXing Decoding error:', error);
             }
-          });
+          };
+          codeReader.decodeFromVideoDevice(deviceId, videoRef.current, callback as any); // Cast to any
           setIsScanning(true); // ZXing is now actively looking for barcodes
           setIsInitializing(false);
         }
@@ -187,8 +197,8 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
 
           if (videoRef.current) {
             controlsRef.current.videoElement = videoRef.current;
-            // Correct callback signature
-            codeReader.decodeFromVideoDevice(deviceId, videoRef.current, (result: Result | undefined, error: Error | undefined, controls: { stream: MediaStream | null }) => {
+            // Use the locally defined type for the callback and cast to any
+            const callback: LocalDecodeContinuouslyCallback = (result, error, controls) => {
               if (result) {
                 if (!detectedBarcode) {
                   setDetectedBarcode(result.getText());
@@ -197,7 +207,8 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
                   controlsRef.current.stream = controls.stream;
                 }
               }
-            });
+            };
+            codeReader.decodeFromVideoDevice(deviceId, videoRef.current, callback as any); // Cast to any
             setIsScanning(true);
             setIsInitializing(false);
           }

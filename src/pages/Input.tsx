@@ -238,14 +238,14 @@ const InputPage = () => {
             </div>
           </div>
 
-          {showScanner && (
-            <div className="mt-6">
-              <BarcodeScannerZXing
-                onScan={handleScannedBarcode}
-                onClose={() => setShowScanner(false)}
-              />
-            </div>
-          )}
+          {/* The scanner component is now always mounted but activated/deactivated */}
+          <div className={cn("mt-6", !showScanner && "hidden")}> {/* Hide it with CSS when not active */}
+            <BarcodeScannerZXing
+              onScan={handleScannedBarcode}
+              onClose={() => setShowScanner(false)}
+              isActive={showScanner} // Pass the state as isActive prop
+            />
+          </div>
         </div>
       </div>
 

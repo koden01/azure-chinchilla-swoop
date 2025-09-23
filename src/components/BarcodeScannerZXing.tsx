@@ -169,16 +169,15 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
 
-        // Removed explicit videoRef.current.play() call.
-        // ZXing's decodeFromStream will handle playing the video.
+        // Add a listener to log video dimensions once metadata is loaded
+        videoRef.current.onloadedmetadata = () => {
+            console.log(`[ZXing] Video metadata loaded. Dimensions: ${videoRef.current?.videoWidth}x${videoRef.current?.videoHeight}`);
+        };
 
         controlsRef.current = (codeReaderRef.current.decodeFromStream(stream, videoRef.current, (result: Result | undefined, error: Error | undefined) => {
           if (error) {
-            if (error.name !== "NotFoundException") {
-              console.warn("[ZXing] Decoding error (non-NotFoundException):", error);
-            }
-            // Log all errors for debugging
-            console.log("[ZXing] Decoder Error:", error);
+            // Log ALL errors for debugging, not just filter NotFoundException
+            console.error("[ZXing] Decoding error:", error); 
           }
 
           if (result) {

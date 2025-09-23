@@ -161,10 +161,9 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
           drawBoundingBox(result.box);
         }
 
-        // Validate barcode length and confidence
-        // Only process if confidence is high (already set in locator.minConfidence, but good to double check)
+        // Validate barcode confidence (removed length validation)
         const confidence = result.codeResult.decodedCodes[0]?.confidence || 0;
-        if (code.length >= 8 && code.length <= 13 && confidence >= 0.8) { // Ensure length and confidence
+        if (confidence >= 0.8) { // Only process if confidence is 80% or higher
           setDetectedBarcode(code);
           lastDetectionTime.current = currentTime;
           

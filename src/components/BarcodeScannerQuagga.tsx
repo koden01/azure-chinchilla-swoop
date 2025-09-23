@@ -28,6 +28,8 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
   const [detectedBarcode, setDetectedBarcode] = useState<string | null>(null);
   const [detectionPosition, setDetectionPosition] = useState<DetectionPosition | null>(null);
   const quaggaInitializedRef = useRef(false);
+  const lastDetectionTime = useRef<number>(0);
+  const detectionCooldown = 2000; // 2 seconds cooldown between detections
 
   useEffect(() => {
     // Check if we're in a browser environment
@@ -73,35 +75,28 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
             },
           },
           locator: {
-            patchSize: "medium",
-            halfSample: true,
+            patchSize: "large", // Changed to large for better detection
+            halfSample: false, // Disable half sample for more accurate reading
             debug: {
-              showCanvas: true,
-              showPatches: true,
-              showFoundPatches: true,
+              showCanvas: false, // Disable canvas overlay
+              showPatches: false, // Disable patches overlay
+              showFoundPatches: false,
               showSkeleton: false,
               showLabels: false,
               showTestMarkers: false,
               showQuagga: false,
             },
           },
-          numOfWorkers: navigator.hardwareConcurrency || 0,
+          numOfWorkers: Math.max(1, navigator.hardwareConcurrency - 1), // Use fewer workers
           locate: true,
           decoder: {
             readers: [
               "code_128_reader",
               "ean_reader",
-              "ean_8_reader",
               "code_39_reader",
-              "code_39_vin_reader",
-              "codabar_reader",
-              "upc_reader",
-              "upc_e_reader",
-              "i2of5_reader",
-              "2of5_reader",
-              "code_93_reader",
             ],
           },
+          frequency: 10, // Lower frequency for slower scanning
         }, (err) => {
           if (err) {
             console.error("QuaggaJS initialization error:", err);
@@ -142,9 +137,22 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
     initializeQuagga();
 
     Quagga.onDetected((result) => {
+      const currentTime = Date.now();
+      
+      // Cooldown mechanism to prevent rapid detections
+      if (currentTime - lastDetectionTime.current < detectionCooldown) {
+        return;
+      }
+
       if (result.codeResult && result.codeResult.code) {
         const code = result.codeResult.code;
         console.log("Barcode detected:", code);
+        
+        // Validate barcode length to prevent partial reads
+        if (code.length < 5) {
+          console.log("Barcode too short, likely partial read:", code);
+          return;
+        }
         
         // Get the position of the detected barcode
         if (result.box) {
@@ -159,9 +167,7 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
         }
         
         setDetectedBarcode(code);
-        // Play beep sound for detection
-        const beep = new Audio('/sounds/beep-double.mp3');
-        beep.play().catch(() => console.log("Audio play failed"));
+        lastDetectionTime.current = currentTime;
       }
     });
 
@@ -210,35 +216,28 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
                 },
               },
               locator: {
-                patchSize: "medium",
-                halfSample: true,
+                patchSize: "large",
+                halfSample: false,
                 debug: {
-                  showCanvas: true,
-                  showPatches: true,
-                  showFoundPatches: true,
+                  showCanvas: false,
+                  showPatches: false,
+                  showFoundPatches: false,
                   showSkeleton: false,
                   showLabels: false,
                   showTestMarkers: false,
                   showQuagga: false,
                 },
               },
-              numOfWorkers: navigator.hardwareConcurrency || 0,
+              numOfWorkers: Math.max(1, navigator.hardwareConcurrency - 1),
               locate: true,
               decoder: {
                 readers: [
                   "code_128_reader",
                   "ean_reader",
-                  "ean_8_reader",
                   "code_39_reader",
-                  "code_39_vin_reader",
-                  "codabar_reader",
-                  "upc_reader",
-                  "upc_e_reader",
-                  "i2of5_reader",
-                  "2of5_reader",
-                  "code_93_reader",
                 ],
               },
+              frequency: 10,
             }, (err) => {
               if (err) {
                 setCameraError("Gagal mengakses kamera setelah percobaan ulang");
@@ -265,6 +264,10 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
 
   const handleManualInput = () => {
     if (manualInput.trim()) {
+      // Play sound when manually entering barcode
+      const beepStart = new Audio('/sounds/beep-start.mp3');
+      beepStart.play().catch(() => console.log("Audio play failed"));
+      
       onScan(manualInput.trim());
       setManualInput('');
       setShowManualInput(false);
@@ -273,6 +276,10 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
 
   const handleConfirmBarcode = () => {
     if (detectedBarcode) {
+      // Play sound when confirming barcode
+      const beepStart = new Audio('/sounds/beep-start.mp3');
+      beepStart.play().catch(() => console.log("Audio play failed"));
+      
       onScan(detectedBarcode);
       setDetectedBarcode(null);
       setDetectionPosition(null);
@@ -342,7 +349,14 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
               onChange={(e) => setManualInput(e.target.value)}
               placeholder="Masukkan nomor resi"
               className="text-gray-800 h-12 text-center text-lg"
-              onKeyPress={(e) => e.key === 'Enter' && handleManualInput()}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  // Play sound on Enter key
+                  const beepStart = new Audio('/sounds/beep-start.mp3');
+                  beepStart.play().catch(() => console.log("Audio play failed"));
+                  handleManualInput();
+                }
+              }}
               autoFocus
             />
           </div>
@@ -368,64 +382,38 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
         </div>
       )}
 
-      {detectedBarcode && detectionPosition && (
-        <div className="absolute inset-0 z-20">
-          {/* Overlay hijau di lokasi barcode */}
-          <div
-            className="absolute border-4 border-green-500 bg-green-500 bg-opacity-30 rounded-lg"
-            style={{
-              left: `${detectionPosition.x}px`,
-              top: `${detectionPosition.y}px`,
-              width: `${detectionPosition.width}px`,
-              height: `${detectionPosition.height}px`,
-            }}
-          />
-          
-          {/* Bubble text di bawah barcode */}
-          <div
-            className="absolute bg-white rounded-lg p-3 shadow-lg z-30"
-            style={{
-              left: `${detectionPosition.x}px`,
-              top: `${detectionPosition.y + detectionPosition.height + 10}px`,
-              minWidth: '200px',
-            }}
-          >
-            <div className="text-center">
-              <p className="text-sm font-semibold text-gray-800 mb-2">Barcode Terdeteksi</p>
-              <div className="bg-green-100 border border-green-300 rounded-md p-2 mb-3">
-                <p className="text-green-800 font-mono text-sm">{detectedBarcode}</p>
-              </div>
-              <div className="flex gap-2 justify-center">
-                <Button
-                  size="sm"
-                  onClick={handleConfirmBarcode}
-                  className="bg-green-600 hover:bg-green-700 text-white"
-                >
-                  <Check className="h-3 w-3 mr-1" />
-                  OK
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleCancelBarcode}
-                  className="border-gray-300 text-gray-700 hover:bg-gray-100"
-                >
-                  <X className="h-3 w-3 mr-1" />
-                  Batal
-                </Button>
-              </div>
+      {detectedBarcode && (
+        <div className="absolute top-full left-0 right-0 bg-white rounded-b-lg p-4 shadow-lg z-30 mt-2">
+          <div className="text-center">
+            <p className="text-sm font-semibold text-gray-800 mb-2">Barcode Terdeteksi</p>
+            <div className="bg-green-100 border border-green-300 rounded-md p-3 mb-3">
+              <p className="text-green-800 font-mono text-lg font-bold">{detectedBarcode}</p>
+            </div>
+            <div className="flex gap-3 justify-center">
+              <Button
+                size="sm"
+                onClick={handleConfirmBarcode}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                <Check className="mr-2 h-4 w-4" />
+                Konfirmasi
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCancelBarcode}
+                className="border-gray-300 text-gray-700 hover:bg-gray-100"
+              >
+                <X className="mr-2 h-4 w-4" />
+                Batal
+              </Button>
             </div>
           </div>
         </div>
       )}
       
       <div id="interactive" className="w-full h-64 relative" ref={videoRef}>
-        {/* Overlay untuk menunjukkan area scan */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-64 h-32 border-4 border-green-500 rounded-lg bg-green-500 bg-opacity-20 flex items-center justify-center">
-            <div className="text-white text-sm font-semibold">Arahkan barcode ke sini</div>
-          </div>
-        </div>
+        {/* Camera view only - no overlay boxes */}
       </div>
       
       {!cameraError && !detectedBarcode && (

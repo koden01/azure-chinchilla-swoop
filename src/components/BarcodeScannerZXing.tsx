@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { BrowserMultiFormatReader, DecodeHintType, BarcodeFormat } from '@zxing/library';
+import { BrowserMultiFormatReader, DecodeHintType, BarcodeFormat, Result, VideoInputDevice } from '@zxing/library'; // Import Result type and VideoInputDevice
 import { Button } from '@/components/ui/button';
 import { XCircle, Loader2, CameraOff, AlertTriangle, CheckCircle } from 'lucide-react';
 import { beepSuccess } from '@/utils/audio';
@@ -72,7 +72,8 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
       setDetectedBarcode(null);
 
       try {
-        const videoInputDevices = await BrowserMultiFormatReader.listVideoInputDevices();
+        // FIX 1: Call listVideoInputDevices on the instance
+        const videoInputDevices = await codeReader.listVideoInputDevices(); 
         if (videoInputDevices.length === 0) {
           throw new Error("Tidak ada perangkat kamera yang ditemukan.");
         }
@@ -83,7 +84,8 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
 
         if (videoRef.current) {
           controlsRef.current.videoElement = videoRef.current;
-          codeReader.decodeFromVideoDevice(deviceId, videoRef.current, (result, error, controls) => {
+          // FIX 2: Correct callback signature
+          codeReader.decodeFromVideoDevice(deviceId, videoRef.current, (result: Result | undefined, error: Error | undefined, controls: VideoInputDevice) => { 
             if (result) {
               console.log('ZXing Barcode detected:', result.getText(), 'Format:', result.getBarcodeFormat().toString());
               if (!detectedBarcode) { // Only set if no barcode is currently detected
@@ -180,13 +182,15 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
 
       const startScanningRetry = async () => {
         try {
-          const videoInputDevices = await BrowserMultiFormatReader.listVideoInputDevices();
+          // FIX 3: Call listVideoInputDevices on the instance
+          const videoInputDevices = await codeReader.listVideoInputDevices();
           const rearCamera = videoInputDevices.find(device => device.label.toLowerCase().includes('back') || device.label.toLowerCase().includes('environment'));
           const deviceId = rearCamera ? rearCamera.deviceId : videoInputDevices[0].deviceId;
 
           if (videoRef.current) {
             controlsRef.current.videoElement = videoRef.current;
-            codeReader.decodeFromVideoDevice(deviceId, videoRef.current, (result, error, controls) => {
+            // FIX 4: Correct callback signature
+            codeReader.decodeFromVideoDevice(deviceId, videoRef.current, (result: Result | undefined, error: Error | undefined, controls: VideoInputDevice) => {
               if (result) {
                 if (!detectedBarcode) {
                   setDetectedBarcode(result.getText());

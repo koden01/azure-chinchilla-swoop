@@ -20,7 +20,8 @@ import { format } from "date-fns";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 import { useAllFlagYesExpedisiResiNumbers } from "@/hooks/useAllFlagYesExpedisiResiNumbers";
 import { Button } from "@/components/ui/button";
-import BarcodeScannerZXing from "@/components/BarcodeScannerZXing"; // Mengganti BarcodeScannerQuagga
+import BarcodeScannerZXing from "@/components/BarcodeScannerZXing";
+import { showError } from "@/utils/toast"; // FIX 5: Import showError
 
 const InputPage = () => {
   const { expedition, setExpedition } = useExpedition();

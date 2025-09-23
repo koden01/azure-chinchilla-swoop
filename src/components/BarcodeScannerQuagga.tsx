@@ -53,10 +53,15 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
       },
       decoder: {
         readers: ["code_128_reader", "ean_reader", "ean_8_reader", "code_39_reader"],
+        // Menambahkan konfigurasi khusus untuk Code 128 jika diperlukan,
+        // namun patchSize dan halfSample lebih umum untuk masalah pemotongan.
       },
       locate: true, // Aktifkan penggambaran kotak pembatas
       numOfWorkers: 0, // Gunakan 0 untuk berjalan di main thread untuk debugging yang lebih sederhana
       frequency: 5, // Mengurangi frekuensi pemrosesan frame untuk mengurangi beban CPU
+      // Menyesuaikan parameter untuk meningkatkan akurasi Code 128
+      patchSize: 'large', // Meningkatkan ukuran patch untuk menangani barcode yang lebih panjang
+      halfSample: false, // Memproses gambar dengan resolusi penuh untuk detail yang lebih baik
     }, (err) => {
       if (err) {
         console.error("[QuaggaJS] Initialization error:", err);

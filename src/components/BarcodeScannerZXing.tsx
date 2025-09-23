@@ -122,8 +122,8 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
       BarcodeFormat.CODE_39, BarcodeFormat.DATA_MATRIX, BarcodeFormat.AZTEC, BarcodeFormat.PDF_417,
     ];
     hints.set(DecodeHintType.POSSIBLE_FORMATS, formats);
-    // hints.set(DecodeHintType.TRY_HARDER, true); // Dihapus untuk optimasi performa
-    hints.set(DecodeHintType.PURE_BARCODE, true); // Menambahkan hint PURE_BARCODE
+    hints.set(DecodeHintType.PURE_BARCODE, true);
+    // hints.set(DecodeHintType.OPTIMIZE_FOR_SCANS, true); // Menambahkan hint OPTIMIZE_FOR_SCANS
 
     if (!codeReaderRef.current) {
       codeReaderRef.current = new BrowserMultiFormatReader(hints);
@@ -139,8 +139,8 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
         stream = await navigator.mediaDevices.getUserMedia({
           video: {
             facingMode: 'environment',
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
+            width: { ideal: 800 }, // Mengurangi resolusi ideal
+            height: { ideal: 600 }, // Mengurangi resolusi ideal
           },
         });
         cameraInfoMessage = "Kamera belakang digunakan.";
@@ -152,8 +152,8 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
           stream = await navigator.mediaDevices.getUserMedia({
             video: {
               facingMode: 'user',
-              width: { ideal: 1280 },
-              height: { ideal: 720 },
+              width: { ideal: 800 }, // Mengurangi resolusi ideal
+              height: { ideal: 600 }, // Mengurangi resolusi ideal
             },
           });
           cameraInfoMessage = "Kamera depan digunakan (kamera belakang tidak dapat diakses).";
@@ -177,8 +177,7 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
         // Add a listener to log video dimensions once metadata is loaded
         videoRef.current.onloadedmetadata = () => {
             console.log(`[ZXing] Video metadata loaded. Dimensions: ${videoRef.current?.videoWidth}x${videoRef.current?.videoHeight}`);
-            // Memastikan video diputar setelah metadata dimuat
-            videoRef.current?.play().catch(e => console.error("Error playing video:", e));
+            // Menghapus panggilan play() eksplisit di sini karena autoplay sudah diatur
         };
 
         controlsRef.current = (codeReaderRef.current.decodeFromStream(stream, videoRef.current, (result: Result | undefined, error: Error | undefined) => {
@@ -318,7 +317,9 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
           id="video" 
           ref={videoRef} 
           className="w-full h-full object-cover"
-          // Atribut autoplay, playsInline, muted dihapus dari JSX
+          autoPlay 
+          playsInline 
+          muted 
         />
         <canvas
           ref={canvasRef}

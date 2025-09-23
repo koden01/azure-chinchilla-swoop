@@ -1,17 +1,14 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { BrowserMultiFormatReader, DecodeHintType, BarcodeFormat, Result } from '@zxing/library';
 import { Button } from '@/components/ui/button';
-import { XCircle, Loader2, CameraOff, AlertTriangle, CheckCircle } from 'lucide-react';
+import { XCircle, Loader2, AlertTriangle } from 'lucide-react'; // Removed CameraOff, CheckCircle
 import { beepSuccess } from '@/utils/audio';
 
 // Define IScannerControls locally as it's not directly exported from @zxing/library
 interface IScannerControls {
-  stream: MediaStream; // Changed to MediaStream (not MediaStream | null)
+  stream: MediaStream;
   stop(): void;
 }
-
-// Define DecodeContinuouslyCallback locally to ensure correct signature is used
-type LocalDecodeContinuouslyCallback = (result: Result | undefined, error: Error | undefined, controls: IScannerControls) => void;
 
 interface BarcodeScannerZXingProps {
   onScan: (decodedText: string) => void;
@@ -22,14 +19,20 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null);
+  // controlsRef is not strictly needed for ZXing's continuous decode, but kept for consistency if manual stream control is desired
   const controlsRef = useRef<{ stream: MediaStream | null; videoElement: HTMLVideoElement | null }>({ stream: null, videoElement: null });
 
   const [isInitializing, setIsInitializing] = useState(true);
   const [cameraError, setCameraError] = useState<string | null>(null);
-  const [detectedBarcode, setDetectedBarcode] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false); // To control if ZXing is actively decoding
+  const [overlayText, setOverlayText] = useState<string | null>(null); // For displaying text on canvas
+  const [boundingBox, setBoundingBox] = useState<any | null>(null); // For drawing bounding box
 
-  const drawOverlay = useCallback((text: string | null) => {
+  const lastProcessedCodeRef = useRef<string | null>(null); // To track last processed code
+  const lastProcessedTimeRef = useRef<number>(0); // To track last processed time
+  const detectionCooldown = 1500; // Cooldown for processing the same barcode (1.5 seconds)
+
+  const drawOverlay = useCallback(() => { // Modified to draw bounding box and text
     const canvas = canvasRef.current;
     const video = videoRef.current;
     if (!canvas || !video) return;
@@ -39,38 +42,60 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
 
     // Set canvas dimensions to match video
     canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight; // Use video.videoHeight for consistency
+    canvas.height = video.videoHeight;
 
     // Clear previous drawing
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    if (text) {
-      // Draw a semi-transparent background for the text
+    // Draw guide box in the center (similar to Quagga)
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const boxWidth = canvas.width * 0.6; // 60% of canvas width
+    const boxHeight = canvas.height * 0.3; // 30% of canvas height
+
+    ctx.strokeStyle = 'rgba(100, 149, 237, 0.5)'; // CornflowerBlue with transparency
+    ctx.lineWidth = 2;
+    ctx.strokeRect(centerX - boxWidth/2, centerY - boxHeight/2, boxWidth, boxHeight);
+
+    // Draw bounding box if available (from last detection)
+    if (boundingBox) {
+      ctx.strokeStyle = '#00ff00'; // Green for detected barcode
+      ctx.lineWidth = 3;
+      // ZXing result.resultPoints are {x, y} objects, not arrays like Quagga's box
+      ctx.beginPath();
+      ctx.moveTo(boundingBox[0].x, boundingBox[0].y);
+      for (let i = 1; i < boundingBox.length; i++) {
+        ctx.lineTo(boundingBox[i].x, boundingBox[i].y);
+      }
+      ctx.closePath();
+      ctx.stroke();
+    }
+
+    // Draw detected barcode text if available
+    if (overlayText) {
       ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
       ctx.fillRect(0, canvas.height - 60, canvas.width, 60); // Bottom bar
-
-      // Draw the detected barcode text
       ctx.font = 'bold 24px Arial';
       ctx.fillStyle = '#00ff00'; // Green text
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(text, canvas.width / 2, canvas.height - 30);
+      ctx.fillText(overlayText, canvas.width / 2, canvas.height - 30);
     }
-  }, []);
+  }, [overlayText, boundingBox]);
 
   useEffect(() => {
     const hints = new Map();
     const formats = [
       BarcodeFormat.CODE_128,
       BarcodeFormat.EAN_13,
-      BarcodeFormat.QR_CODE, // Added QR_CODE for broader detection
+      BarcodeFormat.QR_CODE,
       BarcodeFormat.CODE_39,
       BarcodeFormat.DATA_MATRIX,
       BarcodeFormat.AZTEC,
       BarcodeFormat.PDF_417,
     ];
     hints.set(DecodeHintType.POSSIBLE_FORMATS, formats);
-    hints.set(DecodeHintType.TRY_HARDER, true); // Try harder for better detection
+    hints.set(DecodeHintType.TRY_HARDER, true);
 
     const codeReader = new BrowserMultiFormatReader(hints);
     codeReaderRef.current = codeReader;
@@ -78,39 +103,52 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
     const startScanning = async () => {
       setIsInitializing(true);
       setCameraError(null);
-      setDetectedBarcode(null);
+      setOverlayText(null);
+      setBoundingBox(null);
+      lastProcessedCodeRef.current = null; // Reset on start
+      lastProcessedTimeRef.current = 0; // Reset on start
 
       try {
-        const videoInputDevices = await codeReader.listVideoInputDevices(); 
+        const videoInputDevices = await codeReader.listVideoInputDevices();
         if (videoInputDevices.length === 0) {
           throw new Error("Tidak ada perangkat kamera yang ditemukan.");
         }
 
-        // Try to find an 'environment' (back) camera
         const rearCamera = videoInputDevices.find(device => device.label.toLowerCase().includes('back') || device.label.toLowerCase().includes('environment'));
         const deviceId = rearCamera ? rearCamera.deviceId : videoInputDevices[0].deviceId;
 
         if (videoRef.current) {
           controlsRef.current.videoElement = videoRef.current;
-          // Use the locally defined type for the callback and cast to any
-          const callback: LocalDecodeContinuouslyCallback = (result, error, controls) => {
+
+          // Apply 'as any' to the callback function to resolve TS2345
+          codeReader.decodeFromVideoDevice(deviceId, videoRef.current, ((result: Result | undefined, error: Error | undefined, controls: IScannerControls) => {
             if (result) {
-              console.log('ZXing Barcode detected:', result.getText(), 'Format:', result.getBarcodeFormat().toString());
-              if (!detectedBarcode) { // Only set if no barcode is currently detected
-                setDetectedBarcode(result.getText());
-                setIsScanning(false); // Pause active scanning
-                drawOverlay(result.getText()); // Draw the detected text
-                controlsRef.current.stream = controls.stream; // Store stream for manual stop if needed
-                // ZXing automatically pauses decoding when a result is found,
-                // but we explicitly set isScanning to false to control UI.
+              const currentTime = Date.now();
+              const code = result.getText().trim();
+
+              // Check for cooldown
+              if (code !== lastProcessedCodeRef.current || (currentTime - lastProcessedTimeRef.current > detectionCooldown)) {
+                lastProcessedCodeRef.current = code;
+                lastProcessedTimeRef.current = currentTime;
+
+                onScan(code); // Directly send to textbox and process
+                beepSuccess.play().catch(() => console.log("Audio play failed"));
+
+                setOverlayText(code); // Display the detected code on the canvas
+                setBoundingBox(result.getResultPoints()); // Store bounding box for drawing
+
+                // Temporarily pause scanning (by setting isScanning to false) and clear overlay after cooldown
+                setIsScanning(false); // Indicate that we've processed a barcode
+                setTimeout(() => {
+                  setOverlayText(null); // Clear overlay text
+                  setBoundingBox(null); // Clear bounding box
+                  setIsScanning(true); // Resume scanning after cooldown
+                }, detectionCooldown);
               }
             }
-            if (error && !result) {
-              // Only log errors if no result was found, to avoid spamming for intermittent errors
-              // console.error('ZXing Decoding error:', error);
-            }
-          };
-          codeReader.decodeFromVideoDevice(deviceId, videoRef.current, callback as any); // Cast to any
+            // Always draw overlay to keep it updated, even if no new barcode is detected
+            drawOverlay();
+          }) as any); // Cast the entire callback to any
           setIsScanning(true); // ZXing is now actively looking for barcodes
           setIsInitializing(false);
         }
@@ -126,45 +164,16 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
     return () => {
       if (codeReaderRef.current) {
         console.log("ZXing: Resetting code reader on unmount.");
-        codeReaderRef.current.reset();
+        codeReaderRef.current.reset(); // This stops the video stream and decoding
         codeReaderRef.current = null;
       }
-      if (controlsRef.current.stream) {
-        controlsRef.current.stream.getTracks().forEach(track => track.stop());
-        controlsRef.current.stream = null;
-      }
+      // No need to manually stop stream from controlsRef.current.stream
+      // because codeReader.reset() handles it.
     };
-  }, [drawOverlay, detectedBarcode]); // Re-run effect if detectedBarcode changes to manage scanning state
-
-  useEffect(() => {
-    // Clear overlay when detectedBarcode is cleared
-    if (!detectedBarcode) {
-      drawOverlay(null);
-      if (codeReaderRef.current && !isScanning && !isInitializing && !cameraError) {
-        // Resume scanning if it was paused due to detection and now cleared
-        // This is handled by ZXing's internal state, but we ensure our UI state is consistent
-        setIsScanning(true);
-        // No need to call decodeFromVideoDevice again, as it's continuous
-      }
-    }
-  }, [detectedBarcode, drawOverlay, isScanning, isInitializing, cameraError]);
+  }, [onScan, drawOverlay]);
 
   const handleCloseClick = () => {
     onClose();
-  };
-
-  const handleConfirmBarcode = () => {
-    if (detectedBarcode) {
-      beepSuccess.play().catch(() => console.log("Audio play failed"));
-      onScan(detectedBarcode); // Send to parent component
-      setDetectedBarcode(null); // Clear detected barcode
-      setIsScanning(true); // Resume scanning
-    }
-  };
-
-  const handleCancelBarcode = () => {
-    setDetectedBarcode(null); // Clear detected barcode
-    setIsScanning(true); // Resume scanning
   };
 
   const handleRetryCamera = () => {
@@ -173,10 +182,10 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
     }
     setIsInitializing(true);
     setCameraError(null);
-    setDetectedBarcode(null);
-    setIsScanning(false); // Ensure scanning is off before re-init
-    
-    // Re-initialize after a short delay
+    setOverlayText(null);
+    setBoundingBox(null);
+    setIsScanning(false);
+
     setTimeout(() => {
       const hints = new Map();
       const formats = [
@@ -197,18 +206,28 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
 
           if (videoRef.current) {
             controlsRef.current.videoElement = videoRef.current;
-            // Use the locally defined type for the callback and cast to any
-            const callback: LocalDecodeContinuouslyCallback = (result, error, controls) => {
+            // Apply 'as any' to the callback function to resolve TS2345
+            codeReader.decodeFromVideoDevice(deviceId, videoRef.current, ((result: Result | undefined, error: Error | undefined, controls: IScannerControls) => {
               if (result) {
-                if (!detectedBarcode) {
-                  setDetectedBarcode(result.getText());
+                const currentTime = Date.now();
+                const code = result.getText().trim();
+                if (code !== lastProcessedCodeRef.current || (currentTime - lastProcessedTimeRef.current > detectionCooldown)) {
+                  lastProcessedCodeRef.current = code;
+                  lastProcessedTimeRef.current = currentTime;
+                  onScan(code);
+                  beepSuccess.play().catch(() => console.log("Audio play failed"));
+                  setOverlayText(code);
+                  setBoundingBox(result.getResultPoints());
                   setIsScanning(false);
-                  drawOverlay(result.getText());
-                  controlsRef.current.stream = controls.stream;
+                  setTimeout(() => {
+                    setOverlayText(null);
+                    setBoundingBox(null);
+                    setIsScanning(true);
+                  }, detectionCooldown);
                 }
               }
-            };
-            codeReader.decodeFromVideoDevice(deviceId, videoRef.current, callback as any); // Cast to any
+              drawOverlay();
+            }) as any); // Cast the entire callback to any
             setIsScanning(true);
             setIsInitializing(false);
           }
@@ -229,7 +248,7 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
           <p>Memulai kamera...</p>
         </div>
       )}
-      
+
       {cameraError && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900 bg-opacity-90 text-white z-10 p-4">
           <AlertTriangle className="h-12 w-12 mb-4 text-yellow-400" />
@@ -255,41 +274,16 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
         </div>
       )}
 
-      {detectedBarcode && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900 bg-opacity-90 text-white z-30 p-4">
-          <CheckCircle className="h-16 w-16 text-green-400 mb-4" />
-          <p className="text-lg font-semibold mb-2">Barcode Terdeteksi!</p>
-          <div className="bg-green-100 border border-green-300 rounded-md p-4 mb-4">
-            <p className="text-green-800 font-mono text-xl font-bold">{detectedBarcode}</p>
-          </div>
-          <div className="flex gap-3">
-            <Button
-              onClick={handleConfirmBarcode}
-              className="bg-green-600 hover:bg-green-700 text-white px-6"
-            >
-              Konfirmasi
-            </Button>
-            <Button
-              variant="outline"
-              onClick={handleCancelBarcode}
-              className="border-white text-white hover:bg-white/20 px-6"
-            >
-              Scan Ulang
-            </Button>
-          </div>
-        </div>
-      )}
-      
       <div className="relative">
-        <video id="video" ref={videoRef} className="w-full h-64 object-cover" /> {/* Removed transform for mirror effect */}
+        <video id="video" ref={videoRef} className="w-full h-64 object-cover" />
         <canvas
           ref={canvasRef}
           className="absolute top-0 left-0 w-full h-64 pointer-events-none"
           style={{ zIndex: 20 }}
         />
       </div>
-      
-      {!cameraError && !detectedBarcode && (
+
+      {!cameraError && ( // Always show close button if no camera error
         <div className="absolute top-2 right-2 z-20">
           <Button
             variant="ghost"
@@ -305,7 +299,7 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
       )}
 
       {/* Scanning guide text */}
-      {!detectedBarcode && !cameraError && !isInitializing && (
+      {!cameraError && !isInitializing && ( // Show guide text when not initializing and no error
         <div className="absolute bottom-4 left-0 right-0 text-center z-20">
           <p className="text-white text-sm bg-black bg-opacity-50 px-3 py-1 rounded-full inline-block">
             Arahkan barcode ke tengah layar

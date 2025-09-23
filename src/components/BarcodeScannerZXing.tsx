@@ -19,7 +19,8 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null);
-  const controlsRef = useRef<{ stream: MediaStream | null; videoElement: HTMLVideoElement | null }>({ stream: null, videoElement: null });
+  // controlsRef sekarang akan menyimpan objek kontrol yang dikembalikan oleh ZXing
+  const controlsRef = useRef<IScannerControls | null>(null); // FIX 1: Correct type for controlsRef
 
   const [isInitializing, setIsInitializing] = useState(true);
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -111,10 +112,10 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
 
         if (videoRef.current) {
           console.log("[ZXing] Video ref current:", videoRef.current);
-          controlsRef.current.videoElement = videoRef.current;
-
+          
           // Apply 'as any' to the callback function to resolve TS2345
-          codeReader.decodeFromVideoDevice(deviceId, videoRef.current, ((result: Result | undefined, error: Error | undefined, controls: IScannerControls) => {
+          codeReader.decodeFromVideoDevice(deviceId, videoRef.current, ((result: Result | undefined, error: Error | undefined, zxingControls: IScannerControls) => {
+            controlsRef.current = zxingControls; // FIX 1: Store the IScannerControls object from the callback
             if (result) {
               const currentTime = Date.now();
               const code = result.getText().trim();
@@ -138,17 +139,20 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
             }
             drawOverlay();
           }) as any);
+          
+          // Secara eksplisit atur srcObject dan putar video
+          // FIX 2, 3: Access stream from controlsRef.current
+          if (videoRef.current && controlsRef.current?.stream) { // Use optional chaining for safety
+            videoRef.current.srcObject = controlsRef.current.stream;
+            console.log("[ZXing] Manually set videoRef.current.srcObject:", videoRef.current.srcObject);
+            videoRef.current.play().catch(e => console.error("[ZXing] Error playing video after manual srcObject set:", e));
+          } else {
+            console.warn("[ZXing] Could not manually set srcObject: videoRef.current or controlsRef.current.stream is null.");
+          }
+
           setIsScanning(true);
           setIsInitializing(false); // Set to false when scanning starts successfully
           console.log("[ZXing] Scanning started successfully.");
-          
-          // Log srcObject to verify if MediaStream is attached
-          if (videoRef.current.srcObject) {
-            console.log("[ZXing] videoRef.current.srcObject is set:", videoRef.current.srcObject);
-          } else {
-            console.warn("[ZXing] videoRef.current.srcObject is NOT set after decodeFromVideoDevice.");
-          }
-
         } else {
           console.error("[ZXing] videoRef.current is null, cannot start scanning.");
           setCameraError("Gagal memulai kamera: Elemen video tidak tersedia.");
@@ -169,6 +173,15 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
         codeReaderRef.current.reset();
         codeReaderRef.current = null;
       }
+      // Hentikan semua track media secara eksplisit
+      if (controlsRef.current && controlsRef.current.stream) {
+        console.log("[ZXing] Stopping media tracks.");
+        controlsRef.current.stream.getTracks().forEach(track => track.stop());
+        if (videoRef.current) {
+          videoRef.current.srcObject = null;
+        }
+      }
+      controlsRef.current = null;
     };
   }, [onScan, drawOverlay]);
 
@@ -181,6 +194,15 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
     if (codeReaderRef.current) {
       codeReaderRef.current.reset();
     }
+    // Hentikan track media yang mungkin masih berjalan dari percobaan sebelumnya
+    if (controlsRef.current && controlsRef.current.stream) {
+      controlsRef.current.stream.getTracks().forEach(track => track.stop());
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+    }
+    controlsRef.current = null; // Reset controlsRef
+
     setIsInitializing(true);
     setCameraError(null);
     setOverlayText(null);
@@ -206,9 +228,9 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
           const deviceId = rearCamera ? rearCamera.deviceId : videoInputDevices[0].deviceId;
 
           if (videoRef.current) {
-            controlsRef.current.videoElement = videoRef.current;
-            // Apply 'as any' to the callback function to resolve TS2345
-            codeReader.decodeFromVideoDevice(deviceId, videoRef.current, ((result: Result | undefined, error: Error | undefined, controls: IScannerControls) => {
+            // FIX 4: Similar change for retry logic
+            codeReader.decodeFromVideoDevice(deviceId, videoRef.current, ((result: Result | undefined, error: Error | undefined, zxingControls: IScannerControls) => {
+              controlsRef.current = zxingControls; // Store the IScannerControls object from the callback
               if (result) {
                 const currentTime = Date.now();
                 const code = result.getText().trim();
@@ -229,17 +251,20 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
               }
               drawOverlay();
             }) as any);
+            
+            // Secara eksplisit atur srcObject dan putar video
+            // FIX 5, 6: Access stream from controlsRef.current
+            if (videoRef.current && controlsRef.current?.stream) { // Use optional chaining for safety
+              videoRef.current.srcObject = controlsRef.current.stream;
+              console.log("[ZXing] Manually set videoRef.current.srcObject (retry):", videoRef.current.srcObject);
+              videoRef.current.play().catch(e => console.error("[ZXing] Error playing video after manual srcObject set (retry):", e));
+            } else {
+              console.warn("[ZXing] Could not manually set srcObject (retry): videoRef.current or controlsRef.current.stream is null.");
+            }
+
             setIsScanning(true);
             setIsInitializing(false);
             console.log("[ZXing] Scanning retried successfully.");
-            
-            // Log srcObject to verify if MediaStream is attached
-            if (videoRef.current.srcObject) {
-              console.log("[ZXing] videoRef.current.srcObject is set (retry):", videoRef.current.srcObject);
-            } else {
-              console.warn("[ZXing] videoRef.current.srcObject is NOT set after decodeFromVideoDevice (retry).");
-            }
-
           } else {
             console.error("[ZXing] videoRef.current is null during retry, cannot start scanning.");
             setCameraError("Gagal memulai kamera setelah retry: Elemen video tidak tersedia.");
@@ -257,13 +282,12 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
 
   return (
     <div className="relative w-full bg-gray-900 rounded-lg overflow-hidden">
-      {/* Temporarily hide the initializing overlay to see if video stream appears */}
-      {/* {isInitializing && !cameraError && (
+      {isInitializing && !cameraError && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900 bg-opacity-75 text-white z-10 p-4">
           <Loader2 className="h-8 w-8 animate-spin mb-2" />
           <p>Memulai kamera...</p>
         </div>
-      )} */}
+      )}
 
       {cameraError && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900 bg-opacity-90 text-white z-10 p-4">

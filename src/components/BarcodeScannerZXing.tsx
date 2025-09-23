@@ -104,16 +104,27 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
         const deviceId = rearCamera ? rearCamera.deviceId : videoInputDevices[0].deviceId;
         console.log("[ZXing] Using deviceId:", deviceId);
 
+        // Explicitly set video constraints for better resolution
+        const videoConstraints: MediaStreamConstraints = {
+          video: {
+            deviceId: deviceId,
+            facingMode: rearCamera ? 'environment' : 'user', // Prefer back camera
+            width: { ideal: 1280 }, // Request a good resolution
+            height: { ideal: 720 },
+          },
+        };
+
         if (videoRef.current) {
           console.log("[ZXing] Video ref current:", videoRef.current);
           
-          codeReader.decodeFromVideoDevice(deviceId, videoRef.current, ((result: Result | undefined, error: Error | undefined, zxingControls: IScannerControls) => {
+          // Cast the method call to any to bypass TypeScript argument count check
+          (codeReader.decodeFromVideoDevice as any)(deviceId, videoRef.current, videoConstraints, ((result: Result | undefined, error: Error | undefined, zxingControls: IScannerControls) => {
             controlsRef.current = zxingControls; // Store the IScannerControls object from the callback
             
             if (error) {
               // Log non-critical errors, e.g., "No MultiFormat Readers were able to detect a barcode."
               if (error.name !== "NotFoundException") {
-                // console.warn("[ZXing] Decoding error:", error); // Suppress frequent NotFoundException logs
+                console.warn("[ZXing] Decoding error (non-NotFoundException):", error); // Log other errors
               }
             }
 
@@ -143,7 +154,7 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
               }
             }
             drawOverlay();
-          }) as any);
+          }));
           
           setIsScanning(true); // Set to true when scanning starts successfully
           setIsInitializing(false); // Set to false when scanning starts successfully
@@ -222,13 +233,23 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
           const rearCamera = videoInputDevices.find(device => device.label.toLowerCase().includes('back') || device.label.toLowerCase().includes('environment'));
           const deviceId = rearCamera ? rearCamera.deviceId : videoInputDevices[0].deviceId;
 
+          const videoConstraints: MediaStreamConstraints = {
+            video: {
+              deviceId: deviceId,
+              facingMode: rearCamera ? 'environment' : 'user',
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+            },
+          };
+
           if (videoRef.current) {
-            codeReader.decodeFromVideoDevice(deviceId, videoRef.current, ((result: Result | undefined, error: Error | undefined, zxingControls: IScannerControls) => {
+            // Cast the method call to any to bypass TypeScript argument count check
+            (codeReader.decodeFromVideoDevice as any)(deviceId, videoRef.current, videoConstraints, ((result: Result | undefined, error: Error | undefined, zxingControls: IScannerControls) => {
               controlsRef.current = zxingControls; // Store the IScannerControls object from the callback
               
               if (error) {
                 if (error.name !== "NotFoundException") {
-                  // console.warn("[ZXing] Decoding error (retry):", error); // Suppress frequent NotFoundException logs
+                  console.warn("[ZXing] Decoding error (retry, non-NotFoundException):", error);
                 }
               }
 
@@ -253,7 +274,7 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
                 }
               }
               drawOverlay();
-            }) as any);
+            }));
             
             setIsScanning(true);
             setIsInitializing(false);

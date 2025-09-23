@@ -122,7 +122,7 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
       BarcodeFormat.CODE_39, BarcodeFormat.DATA_MATRIX, BarcodeFormat.AZTEC, BarcodeFormat.PDF_417,
     ];
     hints.set(DecodeHintType.POSSIBLE_FORMATS, formats);
-    hints.set(DecodeHintType.TRY_HARDER, true);
+    // hints.set(DecodeHintType.TRY_HARDER, true); // Dihapus untuk optimasi performa
     hints.set(DecodeHintType.PURE_BARCODE, true); // Menambahkan hint PURE_BARCODE
 
     if (!codeReaderRef.current) {
@@ -177,6 +177,8 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
         // Add a listener to log video dimensions once metadata is loaded
         videoRef.current.onloadedmetadata = () => {
             console.log(`[ZXing] Video metadata loaded. Dimensions: ${videoRef.current?.videoWidth}x${videoRef.current?.videoHeight}`);
+            // Memastikan video diputar setelah metadata dimuat
+            videoRef.current?.play().catch(e => console.error("Error playing video:", e));
         };
 
         controlsRef.current = (codeReaderRef.current.decodeFromStream(stream, videoRef.current, (result: Result | undefined, error: Error | undefined) => {
@@ -316,7 +318,7 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
           id="video" 
           ref={videoRef} 
           className="w-full h-full object-cover"
-          // Removed autoplay, playsInline, muted from JSX
+          // Atribut autoplay, playsInline, muted dihapus dari JSX
         />
         <canvas
           ref={canvasRef}

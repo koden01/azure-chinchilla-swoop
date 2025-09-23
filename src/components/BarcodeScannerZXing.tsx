@@ -281,7 +281,7 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
       )}
       
       <div className="relative">
-        <video id="video" ref={videoRef} className="w-full h-64 object-cover" style={{ transform: 'scaleX(-1)' }} /> {/* Added transform for mirror effect */}
+        <video id="video" ref={videoRef} className="w-full h-64 object-cover" /> {/* Removed transform for mirror effect */}
         <canvas
           ref={canvasRef}
           className="absolute top-0 left-0 w-full h-64 pointer-events-none"

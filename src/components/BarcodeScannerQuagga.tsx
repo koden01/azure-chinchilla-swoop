@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import Quagga from 'quagga';
 import { Button } from '@/components/ui/button';
 import { XCircle, Loader2, CameraOff, AlertTriangle, CheckCircle } from 'lucide-react';
+import { beepSuccess } from '@/utils/audio'; // Import beepSuccess from audio utility
 
 interface BarcodeScannerQuaggaProps {
   onScan: (decodedText: string) => void;
@@ -26,7 +27,7 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true }); // Added willReadFrequently
     if (!ctx) return;
 
     // Clear previous drawing
@@ -144,34 +145,45 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
 
     // Handle detected barcodes
     Quagga.onDetected((result) => {
-      if (!scanningActive) return;
+      // Ignore new detections if scanning is not active, still initializing, or a barcode is already detected and waiting for confirmation
+      if (!scanningActive || isInitializing || detectedBarcode !== null) return;
 
       const currentTime = Date.now();
       
+      // Apply cooldown for new detections
       if (currentTime - lastDetectionTime.current < detectionCooldown) {
         return;
       }
 
       if (result?.codeResult?.code && result.codeResult.format) {
         const code = result.codeResult.code.trim();
-        console.log("Barcode detected:", code, "Format:", result.codeResult.format, "Confidence:", result.codeResult.decodedCodes[0]?.confidence);
+        // Safely get confidence, defaulting to 0 if not available
+        const confidence = result.codeResult.decodedCodes && result.codeResult.decodedCodes.length > 0 
+                           ? result.codeResult.decodedCodes[0].confidence 
+                           : 0;
         
-        // Draw bounding box
-        if (result.box) {
-          drawBoundingBox(result.box);
-        }
+        console.log("Barcode detected:", code, "Format:", result.codeResult.format, "Confidence:", confidence);
 
-        // Validate barcode confidence (removed length validation)
-        const confidence = result.codeResult.decodedCodes[0]?.confidence || 0;
-        if (confidence >= 0.8) { // Only process if confidence is 80% or higher
+        // Only process if confidence is high and code is not empty
+        if (confidence >= 0.8 && code.length > 0) { 
+          // Draw bounding box
+          if (result.box) {
+            drawBoundingBox(result.box);
+          }
+
           setDetectedBarcode(code);
-          lastDetectionTime.current = currentTime;
+          lastDetectionTime.current = currentTime; // Update last detection time for a valid detection
           
           // Auto-confirm after short delay
           setTimeout(() => {
-            if (detectedBarcode === code) { // Only confirm if it's still the same detected barcode
-              handleConfirmBarcode();
-            }
+            // Only confirm if the detectedBarcode state still matches the code we just detected
+            setDetectedBarcode(currentDetectedBarcode => {
+                if (currentDetectedBarcode === code) {
+                    handleConfirmBarcode(); // Call the handler directly
+                    return null; // Clear it immediately after handling
+                }
+                return currentDetectedBarcode; // Keep it if it changed (e.g., a new barcode was detected very quickly)
+            });
           }, 500);
         }
       }
@@ -182,7 +194,7 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
       const canvas = canvasRef.current;
       if (!canvas) return;
 
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext('2d', { willReadFrequently: true }); // Added willReadFrequently
       if (!ctx) return;
 
       // Clear previous drawing
@@ -220,13 +232,12 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
 
   const handleConfirmBarcode = () => {
     if (detectedBarcode) {
-      // Play success sound
-      const beepSuccess = new Audio('/sounds/beep-success.mp3');
+      // Play success sound using the imported audio object
       beepSuccess.play().catch(() => console.log("Audio play failed"));
       
       onScan(detectedBarcode);
-      setDetectedBarcode(null);
-      setScanningActive(false);
+      setDetectedBarcode(null); // Clear detected barcode after processing
+      setScanningActive(false); // Temporarily pause scanning
       
       // Resume scanning after short delay
       setTimeout(() => {
@@ -236,8 +247,8 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
   };
 
   const handleCancelBarcode = () => {
-    setDetectedBarcode(null);
-    setScanningActive(true);
+    setDetectedBarcode(null); // Clear detected barcode
+    setScanningActive(true); // Resume scanning immediately
   };
 
   const handleRetryCamera = () => {

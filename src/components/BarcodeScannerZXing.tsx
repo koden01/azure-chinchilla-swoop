@@ -169,13 +169,8 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
 
-        // Only play if paused, and let ZXing's decodeFromStream manage the video element
-        if (videoRef.current.paused) {
-          videoRef.current.play().catch(e => {
-            console.error("Error playing video:", e);
-            setCameraError("Gagal memutar video kamera: " + e.message);
-          });
-        }
+        // Removed explicit videoRef.current.play() call.
+        // ZXing's decodeFromStream will handle playing the video.
 
         controlsRef.current = (codeReaderRef.current.decodeFromStream(stream, videoRef.current, (result: Result | undefined, error: Error | undefined) => {
           if (error) {

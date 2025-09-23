@@ -114,12 +114,24 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
           },
         };
 
+        const stream = await navigator.mediaDevices.getUserMedia(videoConstraints);
+
         if (videoRef.current) {
-          console.log("[ZXing] Video ref current:", videoRef.current);
-          
-          // Cast the method call to any to bypass TypeScript argument count check
-          (codeReader.decodeFromVideoDevice as any)(deviceId, videoRef.current, videoConstraints, ((result: Result | undefined, error: Error | undefined, zxingControls: IScannerControls) => {
-            controlsRef.current = zxingControls; // Store the IScannerControls object from the callback
+          videoRef.current.srcObject = stream;
+          // Ensure video is loaded before decoding
+          await new Promise<void>(resolve => {
+            if (videoRef.current!.readyState >= 2) { // Check if already loaded
+              resolve();
+            } else {
+              videoRef.current!.onloadedmetadata = () => {
+                videoRef.current!.play().catch(e => console.error("Error playing video on metadata loaded:", e));
+                resolve();
+              };
+            }
+          });
+
+          // Capture controls from the return value of decodeFromStream
+          controlsRef.current = codeReader.decodeFromStream(stream, videoRef.current, (result: Result | undefined, error: Error | undefined) => {
             
             if (error) {
               // Log non-critical errors, e.g., "No MultiFormat Readers were able to detect a barcode."
@@ -154,11 +166,11 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
               }
             }
             drawOverlay();
-          }));
+          });
           
           setIsScanning(true); // Set to true when scanning starts successfully
           setIsInitializing(false); // Set to false when scanning starts successfully
-          console.log("[ZXing] Scanning started successfully.");
+          console.log("[ZXing] Scanning started successfully using decodeFromStream.");
         } else {
           console.error("[ZXing] videoRef.current is null, cannot start scanning.");
           setCameraError("Gagal memulai kamera: Elemen video tidak tersedia.");
@@ -242,10 +254,23 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
             },
           };
 
+          const stream = await navigator.mediaDevices.getUserMedia(videoConstraints);
+
           if (videoRef.current) {
-            // Cast the method call to any to bypass TypeScript argument count check
-            (codeReader.decodeFromVideoDevice as any)(deviceId, videoRef.current, videoConstraints, ((result: Result | undefined, error: Error | undefined, zxingControls: IScannerControls) => {
-              controlsRef.current = zxingControls; // Store the IScannerControls object from the callback
+            videoRef.current.srcObject = stream;
+            await new Promise<void>(resolve => {
+              if (videoRef.current!.readyState >= 2) {
+                resolve();
+              } else {
+                videoRef.current!.onloadedmetadata = () => {
+                  videoRef.current!.play().catch(e => console.error("Error playing video on metadata loaded (retry):", e));
+                  resolve();
+                };
+              }
+            });
+
+            // Capture controls from the return value of decodeFromStream
+            controlsRef.current = codeReader.decodeFromStream(stream, videoRef.current, (result: Result | undefined, error: Error | undefined) => {
               
               if (error) {
                 if (error.name !== "NotFoundException") {
@@ -274,11 +299,11 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
                 }
               }
               drawOverlay();
-            }));
+            });
             
             setIsScanning(true);
             setIsInitializing(false);
-            console.log("[ZXing] Scanning retried successfully.");
+            console.log("[ZXing] Scanning retried successfully using decodeFromStream.");
           } else {
             console.error("[ZXing] videoRef.current is null during retry, cannot start scanning.");
             setCameraError("Gagal memulai kamera setelah retry: Elemen video tidak tersedia.");

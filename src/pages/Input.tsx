@@ -135,11 +135,16 @@ const InputPage = () => {
   const isInputDisabled = !expedition || !selectedKarung || isProcessing || isLoadingAllExpedisiUnfiltered || isLoadingAllFlagNoExpedisiData || isLoadingAllFlagYesExpedisiResiNumbers;
   const isCameraButtonDisabled = isInputDisabled; // Tombol kamera juga dinonaktifkan jika input dinonaktifkan
 
+  // Stabilkan fungsi onClose untuk BarcodeScannerZXing
+  const handleCloseScanner = React.useCallback(() => {
+    setShowScanner(false);
+  }, []);
+
   const handleScannedBarcode = React.useCallback(async (scannedText: string) => {
     setResiNumber(scannedText); // Isi otomatis input resi
-    setShowScanner(false); // Tutup kamera setelah scan berhasil
+    handleCloseScanner(); // Tutup kamera setelah scan berhasil menggunakan fungsi stabil
     await handleScanResi(scannedText); // Trigger proses scan
-  }, [setResiNumber, handleScanResi]);
+  }, [setResiNumber, handleScanResi, handleCloseScanner]); // Tambahkan handleCloseScanner ke dependencies
 
   return (
     <React.Fragment>
@@ -242,7 +247,7 @@ const InputPage = () => {
           <div className={cn("mt-6", !showScanner && "hidden")}> {/* Hide it with CSS when not active */}
             <BarcodeScannerZXing
               onScan={handleScannedBarcode}
-              onClose={() => setShowScanner(false)}
+              onClose={handleCloseScanner} // Pass the stable callback
               isActive={showScanner} // Pass the state as isActive prop
             />
           </div>

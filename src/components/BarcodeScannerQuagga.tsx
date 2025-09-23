@@ -16,6 +16,20 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
   const [cameraError, setCameraError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Check if we're in a browser environment
+    if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+      setCameraError("Browser environment not detected");
+      setIsInitializing(false);
+      return;
+    }
+
+    // Check if getUserMedia is available
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setCameraError("Camera access not supported in this browser");
+      setIsInitializing(false);
+      return;
+    }
+
     if (!videoRef.current) return;
 
     const initializeQuagga = async () => {
@@ -77,6 +91,8 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
               errorMessage = "Izin akses kamera ditolak. Silakan berikan izin akses kamera di pengaturan browser Anda.";
             } else if (err.name === 'NotFoundError') {
               errorMessage = "Tidak ada kamera yang ditemukan. Pastikan perangkat Anda memiliki kamera yang berfungsi.";
+            } else if (err.message?.includes('getUserMedia')) {
+              errorMessage = "Browser tidak mendukung akses kamera. Pastikan Anda menggunakan browser modern seperti Chrome, Firefox, atau Safari.";
             }
             
             setCameraError(errorMessage);

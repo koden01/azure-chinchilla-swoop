@@ -7,7 +7,7 @@ export default defineConfig(() => ({
   server: {
     host: "::",
     port: 8080,
-    allowedHosts: ["*.ngrok-free.dev"], // Menambahkan host yang diizinkan
+    allowedHosts: ["*.ngrok-free.dev", "silas-convallariaceous-strophically.ngrok-free.dev"], // Menambahkan host spesifik
   },
   plugins: [dyadComponentTagger(), react()],
   resolve: {

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { BrowserMultiFormatReader, DecodeHintType, BarcodeFormat, Result, IScannerControls } from '@zxing/library'; // Import IScannerControls
+import { BrowserMultiFormatReader, DecodeHintType, BarcodeFormat, Result } from '@zxing/library'; // Removed IScannerControls
 import { Button } from '@/components/ui/button';
 import { XCircle, Loader2, CameraOff, AlertTriangle, CheckCircle } from 'lucide-react';
 import { beepSuccess } from '@/utils/audio';
@@ -83,8 +83,8 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
 
         if (videoRef.current) {
           controlsRef.current.videoElement = videoRef.current;
-          // FIX 1: Correct callback signature and stream access
-          codeReader.decodeFromVideoDevice(deviceId, videoRef.current, (result: Result | undefined, error: Error | undefined, controls: IScannerControls) => { 
+          // Correct callback signature
+          codeReader.decodeFromVideoDevice(deviceId, videoRef.current, (result: Result | undefined, error: Error | undefined, controls: { stream: MediaStream | null }) => { 
             if (result) {
               console.log('ZXing Barcode detected:', result.getText(), 'Format:', result.getBarcodeFormat().toString());
               if (!detectedBarcode) { // Only set if no barcode is currently detected
@@ -187,8 +187,8 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
 
           if (videoRef.current) {
             controlsRef.current.videoElement = videoRef.current;
-            // FIX 2: Correct callback signature and stream access
-            codeReader.decodeFromVideoDevice(deviceId, videoRef.current, (result: Result | undefined, error: Error | undefined, controls: IScannerControls) => {
+            // Correct callback signature
+            codeReader.decodeFromVideoDevice(deviceId, videoRef.current, (result: Result | undefined, error: Error | undefined, controls: { stream: MediaStream | null }) => {
               if (result) {
                 if (!detectedBarcode) {
                   setDetectedBarcode(result.getText());

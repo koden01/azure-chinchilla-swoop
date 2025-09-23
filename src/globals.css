@@ -128,5 +128,5 @@
   top: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover; /* Pastikan video mengisi container */
+  object-fit: contain; /* Mengubah dari 'cover' menjadi 'contain' */
 }

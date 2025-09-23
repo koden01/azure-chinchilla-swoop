@@ -20,8 +20,7 @@ import { format } from "date-fns";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 import { useAllFlagYesExpedisiResiNumbers } from "@/hooks/useAllFlagYesExpedisiResiNumbers";
 import { Button } from "@/components/ui/button";
-import BarcodeScannerQuagga from "@/components/BarcodeScannerQuagga";
-import { showError } from "@/utils/toast";
+import BarcodeScannerZXing from "@/components/BarcodeScannerZXing"; // Mengganti BarcodeScannerQuagga
 
 const InputPage = () => {
   const { expedition, setExpedition } = useExpedition();
@@ -89,6 +88,7 @@ const InputPage = () => {
 
   const {
     resiNumber,
+    setResiNumber, // Tambahkan setResiNumber
     resiInputRef,
     isProcessing,
     optimisticTotalExpeditionItems,
@@ -147,7 +147,8 @@ const InputPage = () => {
   });
 
   const handleCameraScan = (decodedText: string) => {
-    handleScanResi(decodedText);
+    setResiNumber(decodedText); // Set the textbox value
+    handleScanResi(decodedText); // Trigger the scan logic
   };
 
   const handleToggleCamera = () => {
@@ -261,10 +262,9 @@ const InputPage = () => {
           {/* Camera view appears below the input fields - Only render when camera is active */}
           {isCameraActive && (
             <div className="mt-6">
-              <BarcodeScannerQuagga 
+              <BarcodeScannerZXing 
                 onScan={handleCameraScan} 
                 onClose={() => setIsCameraActive(false)} 
-                key={Date.now()}
               />
             </div>
           )}

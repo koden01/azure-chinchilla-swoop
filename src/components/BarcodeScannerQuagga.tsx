@@ -56,7 +56,7 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
       },
       locate: true, // Aktifkan penggambaran kotak pembatas
       numOfWorkers: 0, // Gunakan 0 untuk berjalan di main thread untuk debugging yang lebih sederhana
-      frequency: 10, // Seberapa sering memproses frame (dalam Hz)
+      frequency: 5, // Mengurangi frekuensi pemrosesan frame untuk mengurangi beban CPU
     }, (err) => {
       if (err) {
         console.error("[QuaggaJS] Initialization error:", err);

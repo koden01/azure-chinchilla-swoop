@@ -42,7 +42,7 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
   const lastProcessedTimeRef = useRef<number>(0);
   const detectionCooldown = 1500;
 
-  // drawOverlay is now truly stable and does nothing visually as per user request
+  // drawOverlay now includes a static scanning frame
   const drawOverlay = useCallback(() => {
     const canvas = canvasRef.current;
     const video = videoRef.current;
@@ -57,8 +57,32 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
     }
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    // All overlay drawing logic removed as per user request
-  }, []);
+
+    // Draw a static scanning frame
+    const frameWidth = canvas.width * 0.7; // 70% of canvas width
+    const frameHeight = canvas.height * 0.3; // 30% of canvas height
+    const frameX = (canvas.width - frameWidth) / 2;
+    const frameY = (canvas.height - frameHeight) / 2;
+
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'; // White, semi-transparent
+    ctx.lineWidth = 2;
+    ctx.strokeRect(frameX, frameY, frameWidth, frameHeight);
+
+    // Optional: Draw a small crosshair in the center of the frame
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+    ctx.lineWidth = 1;
+    const centerX = frameX + frameWidth / 2;
+    const centerY = frameY + frameHeight / 2;
+    const crosshairSize = 10;
+    ctx.beginPath();
+    ctx.moveTo(centerX - crosshairSize, centerY);
+    ctx.lineTo(centerX + crosshairSize, centerY);
+    ctx.moveTo(centerX, centerY - crosshairSize);
+    ctx.lineTo(centerX, centerY + crosshairSize);
+    ctx.stroke();
+
+    // All other overlay drawing logic (scan line, bounding box) remains removed
+  }, []); // Empty dependency array: drawOverlay is truly stable
 
   const cleanupCamera = useCallback(() => {
     console.log("[ZXing] Performing camera cleanup.");
@@ -71,6 +95,7 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
       controlsRef.current.stream.getTracks().forEach(track => track.stop());
       if (videoRef.current) {
         videoRef.current.srcObject = null;
+        videoRef.current.onloadedmetadata = null; // Ensure listener is cleaned up
       }
     }
     controlsRef.current = null;
@@ -144,23 +169,12 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
 
-        // Use onloadedmetadata to ensure video is ready before playing
-        videoRef.current.onloadedmetadata = () => {
-          if (videoRef.current && videoRef.current.paused) {
-            videoRef.current.play().catch(e => {
-              console.error("Error playing video after metadata loaded:", e);
-              setCameraError("Gagal memutar video kamera: " + e.message);
-            });
-          }
-        };
-        // If metadata is already loaded (e.g., on subsequent mounts), play immediately
-        if (videoRef.current.readyState >= 2) { // HAVE_CURRENT_DATA or higher
-          if (videoRef.current.paused) {
-            videoRef.current.play().catch(e => {
-              console.error("Error playing video (readyState >= 2):", e);
-              setCameraError("Gagal memutar video kamera: " + e.message);
-            });
-          }
+        // Only play if paused, and let ZXing's decodeFromStream manage the video element
+        if (videoRef.current.paused) {
+          videoRef.current.play().catch(e => {
+            console.error("Error playing video:", e);
+            setCameraError("Gagal memutar video kamera: " + e.message);
+          });
         }
 
         controlsRef.current = (codeReaderRef.current.decodeFromStream(stream, videoRef.current, (result: Result | undefined, error: Error | undefined) => {
@@ -198,7 +212,7 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
               }, detectionCooldown);
             }
           }
-          drawOverlay(); // Call the stable drawOverlay (which now does nothing visually)
+          drawOverlay(); // Call the stable drawOverlay (which now draws a static frame)
         }) as unknown) as IScannerControls;
         
         setIsScanningState(true);
@@ -231,7 +245,7 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
         controlsRef.current.stream.getTracks().forEach(track => track.stop());
         if (videoRef.current) {
           videoRef.current.srcObject = null;
-          videoRef.current.onloadedmetadata = null; // Clean up listener
+          videoRef.current.onloadedmetadata = null; // Ensure listener is cleaned up
         }
       }
       controlsRef.current = null;

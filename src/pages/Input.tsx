@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Button } from "@/components/ui/button"; // Import Button component
 import { useResiInputData } from "@/hooks/useResiInputData";
 import { useExpedition } from "@/context/ExpeditionContext";
 import { useResiScanner } from "@/hooks/useResiScanner";

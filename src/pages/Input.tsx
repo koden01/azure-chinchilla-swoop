@@ -249,7 +249,7 @@ const InputPage = () => {
           </div>
         </div>
         {showQuaggaScanner && (
-          <div className="md:col-span-2 mt-4 w-full max-w-2xl"> {/* Added max-w-2xl for better sizing */}
+          <div className="md:col-span-2 mt-4 w-full"> {/* Menghapus max-w-2xl */}
             <BarcodeScannerQuagga
               onScan={handleQuaggaScan}
               onClose={() => setShowQuaggaScanner(false)}

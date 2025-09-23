@@ -26,6 +26,7 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
   const [isScanning, setIsScanning] = useState(false);
   const [overlayText, setOverlayText] = useState<string | null>(null);
   const [boundingBox, setBoundingBox] = useState<any | null>(null);
+  const [scanLinePosition, setScanLinePosition] = useState(0); // 0 to 1, representing vertical position
 
   const lastProcessedCodeRef = useRef<string | null>(null);
   const lastProcessedTimeRef = useRef<number>(0);
@@ -57,6 +58,17 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
     ctx.lineWidth = 2;
     ctx.strokeRect(frameX, frameY, frameWidth, frameHeight);
 
+    // Draw scanning line
+    if (isScanning && !overlayText) { // Only draw if actively scanning and no barcode detected yet
+        const currentScanLineY = frameY + (frameHeight * scanLinePosition);
+        ctx.strokeStyle = '#FF0000'; // Red scanning line
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(frameX, currentScanLineY);
+        ctx.lineTo(frameX + frameWidth, currentScanLineY);
+        ctx.stroke();
+    }
+
     // Draw bounding box only if detected
     if (boundingBox) {
       ctx.strokeStyle = '#00ff00'; // Green for detected barcode
@@ -69,7 +81,7 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
       ctx.closePath();
       ctx.stroke();
     }
-  }, [boundingBox]); // Only redraw if boundingBox changes
+  }, [boundingBox, isScanning, scanLinePosition, overlayText]); // Redraw if these change
 
   useEffect(() => {
     console.log("[ZXing] Component mounted. Initializing camera...");
@@ -83,6 +95,8 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
 
     const codeReader = new BrowserMultiFormatReader(hints);
     codeReaderRef.current = codeReader;
+
+    let animationFrameId: number;
 
     const startScanning = async () => {
       setIsInitializing(true);
@@ -118,17 +132,23 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
 
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
-          // Ensure video is loaded before decoding
-          await new Promise<void>(resolve => {
-            if (videoRef.current!.readyState >= 2) { // Check if already loaded
-              resolve();
-            } else {
-              videoRef.current!.onloadedmetadata = () => {
-                videoRef.current!.play().catch(e => console.error("Error playing video on metadata loaded:", e));
-                resolve();
-              };
-            }
-          });
+          // Only attempt to play if not already playing
+          if (videoRef.current.paused) {
+            videoRef.current.play().catch(e => console.error("Error playing video:", e));
+          }
+
+          // Start scan line animation
+          const animateScanLine = (timestamp: DOMHighResTimeStamp) => {
+              const duration = 2000; // 2 seconds for one full cycle (down and up)
+              const progress = (timestamp % duration) / duration; // 0 to 1 over duration
+              
+              // Make it go down then up
+              const position = progress < 0.5 ? progress * 2 : 1 - (progress - 0.5) * 2; // 0 -> 1 -> 0
+              setScanLinePosition(position);
+              animationFrameId = requestAnimationFrame(animateScanLine);
+          };
+          animationFrameId = requestAnimationFrame(animateScanLine);
+
 
           // Capture controls from the return value of decodeFromStream
           controlsRef.current = (codeReader.decodeFromStream(stream, videoRef.current, (result: Result | undefined, error: Error | undefined) => {
@@ -200,6 +220,7 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
         }
       }
       controlsRef.current = null;
+      cancelAnimationFrame(animationFrameId); // Stop animation on unmount
     };
   }, [onScan, drawOverlay, onClose]); // Add onClose to dependencies
 
@@ -239,6 +260,8 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
       const codeReader = new BrowserMultiFormatReader(hints);
       codeReaderRef.current = codeReader;
 
+      let retryAnimationFrameId: number; // New animation frame ID for retry
+
       const startScanningRetry = async () => {
         try {
           const videoInputDevices = await codeReader.listVideoInputDevices();
@@ -258,16 +281,19 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
 
           if (videoRef.current) {
             videoRef.current.srcObject = stream;
-            await new Promise<void>(resolve => {
-              if (videoRef.current!.readyState >= 2) {
-                resolve();
-              } else {
-                videoRef.current!.onloadedmetadata = () => {
-                  videoRef.current!.play().catch(e => console.error("Error playing video on metadata loaded (retry):", e));
-                  resolve();
-                };
-              }
-            });
+            if (videoRef.current.paused) {
+              videoRef.current.play().catch(e => console.error("Error playing video on metadata loaded (retry):", e));
+            }
+
+            // Start scan line animation for retry
+            const animateScanLineRetry = (timestamp: DOMHighResTimeStamp) => {
+                const duration = 2000;
+                const progress = (timestamp % duration) / duration;
+                const position = progress < 0.5 ? progress * 2 : 1 - (progress - 0.5) * 2;
+                setScanLinePosition(position);
+                retryAnimationFrameId = requestAnimationFrame(animateScanLineRetry);
+            };
+            retryAnimationFrameId = requestAnimationFrame(animateScanLineRetry);
 
             // Capture controls from the return value of decodeFromStream
             controlsRef.current = (codeReader.decodeFromStream(stream, videoRef.current, (result: Result | undefined, error: Error | undefined) => {

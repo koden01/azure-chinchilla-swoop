@@ -18,6 +18,7 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [manualInput, setManualInput] = useState('');
   const [showManualInput, setShowManualInput] = useState(false);
+  const quaggaInitializedRef = useRef(false);
 
   useEffect(() => {
     // Check if we're in a browser environment
@@ -41,12 +42,13 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
       return;
     }
 
-    if (!videoRef.current) return;
+    if (!videoRef.current || quaggaInitializedRef.current) return;
 
     const initializeQuagga = async () => {
       setIsInitializing(true);
       setIsScanning(false);
       setCameraError(null);
+      quaggaInitializedRef.current = true;
 
       try {
         await Quagga.init({
@@ -110,6 +112,7 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
             
             setCameraError(errorMessage);
             setIsInitializing(false);
+            quaggaInitializedRef.current = false;
             return;
           }
           console.log("QuaggaJS initialization finished. Starting...");
@@ -123,6 +126,7 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
         const errorMessage = error.message || "Terjadi kesalahan tak terduga saat mengakses kamera";
         setCameraError(errorMessage);
         setIsInitializing(false);
+        quaggaInitializedRef.current = false;
       }
     };
 
@@ -137,23 +141,26 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
     });
 
     return () => {
-      if (isScanning) {
+      if (isScanning && quaggaInitializedRef.current) {
         Quagga.stop();
         console.log("QuaggaJS stopped.");
+        quaggaInitializedRef.current = false;
       }
     };
   }, [onScan, onClose, isScanning]);
 
   const handleCloseClick = () => {
-    if (isScanning) {
+    if (isScanning && quaggaInitializedRef.current) {
       Quagga.stop();
+      quaggaInitializedRef.current = false;
     }
     onClose();
   };
 
   const handleRetryCamera = () => {
-    if (isScanning) {
+    if (isScanning && quaggaInitializedRef.current) {
       Quagga.stop();
+      quaggaInitializedRef.current = false;
     }
     setCameraError(null);
     setIsInitializing(true);
@@ -200,16 +207,19 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
               if (err) {
                 setCameraError("Gagal mengakses kamera setelah percobaan ulang");
                 setIsInitializing(false);
+                quaggaInitializedRef.current = false;
                 return;
               }
               Quagga.start();
               setIsInitializing(false);
               setIsScanning(true);
               setCameraError(null);
+              quaggaInitializedRef.current = true;
             });
           } catch (error) {
             setCameraError("Gagal mengakses kamera");
             setIsInitializing(false);
+            quaggaInitializedRef.current = false;
           }
         };
         initializeQuagga();

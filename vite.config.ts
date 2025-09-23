@@ -38,7 +38,15 @@ const serverConfig = sslCert ? {
 };
 
 export default defineConfig({
-  server: serverConfig,
+  server: {
+    ...serverConfig,
+    // Allow ngrok hosts
+    allowedHosts: [
+      "localhost",
+      ".ngrok-free.dev",
+      ".ngrok.io"
+    ]
+  },
   plugins: [dyadComponentTagger(), react()],
   resolve: {
     alias: {

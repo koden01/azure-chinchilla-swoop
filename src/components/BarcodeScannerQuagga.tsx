@@ -66,11 +66,11 @@ const BarcodeScannerQuagga: React.FC<BarcodeScannerQuaggaProps> = ({ onScan, onC
       },
       locate: true, // Aktifkan penggambaran kotak pembatas
       numOfWorkers: 0, // Gunakan 0 untuk berjalan di main thread untuk debugging yang lebih sederhana
-      frequency: 10, // Mengurangi frekuensi pemrosesan frame untuk mengurangi beban CPU (diubah dari 5 ke 10)
-      // Menyesuaikan parameter untuk meningkatkan akurasi Code 128
-      patchSize: 'large', // Meningkatkan ukuran patch untuk menangani barcode yang lebih panjang
-      halfSample: false, // Memproses gambar dengan resolusi penuh untuk detail yang lebih baik
-      locator: { // Menambahkan konfigurasi locator
+      frequency: 5, // Mengembalikan frekuensi pemrosesan frame ke 5
+      locator: { // Konfigurasi locator yang ditingkatkan
+        patchSize: 'large', // Meningkatkan ukuran patch untuk menangani barcode yang lebih panjang
+        halfSample: false, // Memproses gambar dengan resolusi penuh untuk detail yang lebih baik
+        boxSize: 'large', // Menambahkan ukuran kotak pencarian yang lebih besar
         minCanvasSize: 640, // Memastikan ukuran kanvas minimum untuk pemrosesan
       }
     }, (err) => {

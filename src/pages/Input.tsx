@@ -20,12 +20,12 @@ import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch";
 import { useAllFlagYesExpedisiResiNumbers } from "@/hooks/useAllFlagYesExpedisiResiNumbers";
-import BarcodeScannerQuagga from "@/components/BarcodeScannerQuagga"; // Import the new component
+import BarcodeScannerZXing from "@/components/BarcodeScannerZXing"; // Import the new component
 
 const InputPage = () => {
   const { expedition, setExpedition } = useExpedition();
   const [selectedKarung, setSelectedKarung] = React.useState<string>("1"); // Default to "1"
-  const [showQuaggaScanner, setShowQuaggaScanner] = React.useState(false); // State for Quagga scanner visibility
+  const [showZXingScanner, setShowZXingScanner] = React.useState(false); // State for ZXing scanner visibility
 
   const [isKarungSummaryModalOpen, setIsKarungSummaryModal] = React.useState(false);
 
@@ -138,14 +138,14 @@ const InputPage = () => {
     }
   }, [expedition, selectedKarung, resiInputRef]);
 
-  // Callback for QuaggaJS to handle scanned barcode
-  const handleQuaggaScan = React.useCallback((code: string) => {
+  // Callback for ZXing to handle scanned barcode
+  const handleZXingScan = React.useCallback((code: string) => {
     setResiNumber(code); // Update the input field visually
     processScannedResi(code); // Trigger the processing logic
   }, [setResiNumber, processScannedResi]);
 
-  const toggleQuaggaScanner = () => {
-    setShowQuaggaScanner(prev => !prev);
+  const toggleZXingScanner = () => {
+    setShowZXingScanner(prev => !prev);
   };
 
   const isInputDisabled = !expedition || !selectedKarung || isProcessing || isLoadingAllExpedisiUnfiltered || isLoadingAllFlagNoExpedisiData || isLoadingAllFlagYesExpedisiResiNumbers;
@@ -226,11 +226,11 @@ const InputPage = () => {
                 <Button
                   variant="outline"
                   size="icon"
-                  onClick={toggleQuaggaScanner}
+                  onClick={toggleZXingScanner}
                   disabled={!expedition || isProcessing} // Disable if no expedition or currently processing
                   className={cn(
                     "h-16 w-16 flex-shrink-0",
-                    showQuaggaScanner ? "bg-red-500 hover:bg-red-600 text-white" : "bg-blue-500 hover:bg-blue-600 text-white"
+                    showZXingScanner ? "bg-red-500 hover:bg-red-600 text-white" : "bg-blue-500 hover:bg-blue-600 text-white"
                   )}
                 >
                   <Camera className="h-8 w-8" />
@@ -248,12 +248,12 @@ const InputPage = () => {
             </div>
           </div>
         </div>
-        {showQuaggaScanner && (
-          <div className="md:col-span-2 mt-4 w-full"> {/* Menghapus max-w-2xl */}
-            <BarcodeScannerQuagga
-              onScan={handleQuaggaScan}
-              onClose={() => setShowQuaggaScanner(false)}
-              isActive={showQuaggaScanner}
+        {showZXingScanner && (
+          <div className="md:col-span-2 mt-4 w-full">
+            <BarcodeScannerZXing
+              onScan={handleZXingScan}
+              onClose={() => setShowZXingScanner(false)}
+              isActive={showZXingScanner}
             />
           </div>
         )}

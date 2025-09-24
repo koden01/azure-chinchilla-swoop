@@ -60,6 +60,8 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
     }
 
     codeReader.current = new BrowserMultiFormatReader(hints);
+    // NEW: Mengurangi interval antara upaya dekode
+    codeReader.current.timeBetweenDecodingAttempts = 200; // Coba dekode setiap 200ms
 
     const startDecoding = async () => {
       try {
@@ -82,8 +84,9 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
         }
 
         await codeReader.current?.decodeFromVideoDevice(selectedDeviceId, videoRef.current, (result, error) => {
-          // isInitializing sudah diatur ke false setelah decodeFromVideoDevice berhasil dimulai
-          // atau jika ada error inisialisasi, jadi tidak perlu di sini lagi.
+          if (isInitializing && !cameraError) {
+            setIsInitializing(false);
+          }
 
           if (result) {
             const code = result.getText();
@@ -121,12 +124,10 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
           }
         });
 
-        // Jika sampai sini, berarti decodeFromVideoDevice berhasil dimulai
-        setIsInitializing(false);
-
-        if (videoRef.current && videoRef.current.paused) {
-          videoRef.current.play().catch(e => console.error("[ZXing-JS] Failed to play video:", e));
-        }
+        // OLD: if (videoRef.current && videoRef.current.paused) {
+        // OLD:   videoRef.current.play().catch(e => console.error("[ZXing-JS] Failed to play video:", e));
+        // OLD: }
+        // NEW: Panggilan play() eksplisit dihapus karena decodeFromVideoDevice sudah menanganinya.
 
       } catch (err: any) {
         console.error("[ZXing-JS] Initialization error:", err);
@@ -145,7 +146,7 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
         codeReader.current = null;
       }
     };
-  }, [isActive, onScan, hints, detectionCooldown]); // isInitializing dan cameraError dihapus dari dependensi
+  }, [isActive, onScan, hints, detectionCooldown]);
 
   const handleRetryCamera = () => {
     console.log("[ZXing-JS] Retrying camera initialization...");

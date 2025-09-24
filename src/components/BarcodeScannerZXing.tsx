@@ -10,7 +10,7 @@ interface BarcodeScannerZXingProps {
   isActive: boolean;
 }
 
-const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClose, isActive }) => {
+const BarcodeScannerZXing: React.FC<BarcodeScannerScannerZXingProps> = ({ onScan, onClose, isActive }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const codeReader = useRef<BrowserMultiFormatReader | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
@@ -60,16 +60,22 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
     }
 
     codeReader.current = new BrowserMultiFormatReader(hints);
-    // Mengurangi interval antara upaya dekode
-    codeReader.current.timeBetweenDecodingAttempts = 200; // Coba dekode setiap 200ms
+    // Mengembalikan interval antara upaya dekode menjadi 500ms
+    codeReader.current.timeBetweenDecodingAttempts = 500; // Coba dekode setiap 500ms
 
     const startDecoding = async () => {
       try {
-        // Kita tidak perlu lagi secara eksplisit memilih deviceId di sini
-        // karena videoConstraints akan menanganinya dengan facingMode dan deviceId ideal.
-        // Namun, kita tetap perlu memanggil listVideoInputDevices untuk memastikan ada kamera.
         const videoInputDevices = await codeReader.current!.listVideoInputDevices(); 
-        if (videoInputDevices.length === 0) {
+        let selectedDeviceId: string | undefined;
+
+        const rearCamera = videoInputDevices.find(device => device.label.toLowerCase().includes('back') || device.label.toLowerCase().includes('environment'));
+        if (rearCamera) {
+          selectedDeviceId = rearCamera.deviceId;
+          console.log("[ZXing-JS] Using rear camera:", rearCamera.label);
+        } else if (videoInputDevices.length > 0) {
+          selectedDeviceId = videoInputDevices[0].deviceId;
+          console.log("[ZXing-JS] No explicit rear camera found, using first available camera:", videoInputDevices[0].label);
+        } else {
           console.warn("[ZXing-JS] No video input devices found.");
           setCameraError("Tidak ada perangkat kamera yang ditemukan.");
           setIsInitializing(false);
@@ -80,50 +86,54 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
         // Define video constraints for higher resolution and preferred facing mode
         const videoConstraints: MediaStreamConstraints = {
           video: {
+            deviceId: selectedDeviceId ? { exact: selectedDeviceId } : undefined, // NEW: Gunakan exact deviceId di sini
             facingMode: 'environment', // Prefer back camera
             width: { ideal: 1280 },    // Request ideal width
             height: { ideal: 720 }     // Request ideal height
           }
         };
 
-        // NEW: Panggil decodeFromVideoDevice dengan videoRef.current sebagai argumen pertama,
-        // dan biarkan videoConstraints menentukan kamera.
-        await codeReader.current?.decodeFromVideoDevice(videoRef.current, videoConstraints, (result, error) => {
-          if (result) {
-            const code = result.getText();
-            if (code) {
-              console.log("[ZXing-JS] Barcode successfully decoded:", code);
-              if (lastDetectedCode.current === code && (Date.now() - lastDetectionTime.current < detectionCooldown)) {
-                return;
-              }
-              lastDetectedCode.current = code;
-              lastDetectionTime.current = Date.now();
-
-              console.log("[ZXing-JS] Barcode detected:", code);
-              onScan(code);
-              beepSuccess.play().catch(() => console.log("Audio play failed"));
-
-              setTimeout(() => {
-                if (lastDetectedCode.current === code) {
-                  lastDetectedCode.current = null;
+        // FIX: Panggil decodeFromVideoDevice dengan 3 argumen: videoElement, videoConstraints, callback
+        await codeReader.current?.decodeFromVideoDevice(
+          videoRef.current, // videoElement: HTMLVideoElement
+          videoConstraints, // videoConstraints: MediaStreamConstraints
+          (result, error) => {
+            if (result) {
+              const code = result.getText();
+              if (code) {
+                console.log("[ZXing-JS] Barcode successfully decoded:", code);
+                if (lastDetectedCode.current === code && (Date.now() - lastDetectionTime.current < detectionCooldown)) {
+                  return;
                 }
-              }, detectionCooldown);
-            }
-          }
+                lastDetectedCode.current = code;
+                lastDetectionTime.current = Date.now();
 
-          if (error) {
-            if (error.name === 'NotFoundException') {
-              // Expected error, do nothing
-            } else if (error.name === 'NotAllowedError' || error.name === 'NotReadableError' || error.name === 'OverconstrainedError' || error.name === 'AbortError') {
-              console.error("[ZXing-JS] Camera error:", error);
-              setCameraError(`Gagal mengakses kamera: ${error.message || "Pastikan izin kamera diberikan dan aplikasi berjalan di HTTPS."}`);
-              beepFailure.play().catch(() => console.log("Audio play failed"));
-              codeReader.current?.reset();
-            } else {
-              console.warn("[ZXing-JS] Decoding error (non-critical):", error.message);
+                console.log("[ZXing-JS] Barcode detected:", code);
+                onScan(code);
+                beepSuccess.play().catch(() => console.log("Audio play failed"));
+
+                setTimeout(() => {
+                  if (lastDetectedCode.current === code) {
+                    lastDetectedCode.current = null;
+                  }
+                }, detectionCooldown);
+              }
+            }
+
+            if (error) {
+              if (error.name === 'NotFoundException') {
+                // Expected error, do nothing
+              } else if (error.name === 'NotAllowedError' || error.name === 'NotReadableError' || error.name === 'OverconstrainedError' || error.name === 'AbortError') {
+                console.error("[ZXing-JS] Camera error:", error);
+                setCameraError(`Gagal mengakses kamera: ${error.message || "Pastikan izin kamera diberikan dan aplikasi berjalan di HTTPS."}`);
+                beepFailure.play().catch(() => console.log("Audio play failed"));
+                codeReader.current?.reset();
+              } else {
+                console.warn("[ZXing-JS] Decoding error (non-critical):", error.message);
+              }
             }
           }
-        });
+        );
 
         // Jika sampai sini, berarti decodeFromVideoDevice berhasil dimulai
         setIsInitializing(false);

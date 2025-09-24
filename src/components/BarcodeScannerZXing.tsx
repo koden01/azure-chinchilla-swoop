@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { BrowserMultiFormatReader, DecodeHintType, BarcodeFormat } from '@zxing/library';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -19,16 +19,20 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
   const lastDetectionTime = useRef<number>(0);
   const detectionCooldown = 1500; // Cooldown untuk mencegah pemindaian ulang barcode yang sama terlalu cepat
 
-  const hints = new Map();
-  const formats = [BarcodeFormat.CODE_128, BarcodeFormat.EAN_13, BarcodeFormat.QR_CODE, BarcodeFormat.DATA_MATRIX];
-  hints.set(DecodeHintType.POSSIBLE_FORMATS, formats);
-  hints.set(DecodeHintType.TRY_HARDER, true); // Coba lebih keras untuk mendeteksi
+  const hints = useMemo(() => {
+    const h = new Map();
+    const formats = [BarcodeFormat.CODE_128, BarcodeFormat.EAN_13, BarcodeFormat.QR_CODE, BarcodeFormat.DATA_MATRIX];
+    h.set(DecodeHintType.POSSIBLE_FORMATS, formats);
+    h.set(DecodeHintType.TRY_HARDER, true); // Coba lebih keras untuk mendeteksi
+    return h;
+  }, []); // Dependensi kosong agar hanya dibuat sekali
 
   useEffect(() => {
     if (!isActive) {
       console.log("[ZXing-JS] Stopping scanner.");
       if (codeReader.current) {
         codeReader.current.reset();
+        codeReader.current = null; // Pastikan referensi diatur ulang
       }
       setIsInitializing(false);
       setCameraError(null);
@@ -42,16 +46,24 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
       return;
     }
 
+    // Reset state saat memulai inisialisasi baru
     setIsInitializing(true);
     setCameraError(null);
     lastDetectedCode.current = null;
 
     console.log("[ZXing-JS] Initializing scanner...");
 
+    // Pastikan tidak ada instance codeReader yang berjalan
+    if (codeReader.current) {
+      codeReader.current.reset();
+      codeReader.current = null;
+    }
+
     codeReader.current = new BrowserMultiFormatReader(hints);
 
     codeReader.current.decodeFromVideoDevice(undefined, videoRef.current, (result, error) => {
-      if (isInitializing) {
+      // Set isInitializing ke false setelah deteksi pertama atau jika ada error inisialisasi
+      if (isInitializing && !cameraError) {
         setIsInitializing(false);
         beepSuccess.play().catch(() => console.log("Audio play failed"));
       }
@@ -77,17 +89,16 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
         }
       }
 
-      if (error && !isInitializing) { // Only log errors after initialization is complete
+      if (error) { // Log errors, but only set cameraError for critical ones
         if (error.name === 'NotFoundException') {
           // This error is expected if no barcode is found in a frame, don't log as critical
-          // console.log("[ZXing-JS] No barcode found in frame.");
         } else if (error.name === 'NotAllowedError' || error.name === 'NotReadableError' || error.name === 'OverconstrainedError' || error.name === 'AbortError') {
           console.error("[ZXing-JS] Camera error:", error);
           setCameraError(`Gagal mengakses kamera: ${error.message || "Pastikan izin kamera diberikan dan aplikasi berjalan di HTTPS."}`);
           beepFailure.play().catch(() => console.log("Audio play failed"));
           codeReader.current?.reset();
         } else {
-          // console.error("[ZXing-JS] Decoding error:", error);
+          // console.error("[ZXing-JS] Decoding error:", error); // Log other decoding errors if needed
         }
       }
     }).catch((err) => {
@@ -101,9 +112,10 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
       console.log("[ZXing-JS] Cleanup effect running.");
       if (codeReader.current) {
         codeReader.current.reset();
+        codeReader.current = null; // Pastikan referensi diatur ulang saat cleanup
       }
     };
-  }, [isActive, onScan, detectionCooldown, hints, isInitializing]);
+  }, [isActive, onScan, hints, detectionCooldown]); // isInitializing dihapus dari dependensi
 
   const handleRetryCamera = () => {
     console.log("[ZXing-JS] Retrying camera initialization...");

@@ -10,7 +10,7 @@ interface BarcodeScannerZXingProps {
   isActive: boolean;
 }
 
-const BarcodeScannerZXing: React.FC<BarcodeScannerScannerZXingProps> = ({ onScan, onClose, isActive }) => {
+const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClose, isActive }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const codeReader = useRef<BrowserMultiFormatReader | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
@@ -86,15 +86,16 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerScannerZXingProps> = ({ onScan
         // Define video constraints for higher resolution and preferred facing mode
         const videoConstraints: MediaStreamConstraints = {
           video: {
-            deviceId: selectedDeviceId ? { exact: selectedDeviceId } : undefined, // NEW: Gunakan exact deviceId di sini
+            // deviceId: { exact: selectedDeviceId }, // Dihapus dari sini karena akan diteruskan sebagai argumen pertama
             facingMode: 'environment', // Prefer back camera
             width: { ideal: 1280 },    // Request ideal width
             height: { ideal: 720 }     // Request ideal height
           }
         };
 
-        // FIX: Panggil decodeFromVideoDevice dengan 3 argumen: videoElement, videoConstraints, callback
+        // FIX: Panggil decodeFromVideoDevice dengan selectedDeviceId sebagai argumen pertama
         await codeReader.current?.decodeFromVideoDevice(
+          selectedDeviceId, // deviceId: string
           videoRef.current, // videoElement: HTMLVideoElement
           videoConstraints, // videoConstraints: MediaStreamConstraints
           (result, error) => {

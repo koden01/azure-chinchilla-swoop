@@ -92,18 +92,13 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
           }
         };
 
-        // Pastikan selectedDeviceId adalah string sebelum meneruskannya
-        if (!selectedDeviceId) {
-          setCameraError("Tidak ada perangkat kamera yang dipilih.");
-          setIsInitializing(false);
-          beepFailure.play().catch(() => console.log("Audio play failed"));
-          return;
+        // Add deviceId constraint if a specific device was selected
+        if (selectedDeviceId) {
+          (videoConstraints.video as MediaTrackConstraints).deviceId = { exact: selectedDeviceId };
         }
 
-        // FIX: Panggil decodeFromVideoDevice dengan selectedDeviceId sebagai argumen pertama
-        // dan videoRef.current sebagai argumen kedua, sesuai dengan overload 4-argumen.
+        // FIX: Panggil decodeFromVideoDevice dengan 3 argumen: videoElement, videoConstraints, callback
         await codeReader.current?.decodeFromVideoDevice(
-          selectedDeviceId, // deviceId: string
           videoRef.current, // videoElement: HTMLVideoElement
           videoConstraints, // videoConstraints: MediaStreamConstraints
           (result, error) => {

@@ -65,17 +65,11 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
 
     const startDecoding = async () => {
       try {
+        // Kita tidak perlu lagi secara eksplisit memilih deviceId di sini
+        // karena videoConstraints akan menanganinya dengan facingMode dan deviceId ideal.
+        // Namun, kita tetap perlu memanggil listVideoInputDevices untuk memastikan ada kamera.
         const videoInputDevices = await codeReader.current!.listVideoInputDevices(); 
-        let selectedDeviceId: string | undefined;
-
-        const rearCamera = videoInputDevices.find(device => device.label.toLowerCase().includes('back') || device.label.toLowerCase().includes('environment'));
-        if (rearCamera) {
-          selectedDeviceId = rearCamera.deviceId;
-          console.log("[ZXing-JS] Using rear camera:", rearCamera.label);
-        } else if (videoInputDevices.length > 0) {
-          selectedDeviceId = videoInputDevices[0].deviceId;
-          console.log("[ZXing-JS] No explicit rear camera found, using first available camera:", videoInputDevices[0].label);
-        } else {
+        if (videoInputDevices.length === 0) {
           console.warn("[ZXing-JS] No video input devices found.");
           setCameraError("Tidak ada perangkat kamera yang ditemukan.");
           setIsInitializing(false);
@@ -83,7 +77,19 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
           return;
         }
 
-        await codeReader.current?.decodeFromVideoDevice(selectedDeviceId, videoRef.current, (result, error) => {
+        // Define video constraints for higher resolution and preferred facing mode
+        const videoConstraints: MediaStreamConstraints = {
+          video: {
+            // deviceId: selectedDeviceId ? { exact: selectedDeviceId } : undefined, // Dihapus, akan ditangani oleh facingMode atau default
+            facingMode: 'environment', // Prefer back camera
+            width: { ideal: 1280 },    // Request ideal width
+            height: { ideal: 720 }     // Request ideal height
+          }
+        };
+
+        // NEW: Panggil decodeFromVideoDevice dengan undefined untuk deviceId,
+        // dan biarkan videoConstraints menentukan kamera.
+        await codeReader.current?.decodeFromVideoDevice(undefined, videoRef.current, videoConstraints, (result, error) => {
           if (result) {
             const code = result.getText();
             if (code) {

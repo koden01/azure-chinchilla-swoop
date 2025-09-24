@@ -80,16 +80,15 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
         // Define video constraints for higher resolution and preferred facing mode
         const videoConstraints: MediaStreamConstraints = {
           video: {
-            // deviceId: selectedDeviceId ? { exact: selectedDeviceId } : undefined, // Dihapus, akan ditangani oleh facingMode atau default
             facingMode: 'environment', // Prefer back camera
             width: { ideal: 1280 },    // Request ideal width
             height: { ideal: 720 }     // Request ideal height
           }
         };
 
-        // NEW: Panggil decodeFromVideoDevice dengan undefined untuk deviceId,
+        // NEW: Panggil decodeFromVideoDevice dengan videoRef.current sebagai argumen pertama,
         // dan biarkan videoConstraints menentukan kamera.
-        await codeReader.current?.decodeFromVideoDevice(undefined, videoRef.current, videoConstraints, (result, error) => {
+        await codeReader.current?.decodeFromVideoDevice(videoRef.current, videoConstraints, (result, error) => {
           if (result) {
             const code = result.getText();
             if (code) {

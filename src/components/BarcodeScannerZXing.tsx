@@ -65,7 +65,7 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
       // Set isInitializing ke false setelah deteksi pertama atau jika ada error inisialisasi
       if (isInitializing && !cameraError) {
         setIsInitializing(false);
-        beepSuccess.play().catch(() => console.log("Audio play failed"));
+        // beepSuccess.play().catch(() => console.log("Audio play failed")); // Dihapus: Tidak lagi membunyikan beep saat inisialisasi
       }
 
       if (result) {

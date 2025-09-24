@@ -60,7 +60,7 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
     }
 
     codeReader.current = new BrowserMultiFormatReader(hints);
-    // NEW: Mengurangi interval antara upaya dekode
+    // Mengurangi interval antara upaya dekode
     codeReader.current.timeBetweenDecodingAttempts = 200; // Coba dekode setiap 200ms
 
     const startDecoding = async () => {
@@ -84,10 +84,6 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
         }
 
         await codeReader.current?.decodeFromVideoDevice(selectedDeviceId, videoRef.current, (result, error) => {
-          if (isInitializing && !cameraError) {
-            setIsInitializing(false);
-          }
-
           if (result) {
             const code = result.getText();
             if (code) {
@@ -124,10 +120,13 @@ const BarcodeScannerZXing: React.FC<BarcodeScannerZXingProps> = ({ onScan, onClo
           }
         });
 
-        // OLD: if (videoRef.current && videoRef.current.paused) {
-        // OLD:   videoRef.current.play().catch(e => console.error("[ZXing-JS] Failed to play video:", e));
-        // OLD: }
-        // NEW: Panggilan play() eksplisit dihapus karena decodeFromVideoDevice sudah menanganinya.
+        // Jika sampai sini, berarti decodeFromVideoDevice berhasil dimulai
+        setIsInitializing(false);
+
+        // Mengembalikan panggilan play() eksplisit
+        if (videoRef.current) {
+          videoRef.current.play().catch(e => console.error("[ZXing-JS] Failed to play video:", e));
+        }
 
       } catch (err: any) {
         console.error("[ZXing-JS] Initialization error:", err);

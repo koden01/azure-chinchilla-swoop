@@ -1,7 +1,7 @@
 import React, { useTransition } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { showSuccess, showError, dismissToast } from "@/utils/toast";
-import { beepSuccess, beepFailure, beepStart } from "@/utils/audio"; // beepDouble dihapus
+import { beepSuccess, beepFailure, beepDouble, beepStart } from "@/utils/audio";
 import { useQueryClient } from "@tanstack/react-query";
 import { format, isSameDay } from "date-fns";
 import { normalizeExpeditionName } from "@/utils/expeditionUtils";
@@ -117,7 +117,7 @@ export const useResiScanner = ({
     try {
       if (allFlagYesExpedisiResiNumbers?.has(normalizedCurrentResi)) {
         validationStatus = 'DUPLICATE_PROCESSED';
-        finalBeepSound = beepSuccess; // Use beepSuccess for duplicate, as it's a successful read
+        finalBeepSound = beepDouble; // Set beep for duplicate
         const { data: resiDetails, error: resiDetailsError } = await supabase
             .from("tbl_resi")
             .select("created, Keterangan, nokarung, schedule")

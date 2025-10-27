@@ -280,7 +280,7 @@ const ResiDetailModal: React.FC<ResiDetailModalProps> = ({
     getPaginationRowModel: getPaginationRowModel(),
     initialState: {
       pagination: {
-        pageSize: 10, // Default page size
+        pageSize: 100, // Default page size changed to 100
       },
     },
   });

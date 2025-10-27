@@ -52,7 +52,7 @@ export const useHistoryTable = ({ data, columns, globalFilter, startDate, endDat
     getPaginationRowModel: getPaginationRowModel(),
     initialState: {
       pagination: {
-        pageSize: 10,
+        pageSize: 100, // Changed default page size to 100
       },
     },
   });

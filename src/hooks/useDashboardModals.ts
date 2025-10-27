@@ -5,7 +5,8 @@ import { ModalDataItem } from "@/types/data";
 import { normalizeExpeditionName } from "@/utils/expeditionUtils";
 import { addPendingOperation } from "@/integrations/indexeddb/pendingOperations";
 import { useBackgroundSync } from "@/hooks/useBackgroundSync";
-import { format } from "date-fns";
+import { format, startOfDay, endOfDay } from "date-fns"; // Import startOfDay and endOfDay
+import { fetchAllDataPaginated } from "@/utils/supabaseFetch"; // Import fetchAllDataPaginated
 
 interface UseDashboardModalsProps {
   date: Date | undefined;
@@ -61,16 +62,19 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       return;
     }
 
-    const { data, error } = await supabase.rpc("get_transaksi_hari_ini_records", {
-      p_selected_date: formattedDate,
-    });
-      
-    if (error) {
+    try {
+      const data = await fetchAllDataPaginated(
+        "tbl_expedisi",
+        "created",
+        date,
+        date,
+        "resino, orderno, chanelsales, couriername, created, flag, datetrans, cekfu"
+      );
+      openResiModal("Transaksi Hari Ini", data || [], "transaksiHariIni");
+    } catch (error) {
       showError("Gagal memuat data transaksi hari ini.");
       console.error("Error fetching Transaksi Hari Ini data:", error);
-      return;
     }
-    openResiModal("Transaksi Hari Ini", data || [], "transaksiHariIni");
   };
 
   const handleOpenBelumKirimModal = async () => {
@@ -79,32 +83,53 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       return;
     }
 
-    const { data, error } = await supabase.rpc("get_belum_kirim_records", {
-      p_selected_date: formattedDate,
-    });
-      
-    if (error) {
+    try {
+      const data = await fetchAllDataPaginated(
+        "tbl_expedisi",
+        "created",
+        date,
+        date,
+        "resino, orderno, chanelsales, couriername, created, flag, datetrans, cekfu",
+        (query) => query.eq("flag", "NO")
+      );
+      openResiModal("Belum Kirim (Hari Ini)", data || [], "belumKirim");
+    } catch (error) {
       showError("Gagal memuat data resi yang belum dikirim.");
       console.error("Error fetching Belum Kirim data:", error);
-      return;
     }
-    openResiModal("Belum Kirim (Hari Ini)", data || [], "belumKirim");
   };
 
   const handleOpenFollowUpFlagNoModal = async () => {
     const actualCurrentDate = new Date();
-    const actualCurrentFormattedDate = format(actualCurrentDate, 'yyyy-MM-dd');
+    const startOfToday = startOfDay(actualCurrentDate);
+    const endOfToday = endOfDay(actualCurrentDate);
 
-    const { data, error } = await supabase.rpc("get_flag_no_expedisi_records_except_today", {
-      p_selected_date: actualCurrentFormattedDate,
-    });
+    try {
+      // Fetch records before today
+      const recordsBeforeToday = await fetchAllDataPaginated(
+        "tbl_expedisi",
+        "created",
+        new Date(0), // Start from epoch
+        new Date(startOfToday.getTime() - 1), // Up to end of yesterday
+        "resino, orderno, chanelsales, couriername, created, flag, datetrans, cekfu",
+        (query) => query.eq("flag", "NO")
+      );
 
-    if (error) {
+      // Fetch records after today
+      const recordsAfterToday = await fetchAllDataPaginated(
+        "tbl_expedisi",
+        "created",
+        new Date(endOfToday.getTime() + 1), // Start from beginning of tomorrow
+        new Date(8640000000000000), // Up to max date (far future)
+        "resino, orderno, chanelsales, couriername, created, flag, datetrans, cekfu",
+        (query) => query.eq("flag", "NO")
+      );
+      const combinedData = [...recordsBeforeToday, ...recordsAfterToday];
+      openResiModal("Follow Up (Belum Kirim)", combinedData || [], "belumKirim");
+    } catch (error) {
       showError("Gagal memuat data Follow Up (Belum Kirim).");
-      console.error("Error fetching Follow Up (Belum Kirim) data via RPC:", error);
-      return;
+      console.error("Error fetching Follow Up (Belum Kirim) data:", error);
     }
-    openResiModal("Follow Up (Belum Kirim)", data || [], "belumKirim");
   };
 
   const handleOpenScanFollowupModal = async () => {
@@ -113,6 +138,12 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       return;
     }
 
+    // NOTE: This RPC performs a JOIN operation. If the number of records returned by this RPC
+    // exceeds 1000, it will be truncated by the Supabase client. To fetch more than 1000
+    // records for this specific modal, the 'get_scan_follow_up' database function itself
+    // would need to be modified to implement pagination (e.g., by accepting _offset and _limit parameters)
+    // and then a custom client-side paginated fetcher would be required.
+    // For now, it will be limited by the RPC's default behavior.
     const { data, error } = await supabase.rpc("get_scan_follow_up", {
       selected_date: formattedDate,
     });
@@ -130,17 +161,20 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
       return;
     }
 
-    const { data, error } = await supabase.rpc("get_expedition_detail_records", {
-      p_couriername: courierName,
-      p_selected_date: formattedDate,
-    });
-
-    if (error) {
+    try {
+      const data = await fetchAllDataPaginated(
+        "tbl_expedisi",
+        "created",
+        date,
+        date,
+        "resino, orderno, chanelsales, couriername, created, flag, datetrans, cekfu",
+        (query) => query.eq("couriername", courierName).eq("flag", "NO")
+      );
+      openResiModal(`Detail Resi ${courierName} (Belum Kirim)`, data || [], "expeditionDetail", courierName);
+    } catch (error) {
       showError(`Gagal memuat detail resi untuk ${courierName}.`);
       console.error(`Error fetching expedition detail data for ${courierName}:`, error);
-      return;
     }
-    openResiModal(`Detail Resi ${courierName} (Belum Kirim)`, data || [], "expeditionDetail", courierName);
   };
 
   const handleCloseModal = () => {

@@ -5,7 +5,7 @@ import { ModalDataItem } from "@/types/data";
 import { normalizeExpeditionName } from "@/utils/expeditionUtils";
 import { addPendingOperation } from "@/integrations/indexeddb/pendingOperations";
 import { useBackgroundSync } from "@/hooks/useBackgroundSync";
-import { format, startOfDay, endOfDay } from "date-fns"; // Import startOfDay and endOfDay
+import { startOfDay, endOfDay } from "date-fns"; // Import startOfDay and endOfDay, removed format
 import { fetchAllDataPaginated } from "@/utils/supabaseFetch"; // Import fetchAllDataPaginated
 
 interface UseDashboardModalsProps {

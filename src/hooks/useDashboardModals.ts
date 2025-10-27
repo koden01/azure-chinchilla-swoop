@@ -120,7 +120,7 @@ export const useDashboardModals = ({ date, formattedDate, allExpedisiData }: Use
         "tbl_expedisi",
         "created",
         new Date(endOfToday.getTime() + 1), // Start from beginning of tomorrow
-        new Date(8640000000000000), // Up to max date (far future)
+        new Date(2099, 11, 31), // Use a reasonable far future date (Dec 31, 2099)
         "resino, orderno, chanelsales, couriername, created, flag, datetrans, cekfu",
         (query) => query.eq("flag", "NO")
       );
